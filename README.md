@@ -2,7 +2,7 @@
 
 _Tilt Your World. Defy Gravity._ A futuristic 3D physics puzzle game for iPhone: roll a metallic sphere by tilting your phone, and shift gravity 90° to turn walls and ceilings into floors.
 
-**Status:** Milestone 1 (tilt-control foundation) + gravity-shift proof-of-concept course. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** v0.2: Orbital Labyrinth benchmark maze (about 80% tilt labyrinth, 20% gravity shifting) on the Milestone 1 tilt-control foundation. See [docs/PLAN.md](docs/PLAN.md).
 
 Stack: Three.js · TypeScript · Vite · Rapier · Capacitor (iOS).
 
@@ -43,13 +43,11 @@ After code changes run `npm run ios:sync` again, then Run in Xcode.
 
 ## What to try
 
+- **Play: Orbital Labyrinth** (target 45–60 s). Roll through the maze: weave past three holes, time the amber sliding block, cross the checkpoint, climb the ramp and cross the narrow bridge over the chasm, dodge the red energy strips, and reach the portal. No gravity shift is needed.
+  - **Optional shortcut:** in the purple pad by the tall purple wall (near the start), the ▶ button appears. Shift onto the wall, climb a little (tilt right), roll forward over the chasm, and at the purple band near the far end press ◀ to drop back into the maze.
+  - Stars depend on time and falls only: 3★ ≤ 50 s with no falls, 2★ ≤ 80 s with at most 2 falls.
+- **Shift Lab:** the earlier proof of concept, where shifts work anywhere (floor → wall → ceiling).
 - **Test Deck:** a flat platform with no goal for judging tilt feel. Turn on **Settings → Debug readout** to see tilt angles, sensor rate and FPS.
-- **Play (Gravity Shift proof of concept):**
-  1. Roll down the start floor. The red lip ends at a gap you can't cross.
-  2. Press **▶**: gravity shifts right and the purple wall becomes the floor.
-  3. Roll forward along the wall (past the checkpoint ring) until you're under the purple ceiling hanging overhead.
-  4. Press **▶** again: you fall "up" onto the ceiling. Roll into the portal.
-  Shift in the wrong place and you fall into the void (counted as a fall, respawn at the last checkpoint).
 - Hold the phone however is comfortable, then tap **◎** to make that the neutral pose.
 - Tune **Sensitivity**, **Dead zone** and **Smoothing** in Settings; they apply instantly.
 

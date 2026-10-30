@@ -15,8 +15,8 @@ import type { LevelDef } from './LevelTypes';
  */
 export const SHIFT_PROOF: LevelDef = {
   id: 'shift-proof',
-  name: 'Gravity Shift',
-  subtitle: 'Proof of concept',
+  name: 'Shift Lab',
+  subtitle: 'Gravity-shift proof of concept',
   spawn: [0, 1, 12],
   frame: { down: [0, -1, 0], forward: [0, 0, -1] },
   allowShifts: true,
@@ -42,5 +42,6 @@ export const SHIFT_PROOF: LevelDef = {
   ],
   checkpoints: [{ position: [4, 3.5, 1], frame: { down: [1, 0, 0], forward: [0, 0, -1] } }],
   goal: { position: [0, 9, -22], up: [0, -1, 0] },
+  par: { three: 45, two: 75 },
   fallMargin: 9,
 };

@@ -17,5 +17,6 @@ export const TEST_DECK: LevelDef = {
     { position: [3.2, 0, -4], radius: 0.45, height: 1.2 },
     { position: [0, 0, -7.5], radius: 0.45, height: 1.2 },
   ],
+  par: { three: 30, two: 60 },
   fallMargin: 10,
 };

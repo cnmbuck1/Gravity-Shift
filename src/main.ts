@@ -5,6 +5,7 @@ import { SettingsManager } from './settings/SettingsManager';
 import { UIManager } from './ui/UIManager';
 import { SHIFT_PROOF } from './levels/shiftProof';
 import { TEST_DECK } from './levels/testDeck';
+import { ORBITAL_LABYRINTH } from './levels/orbitalLabyrinth';
 
 async function boot(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -14,7 +15,7 @@ async function boot(): Promise<void> {
   const game = await GameManager.create(canvas, ui, settings, save);
 
   // The menu shows the first level idling in the background.
-  const levels = [SHIFT_PROOF, TEST_DECK];
+  const levels = [ORBITAL_LABYRINTH, SHIFT_PROOF, TEST_DECK];
   game.loadLevel(levels[0]);
   game.toMenu();
   new UIManager(ui, game, settings, levels);

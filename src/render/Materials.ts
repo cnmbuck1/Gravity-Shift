@@ -95,3 +95,20 @@ export function trimMaterial(role: SurfaceRole): THREE.MeshStandardMaterial {
   const c = COLORS[role];
   return new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 2.2, metalness: 0.2, roughness: 0.4 });
 }
+
+/** Maze floor: dark brushed metal panels, tiled in world space (see MazeBuilder). */
+export function mazeFloorMaterial(): THREE.MeshStandardMaterial {
+  shared ??= brushedMetalTexture();
+  const map = shared.map.clone();
+  const rough = shared.rough.clone();
+  map.needsUpdate = rough.needsUpdate = true;
+  return new THREE.MeshStandardMaterial({ color: '#8d97a8', map, roughnessMap: rough, metalness: 0.8, roughness: 0.6, envMapIntensity: 0.8 });
+}
+
+/** Maze walls: brighter polished metal so the corridors read clearly against the floor. */
+export function mazeWallMaterial(): THREE.MeshStandardMaterial {
+  shared ??= brushedMetalTexture();
+  const map = shared.map.clone();
+  map.needsUpdate = true;
+  return new THREE.MeshStandardMaterial({ color: '#dfe6f2', map, metalness: 0.9, roughness: 0.32, envMapIntensity: 1.2 });
+}

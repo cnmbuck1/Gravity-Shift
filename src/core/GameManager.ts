@@ -6,7 +6,7 @@ import { BallController, BALL_RADIUS } from '../game/BallController';
 import { CameraController } from '../game/CameraController';
 import { GravityFrame, type ShiftDirection } from '../game/GravityFrame';
 import { LevelManager, v3 } from '../game/LevelManager';
-import type { GravityFrameDef, LevelDef } from '../levels/LevelTypes';
+import type { GravityFrameDef, LevelDef, ShiftZoneDef } from '../levels/LevelTypes';
 import type { SettingsManager, Settings } from '../settings/SettingsManager';
 import type { SaveManager } from '../settings/SaveManager';
 
@@ -33,6 +33,7 @@ export interface GameEvents {
   onShiftRejected?(reason: string): void;
   onFall?(): void;
   onCheckpoint?(): void;
+  onZoneEnter?(zone: ShiftZoneDef): void;
   onComplete?(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void;
 }
 
@@ -54,6 +55,8 @@ export class GameManager {
   private elapsed = 0;
   private fpsFrames = 0;
   private fpsTime = 0;
+  /** Gravity zone the ball is currently in (only meaningful for levels with zones). */
+  zone: ShiftZoneDef | null = null;
 
   private constructor(
     readonly physics: PhysicsManager,
@@ -96,6 +99,7 @@ export class GameManager {
 
   loadLevel(def: LevelDef): void {
     this.levels.load(def);
+    this.camera.configure(def.camera);
     this.respawnFrame = def.frame;
     this.respawnPoint.copy(v3(def.spawn));
     this.restart();
@@ -113,9 +117,18 @@ export class GameManager {
     this.state = 'playing';
   }
 
+  /** Shift directions available right now (drives which HUD buttons are shown). */
+  availableShifts(): ShiftDirection[] {
+    const def = this.levels.level;
+    if (!def?.allowShifts) return [];
+    if (!def.shiftZones) return ['left', 'forward', 'right'];
+    return this.zone ? this.zone.allow : [];
+  }
+
   /** Back to the latest checkpoint, without counting a fall (the RESET button). */
   respawn(): void {
     this.respawnTimer = -1;
+    this.zone = null;
     this.setFrame(this.respawnFrame);
     this.ball.teleport(this.respawnPoint);
     this.camera.snap(this.frame, this.respawnPoint);
@@ -142,6 +155,7 @@ export class GameManager {
     if (this.state !== 'playing' || !this.levels.level?.allowShifts) return false;
     if (this.respawnTimer >= 0) return false;
     if (this.camera.transitioning) return false;
+    if (!this.availableShifts().includes(dir)) return false;
     if (!this.ball.grounded && this.ball.airTime > COYOTE_TIME) {
       this.events.onShiftRejected?.('Land on a surface to shift');
       return false;
@@ -190,6 +204,7 @@ export class GameManager {
       alpha = this.physics.advance(
         dt,
         (step) => {
+          this.levels.stepMovers(step);
           const move = this.state === 'playing' && this.respawnTimer < 0 ? this.input.sample(step) : ([0, 0] as [number, number]);
           this.ball.applyInput(move, this.frame, step);
         },
@@ -199,7 +214,7 @@ export class GameManager {
     }
 
     this.ball.render(alpha, dt);
-    this.camera.update(dt, this.ball.mesh.position, this.ball.collider);
+    this.camera.update(dt, this.ball.mesh.position, this.ball.body.linvel(), this.frame, this.ball.collider);
     this.levels.update(dt, this.elapsed);
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);
     this.view.ballLight.target.position.copy(this.ball.mesh.position);
@@ -216,12 +231,18 @@ export class GameManager {
     this.stats.time += dt;
     const p = this.ball.position;
 
-    if (this.levels.isOutOfBounds(p)) {
+    if (this.levels.isOutOfBounds(p) || this.levels.inHazard(p)) {
       this.stats.falls++;
       this.respawnTimer = 0;
       this.camera.frozen = true;
       this.events.onFall?.();
       return;
+    }
+
+    const zone = this.levels.shiftZoneAt(p, this.frame.down);
+    if (zone !== this.zone) {
+      this.zone = zone;
+      if (zone) this.events.onZoneEnter?.(zone);
     }
 
     for (const c of this.levels.checkpoints) {
@@ -246,7 +267,8 @@ export class GameManager {
     this.levels.goal?.celebrate();
     const def = this.levels.level!;
     const { time, falls } = this.stats;
-    const stars = falls === 0 && time < 45 ? 3 : falls <= 2 && time < 75 ? 2 : 1;
+    // Stars reward clean, fast navigation. Gravity shifts deliberately don't count.
+    const stars = falls === 0 && time <= def.par.three ? 3 : falls <= 2 && time <= def.par.two ? 2 : 1;
     const key = `record:${def.id}`;
     const prev = this.save.load<LevelRecord>(key, { bestTime: null, bestStars: 0 });
     const newBest = prev.bestTime === null || time < prev.bestTime;

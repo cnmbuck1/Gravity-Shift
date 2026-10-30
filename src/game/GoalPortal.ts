@@ -12,10 +12,10 @@ export class GoalPortal {
   private sparks: THREE.Points;
   private completed = 0;
 
-  constructor(position: V3, upArr: V3) {
+  constructor(position: V3, upArr: V3, facingArr?: V3) {
     const up = new THREE.Vector3(...upArr).normalize();
     // Ring faces along whichever world axis is perpendicular to its surface normal (z preferred).
-    const facing = Math.abs(up.z) < 0.5 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+    const facing = facingArr ? new THREE.Vector3(...facingArr).normalize() : Math.abs(up.z) < 0.5 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
     const right = new THREE.Vector3().crossVectors(up, facing);
     this.object.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, facing));
     this.object.position.fromArray(position);

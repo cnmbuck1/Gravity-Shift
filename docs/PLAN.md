@@ -1,8 +1,17 @@
-# Gravity Shift — Technical Plan (v0.1)
+# Gravity Shift — Technical Plan (v0.2)
 
 _Tilt Your World. Defy Gravity._
 
-This covers the build sheet's section 17 items, updated for the core design change: **player-triggered 90° gravity shifts are the signature mechanic.**
+This covers the build sheet's section 17 items, updated for two design changes: player-triggered 90° gravity shifts (v0.1), then the correction that **Gravity Shift is ~80% continuous tilt labyrinth and ~20% gravity manipulation** (v0.2).
+
+## 0. Labyrinth direction (v0.2)
+
+- **Course architecture:** a level can carry a `maze` text grid (`#` wall, `.` floor, space = hole, `X` red energy floor, `P` purple zone floor, `B` filled by explicit platforms). `MazeBuilder` turns it into merged wall/floor meshes (a few draw calls), one collider per row run, cyan borders on wall tops, red edges around holes. Ramps and bridges are rotated `platforms`; sliding blocks are `movers` (kinematic bodies that push the ball).
+- **Gravity as an occasional event:** `shiftZones` restrict shifts to marked volumes, under a given gravity, in given directions. The HUD shows only the shifts that are possible right now; outside a zone the shift pad is hidden.
+- **Camera:** per-level settings (`camera`). Mazes use a steeper 58° pitch and 16 m distance, follow smoothly, and lead along the ball's velocity so the next corridor stays in view. It rotates only during a shift.
+- **Scoring:** per-level `par` times. Stars = time + falls; gravity shifts never affect stars.
+- **Benchmark level:** `levels/orbitalLabyrinth.ts`.
+
 
 ## 1. Architecture
 

@@ -3,12 +3,19 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsManager } from '../physics/PhysicsManager';
-import type { CheckpointDef, LevelDef, PlatformDef, PylonDef, V3 } from '../levels/LevelTypes';
+import type { CheckpointDef, LevelDef, MoverDef, PlatformDef, PylonDef, ShiftZoneDef, V3 } from '../levels/LevelTypes';
 import { COLORS, platformMaterial, trimMaterial, undersideMaterial } from '../render/Materials';
 import { GoalPortal } from './GoalPortal';
+import { buildMaze } from './MazeBuilder';
 
 const TRIM = 0.07;
 const TEXTURE_TILE = 4; // metres per texture repeat
+
+interface MoverRuntime {
+  def: MoverDef;
+  body: RAPIER.RigidBody;
+  mesh: THREE.Mesh;
+}
 
 export interface CheckpointRuntime {
   def: CheckpointDef;
@@ -26,6 +33,11 @@ export class LevelManager {
   readonly bounds = new THREE.Box3();
   checkpoints: CheckpointRuntime[] = [];
   goal: GoalPortal | null = null;
+  hazards: THREE.Box3[] = [];
+
+  private movers: MoverRuntime[] = [];
+  private hazardMaterial: THREE.MeshStandardMaterial | null = null;
+  private moverTime = 0;
 
   private body: RAPIER.RigidBody | null = null;
   private disposables: { dispose(): void }[] = [];
@@ -41,6 +53,14 @@ export class LevelManager {
     this.body = this.physics.world.createRigidBody(R.RigidBodyDesc.fixed());
 
     this.bounds.makeEmpty();
+    if (def.maze) {
+      const maze = buildMaze(def.maze, this.physics, this.body);
+      maze.objects.forEach((o) => this.group.add(o));
+      this.disposables.push(...maze.disposables);
+      this.hazards = maze.hazards;
+      this.hazardMaterial = maze.hazardMaterial;
+      this.bounds.union(maze.bounds);
+    }
     for (const p of def.platforms) {
       const half = new THREE.Vector3(...p.size).multiplyScalar(0.5);
       const c = new THREE.Vector3(...p.position);
@@ -50,15 +70,21 @@ export class LevelManager {
 
     for (const p of def.platforms) this.addPlatform(p, centre);
     for (const p of def.pylons ?? []) this.addPylon(p);
+    for (const m of def.movers ?? []) this.addMover(m);
+    this.moverTime = 0;
     this.checkpoints = (def.checkpoints ?? []).map((c) => this.addCheckpoint(c));
     if (def.goal) {
-      this.goal = new GoalPortal(def.goal.position, def.goal.up);
+      this.goal = new GoalPortal(def.goal.position, def.goal.up, def.goal.facing);
       this.group.add(this.goal.object);
     }
   }
 
   unload(): void {
     if (this.body) this.physics.world.removeRigidBody(this.body);
+    for (const m of this.movers) this.physics.world.removeRigidBody(m.body);
+    this.movers = [];
+    this.hazards = [];
+    this.hazardMaterial = null;
     this.body = null;
     this.group.clear();
     for (const d of this.disposables) d.dispose();
@@ -67,7 +93,34 @@ export class LevelManager {
     this.goal = null;
   }
 
+  /** Ball has touched red energy floor. */
+  inHazard(p: THREE.Vector3): boolean {
+    return this.hazards.some((h) => h.containsPoint(p));
+  }
+
+  /** The gravity zone containing `p` that is active under the current gravity, if any. */
+  shiftZoneAt(p: THREE.Vector3, down: THREE.Vector3): ShiftZoneDef | null {
+    for (const z of this.level?.shiftZones ?? []) {
+      if (z.whenDown && v3(z.whenDown).dot(down) < 0.99) continue;
+      if (new THREE.Box3(v3(z.min), v3(z.max)).containsPoint(p)) return z;
+    }
+    return null;
+  }
+
+  /** Advances moving obstacles; call before every physics step. */
+  stepMovers(dt: number): void {
+    this.moverTime += dt;
+    for (const m of this.movers) {
+      const t = ((this.moverTime / m.def.period + (m.def.phase ?? 0)) % 1 + 1) % 1;
+      // Smooth ping-pong: ease at both ends so the block visibly pauses before reversing.
+      const k = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
+      const p = v3(m.def.from).lerp(v3(m.def.to), k);
+      m.body.setNextKinematicTranslation({ x: p.x, y: p.y, z: p.z });
+    }
+  }
+
   isOutOfBounds(p: THREE.Vector3): boolean {
+    if (this.level?.killY !== undefined && p.y < this.level.killY) return true;
     const m = this.level?.fallMargin ?? 10;
     const b = this.bounds;
     return p.x < b.min.x - m || p.y < b.min.y - m || p.z < b.min.z - m || p.x > b.max.x + m || p.y > b.max.y + m || p.z > b.max.z + m;
@@ -75,6 +128,11 @@ export class LevelManager {
 
   update(dt: number, time: number): void {
     this.goal?.update(dt, time);
+    for (const m of this.movers) {
+      const t = m.body.translation();
+      m.mesh.position.set(t.x, t.y, t.z);
+    }
+    if (this.hazardMaterial) this.hazardMaterial.emissiveIntensity = 1.4 + Math.sin(time * 6) * 0.7;
     for (const c of this.checkpoints) {
       const mat = c.mesh.material as THREE.MeshStandardMaterial;
       mat.emissiveIntensity = c.active ? 2.5 + Math.sin(time * 4) * 0.6 : 0.8;
@@ -90,10 +148,15 @@ export class LevelManager {
     const dims = [sx, sy, sz].sort((a, b) => b - a);
     const geo = new RoundedBoxGeometry(sx, sy, sz, 2, Math.min(0.12, Math.min(sx, sy, sz) * 0.2));
     const mat = platformMaterial(dims[0] / TEXTURE_TILE, dims[1] / TEXTURE_TILE, role);
+    const holder = new THREE.Group();
+    holder.position.copy(pos);
+    const rot = p.rotation ? new THREE.Euler(...(p.rotation.map((d) => (d * Math.PI) / 180) as V3)) : null;
+    if (rot) holder.rotation.copy(rot);
+    this.group.add(holder);
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.copy(pos);
     mesh.receiveShadow = true;
-    this.group.add(mesh);
+    mesh.castShadow = role !== 'gravity';
+    holder.add(mesh);
     this.disposables.push(geo, mat);
 
     // Glowing trim along all 12 edges (merged into one draw call).
@@ -117,16 +180,17 @@ export class LevelManager {
     trims.forEach((g) => g.dispose());
     const trimMat = trimMaterial(role === 'gravity' ? 'gravity' : role);
     const trim = new THREE.Mesh(trimGeo, trimMat);
-    trim.position.copy(pos);
-    this.group.add(trim);
+    holder.add(trim);
     this.disposables.push(trimGeo, trimMat);
 
     // Mechanical underside detail on the face pointing away from the course.
-    if (role !== 'hazard') this.addUnderside(p, levelCentre);
+    if (role !== 'hazard' && !rot) this.addUnderside(p, levelCentre);
 
     const R = this.physics.rapier;
+    const q = new THREE.Quaternion().setFromEuler(rot ?? new THREE.Euler());
     const col = R.ColliderDesc.cuboid(sx / 2, sy / 2, sz / 2)
       .setTranslation(pos.x, pos.y, pos.z)
+      .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
       .setFriction(p.friction ?? 0.9)
       .setRestitution(0.15);
     this.physics.world.createCollider(col, this.body!);
@@ -200,6 +264,30 @@ export class LevelManager {
       .setFriction(0.5)
       .setRestitution(0.4);
     this.physics.world.createCollider(col, this.body!);
+  }
+
+  private addMover(def: MoverDef): void {
+    const R = this.physics.rapier;
+    const start = v3(def.from);
+    const body = this.physics.world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased().setTranslation(start.x, start.y, start.z));
+    this.physics.world.createCollider(R.ColliderDesc.cuboid(def.size[0] / 2, def.size[1] / 2, def.size[2] / 2).setFriction(0.6).setRestitution(0.3), body);
+
+    const geo = new RoundedBoxGeometry(def.size[0], def.size[1], def.size[2], 2, 0.08);
+    const mat = new THREE.MeshStandardMaterial({ color: '#4a3a1c', metalness: 0.85, roughness: 0.35, emissive: COLORS.moving, emissiveIntensity: 0.35 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = mesh.receiveShadow = true;
+    // Amber hazard stripes on top.
+    const stripeGeo = new THREE.BoxGeometry(def.size[0] * 1.01, 0.05, def.size[2] * 0.25);
+    const stripeMat = trimMaterial('moving');
+    for (const off of [-0.3, 0.3]) {
+      const s = new THREE.Mesh(stripeGeo, stripeMat);
+      s.position.set(0, def.size[1] / 2, off * def.size[2]);
+      mesh.add(s);
+    }
+    mesh.position.copy(start);
+    this.group.add(mesh);
+    this.disposables.push(geo, mat, stripeGeo, stripeMat);
+    this.movers.push({ def, body, mesh });
   }
 
   private addCheckpoint(def: CheckpointDef): CheckpointRuntime {

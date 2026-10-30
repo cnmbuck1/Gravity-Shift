@@ -30,6 +30,7 @@ html, body {
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 #ui button, #ui input, #ui .panel, #ui .seg { pointer-events: auto; }
+#ui .shift-pad .shift-btn { pointer-events: none; }
 
 button { font: inherit; color: inherit; cursor: pointer; }
 
@@ -99,12 +100,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
   box-shadow: 0 0 18px rgba(162, 75, 255, 0.45);
 }
 .shift-btn[data-shift='forward'] { transform: translateY(-14px); }
+.shift-pad { opacity: 0; transform: translateX(-50%) translateY(16px); transition: opacity 0.25s, transform 0.25s; pointer-events: none; }
+.shift-pad.active { opacity: 1; transform: translateX(-50%); }
+#ui .shift-pad.active .shift-btn { pointer-events: auto; animation: zone-pulse 1.4s ease-in-out infinite; }
+.shift-btn.hidden { visibility: hidden; }
+@keyframes zone-pulse { 50% { box-shadow: 0 0 34px rgba(162, 75, 255, 0.9); } }
 .shift-btn:active { filter: brightness(1.4); }
 .shift-btn.denied { animation: denied 0.3s; border-color: var(--red); }
 @keyframes denied { 25% { translate: -5px 0; } 75% { translate: 5px 0; } }
 .shift-label { grid-column: 1 / 4; font-size: 9px; letter-spacing: 0.25em; color: #c9a6ff; opacity: 0.8; }
 /* In touch mode the joystick uses the screen, so shift buttons move to the right edge. */
-.hud.touch-mode .shift-pad { left: auto; right: 10px; transform: none; grid-template-columns: 56px; }
+.hud.touch-mode .shift-pad, .hud.touch-mode .shift-pad.active { left: auto; right: 10px; transform: none; grid-template-columns: 56px; }
 .hud.touch-mode .shift-btn { width: 56px; height: 56px; }
 .hud.touch-mode .shift-btn[data-shift='forward'] { transform: none; order: -1; }
 .hud.touch-mode .shift-label { grid-column: 1; }

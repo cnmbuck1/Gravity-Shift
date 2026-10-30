@@ -15,6 +15,8 @@ export class UIManager {
   private debugEl!: HTMLElement;
   private shiftFlash!: HTMLElement;
   private toastTimer = 0;
+  private shiftPad!: HTMLElement;
+  private shiftKey = '';
   private settingsReturn: 'menu' | 'game' = 'menu';
 
   constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private levels: LevelDef[]) {
@@ -43,7 +45,7 @@ export class UIManager {
           ${this.levels.map((l, i) => `<button class="btn ${i === 0 ? 'primary' : ''}" data-level="${i}"><b>${i === 0 ? 'PLAY' : l.name.toUpperCase()}</b><small>${l.subtitle}</small></button>`).join('')}
           <button class="btn" data-action="settings">SETTINGS</button>
         </div>
-        <div class="menu-foot">v0.1 · Milestone 1 + gravity-shift prototype</div>
+        <div class="menu-foot">v0.2 · Orbital Labyrinth benchmark</div>
       </section>
 
       <section class="hud" data-screen="hud">
@@ -135,6 +137,7 @@ export class UIManager {
     this.toastEl = this.root.querySelector('.toast')!;
     this.debugEl = this.root.querySelector('.debug')!;
     this.shiftFlash = this.root.querySelector('.shift-flash')!;
+    this.shiftPad = this.root.querySelector('.shift-pad')!;
 
     this.root.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
@@ -217,6 +220,7 @@ export class UIManager {
       onShiftRejected: (reason) => this.toast(reason),
       onFall: () => this.toast('FELL INTO THE VOID'),
       onCheckpoint: () => this.toast('CHECKPOINT'),
+      onZoneEnter: (zone) => this.toast(zone.hint, 2400),
       onComplete: (stats, stars, record, newBest) => this.showComplete(stats, stars, record, newBest),
     };
   }
@@ -347,6 +351,14 @@ export class UIManager {
       this.bind('falls', String(g.stats.falls));
       this.bind('shifts', String(g.stats.shifts));
       this.bind('surface', g.surfaceName);
+      // Only offer the shifts that are possible right now.
+      const allowed = g.availableShifts();
+      const key = allowed.join(',');
+      if (key !== this.shiftKey) {
+        this.shiftKey = key;
+        this.shiftPad.classList.toggle('active', allowed.length > 0);
+        this.shiftPad.querySelectorAll<HTMLElement>('[data-shift]').forEach((b) => b.classList.toggle('hidden', !allowed.includes(b.dataset.shift as ShiftDirection)));
+      }
     }
     if (this.settings.get().showDebug) {
       const t = g.input.tilt;
