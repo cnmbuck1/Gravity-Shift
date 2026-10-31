@@ -4,6 +4,8 @@ import type { PhysicsManager } from '../physics/PhysicsManager';
 import type { CameraDef } from '../levels/LevelTypes';
 import type { GravityFrame } from './GravityFrame';
 
+/** How far (radians) the view rolls toward world up while the ball is on a wall. */
+const WALL_LIFT = 0.6;
 const DEFAULT_CAMERA: CameraDef = { pitchDeg: 40, distance: 10.5, lookAhead: 2.5 };
 const SHIFT_DURATION = 0.75;
 /** How far (m) the camera sinks after a falling ball before letting it vanish below. */
@@ -31,6 +33,8 @@ export class CameraController {
   frozen = false;
   /** Ball position the last time it touched a surface; falls are followed relative to it. */
   private groundRef = new THREE.Vector3();
+  /** Radians the view is rolled toward world up while on a wall (smoothed), see WALL_LIFT. */
+  private lift = 0;
   private fly: { curve: THREE.CatmullRomCurve3; t: number; duration: number; done: () => void } | null = null;
 
   constructor(private camera: THREE.PerspectiveCamera, private physics: PhysicsManager) {
@@ -134,7 +138,15 @@ export class CameraController {
     }
 
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.frameQ);
-    const camQ = this.frameQ.clone().multiply(this.pitchQ);
+    // On a wall the camera would sit level with the floor the ball came from, so that floor
+    // and its maze walls block the view. Roll the view about the forward axis so the camera
+    // rises toward the sky side and looks down across the wall instead.
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.frameQ);
+    const onWall = Math.abs(frame.down.y) < 0.5;
+    const liftTarget = onWall ? WALL_LIFT * Math.sign(right.y || 1) : 0;
+    this.lift += (liftTarget - this.lift) * (1 - Math.exp(-dt * 3));
+    const roll = new THREE.Quaternion().setFromAxisAngle(forward, this.lift);
+    const camQ = roll.clone().multiply(this.frameQ).multiply(this.pitchQ);
     const lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camQ);
     // A small constant forward bias keeps more of the course ahead than behind on screen.
     const lookAt = this.focus.clone().addScaledVector(forward, this.cfg.forwardBias ?? this.cfg.lookAhead * 0.35).add(this.lead);
@@ -143,7 +155,7 @@ export class CameraController {
     // above the look point so low maze walls right beside the ball don't count.
     let dist = this.cfg.distance;
     const back = lookDir.clone().negate();
-    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.frameQ);
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.frameQ).applyQuaternion(roll);
     const origin = lookAt.clone().addScaledVector(up, 1.2);
     this.ray.origin = { x: origin.x, y: origin.y, z: origin.z };
     this.ray.dir = { x: back.x, y: back.y, z: back.z };
