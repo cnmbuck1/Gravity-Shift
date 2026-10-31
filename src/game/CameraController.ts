@@ -27,6 +27,7 @@ export class CameraController {
   private cfg: CameraDef = DEFAULT_CAMERA;
   private ray: RAPIER.Ray;
   frozen = false;
+  private fly: { curve: THREE.CatmullRomCurve3; t: number; duration: number; done: () => void } | null = null;
 
   constructor(private camera: THREE.PerspectiveCamera, private physics: PhysicsManager) {
     this.ray = new physics.rapier.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 });
@@ -52,6 +53,26 @@ export class CameraController {
     this.frozen = false;
   }
 
+  get inFlyover(): boolean {
+    return this.fly !== null;
+  }
+
+  /**
+   * Course preview: glide over `points` (goal → … → start) high above the maze, descending
+   * into the normal gameplay view at the last point so the hand-off has no cut.
+   */
+  flyover(points: THREE.Vector3[], frame: GravityFrame, duration: number, done: () => void): void {
+    frame.quaternion(this.frameQ);
+    this.t = 1;
+    this.lead.set(0, 0, 0);
+    this.fly = { curve: new THREE.CatmullRomCurve3(points, false, 'centripetal'), t: 0, duration, done };
+  }
+
+  /** Jump to the end of the flyover. */
+  skipFlyover(): void {
+    if (this.fly) this.fly.t = this.fly.duration;
+  }
+
   /** Begin a smooth rotation to a new gravity frame. */
   transitionTo(frame: GravityFrame): void {
     this.fromQ.copy(this.frameQ);
@@ -60,6 +81,28 @@ export class CameraController {
   }
 
   update(dt: number, target: THREE.Vector3, velocity: { x: number; y: number; z: number }, frame: GravityFrame, ignore?: RAPIER.Collider): void {
+    if (this.fly) {
+      const f = this.fly;
+      f.t = Math.min(f.duration, f.t + dt);
+      const u = f.t / f.duration;
+      const e = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2;
+      const focus = f.curve.getPoint(e);
+      const pitch = THREE.MathUtils.lerp(80, this.cfg.pitchDeg, e);
+      const dist = THREE.MathUtils.lerp(this.cfg.distance * 1.9, this.cfg.distance, e);
+      const q = this.frameQ.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), (-pitch * Math.PI) / 180));
+      const back = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.frameQ);
+      const lookAt = focus.clone().addScaledVector(fwd, (this.cfg.forwardBias ?? this.cfg.lookAhead * 0.35) * e);
+      this.camera.position.copy(lookAt).addScaledVector(back, dist);
+      this.camera.quaternion.copy(q);
+      if (f.t >= f.duration) {
+        this.fly = null;
+        this.focus.copy(target);
+        f.done();
+      }
+      return;
+    }
+
     if (this.t < 1) {
       this.t = Math.min(1, this.t + dt / SHIFT_DURATION);
       const e = this.t < 0.5 ? 4 * this.t ** 3 : 1 - (-2 * this.t + 2) ** 3 / 2;
@@ -73,16 +116,16 @@ export class CameraController {
 
       // Velocity look-ahead in the floor plane, heavily smoothed so the view never jerks.
       const v = new THREE.Vector3(velocity.x, velocity.y, velocity.z);
-      v.addScaledVector(frame.down, -v.dot(frame.down)).multiplyScalar(0.35);
+      v.addScaledVector(frame.down, -v.dot(frame.down)).multiplyScalar(0.3);
       if (v.length() > this.cfg.lookAhead) v.setLength(this.cfg.lookAhead);
-      this.lead.lerp(v, 1 - Math.exp(-dt * 1.8));
+      this.lead.lerp(v, 1 - Math.exp(-dt * 1.5));
     }
 
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.frameQ);
     const camQ = this.frameQ.clone().multiply(this.pitchQ);
     const lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camQ);
     // A small constant forward bias keeps more of the course ahead than behind on screen.
-    const lookAt = this.focus.clone().addScaledVector(forward, this.cfg.lookAhead * 0.35).add(this.lead);
+    const lookAt = this.focus.clone().addScaledVector(forward, this.cfg.forwardBias ?? this.cfg.lookAhead * 0.35).add(this.lead);
 
     // Pull the camera in if geometry sits between it and the ball. The ray starts a little
     // above the look point so low maze walls right beside the ball don't count.

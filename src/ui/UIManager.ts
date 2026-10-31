@@ -17,6 +17,7 @@ export class UIManager {
   private toastTimer = 0;
   private shiftPad!: HTMLElement;
   private shiftKey = '';
+  private previewDone: (() => void) | null = null;
   private settingsReturn: 'menu' | 'game' = 'menu';
 
   constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private levels: LevelDef[]) {
@@ -50,13 +51,11 @@ export class UIManager {
 
       <section class="hud" data-screen="hud">
         <div class="hud-top">
-          <div class="hud-stats">
-            <div class="level-name" data-bind="level"></div>
-            <div class="stat-row">
-              <div class="stat"><small>TIME</small><b data-bind="time">0.0</b></div>
-              <div class="stat"><small>FALLS</small><b data-bind="falls">0</b></div>
-              <div class="stat shifts-stat"><small>SHIFTS</small><b data-bind="shifts">0</b></div>
-            </div>
+          <div class="hud-stats" aria-label="Run stats">
+            <span class="stat" title="Time"><i class="ico">◷</i><b data-bind="time">0.0</b></span>
+            <span class="stat" title="Falls"><i class="ico">↓</i><b data-bind="falls">0</b></span>
+            <span class="stat shifts-stat" title="Gravity shifts"><i class="ico">⟲</i><b data-bind="shifts">0</b></span>
+            <span class="gravity-ind" title="Gravity"><i class="g-arrow">▼</i><b data-bind="surface-short">F</b></span>
           </div>
           <div class="hud-buttons">
             <button class="icon-btn" data-action="pause" aria-label="Pause">❚❚</button>
@@ -64,7 +63,6 @@ export class UIManager {
             <button class="icon-btn" data-action="reset" aria-label="Reset">↺</button>
           </div>
         </div>
-        <div class="gravity-chip"><span class="g-arrow">▼</span> GRAVITY · <b data-bind="surface">FLOOR</b></div>
         <div class="shift-pad">
           <button class="shift-btn" data-shift="left" aria-label="Shift gravity left">◀</button>
           <button class="shift-btn" data-shift="forward" aria-label="Shift gravity forward">▲</button>
@@ -72,6 +70,7 @@ export class UIManager {
           <div class="shift-label">SHIFT GRAVITY</div>
         </div>
         <div class="shift-flash"></div>
+        <div class="flyover-skip">TAP TO SKIP PREVIEW</div>
       </section>
 
       <section class="screen panel-screen" data-screen="pause">
@@ -122,8 +121,13 @@ export class UIManager {
           </div>
           <label class="row">Sound effects <input type="checkbox" data-setting="sfx" /></label>
           <label class="row">Music <input type="checkbox" data-setting="music" /></label>
+          <label class="row">Haptics <input type="checkbox" data-setting="haptics" /></label>
+          <label class="row">Course preview <input type="checkbox" data-setting="preview" /></label>
+          <div class="row">Physics
+            <span class="seg" data-setting="physics"><button data-value="refined">REFINED</button><button data-value="classic">CLASSIC</button></span>
+          </div>
           <label class="row">Debug readout <input type="checkbox" data-setting="showDebug" /></label>
-          <div class="note">Audio arrives in Milestone 3; these toggles are saved now.</div>
+          <div class="note">Physics: REFINED is the new tuning; CLASSIC is the previous build, kept for comparison. Music arrives later; its toggle is saved now.</div>
           <button class="btn primary" data-action="close-settings">DONE</button>
         </div>
       </section>
@@ -139,6 +143,11 @@ export class UIManager {
     this.shiftFlash = this.root.querySelector('.shift-flash')!;
     this.shiftPad = this.root.querySelector('.shift-pad')!;
 
+    // iOS only allows audio to start from a user gesture. Any tap also skips the preview.
+    window.addEventListener('pointerdown', () => {
+      this.game.audio.unlock();
+      this.game.skipPreview();
+    }, { capture: true });
     this.root.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
       if (!t) return;
@@ -221,6 +230,11 @@ export class UIManager {
       onFall: () => this.toast('FELL INTO THE VOID'),
       onCheckpoint: () => this.toast('CHECKPOINT'),
       onZoneEnter: (zone) => this.toast(zone.hint, 2400),
+      onPreviewEnd: () => {
+        this.hud.classList.remove('flyover');
+        this.previewDone?.();
+        this.previewDone = null;
+      },
       onComplete: (stats, stars, record, newBest) => this.showComplete(stats, stars, record, newBest),
     };
   }
@@ -233,9 +247,14 @@ export class UIManager {
     const def = this.levels[index];
     this.game.loadLevel(def);
     this.hud.classList.toggle('no-shifts', !def.allowShifts);
-    this.bind('level', def.name.toUpperCase());
     this.show('hud');
-    if (await permission) await this.calibrate();
+    const previewing = this.game.startPreview(this.settings.get().preview);
+    this.hud.classList.toggle('flyover', previewing);
+    this.toast(def.name.toUpperCase(), previewing ? 3000 : 1600);
+    const tiltOk = await permission;
+    // Calibrate after the preview, once the player has settled into a grip.
+    if (previewing) await new Promise<void>((r) => (this.previewDone = r));
+    if (tiltOk) await this.calibrate();
   }
 
   /** Requests motion permission; falls back to touch controls when unavailable. */
@@ -256,8 +275,8 @@ export class UIManager {
       return;
     }
     this.toast('HOLD STEADY…', 2000);
-    const ok = await input.calibration.calibrate(300);
-    this.toast(ok ? '✓ CALIBRATED' : 'Calibration failed · try again');
+    const result = await input.calibration.calibrate(300);
+    this.toast(result === 'ok' ? '✓ CALIBRATED' : result === 'unsteady' ? 'CALIBRATED · phone was moving, tap ◎ to redo' : 'Calibration failed · try again', result === 'ok' ? 1400 : 2600);
   }
 
   private action(a: string): void {
@@ -346,11 +365,11 @@ export class UIManager {
   private tick = (): void => {
     requestAnimationFrame(this.tick);
     const g = this.game;
-    if (g.state === 'playing' || g.state === 'paused') {
+    if (g.state === 'playing' || g.state === 'paused' || g.state === 'preview') {
       this.bind('time', g.stats.time.toFixed(1));
       this.bind('falls', String(g.stats.falls));
       this.bind('shifts', String(g.stats.shifts));
-      this.bind('surface', g.surfaceName);
+      this.bind('surface-short', g.surfaceName[0]);
       // Only offer the shifts that are possible right now.
       const allowed = g.availableShifts();
       const key = allowed.join(',');

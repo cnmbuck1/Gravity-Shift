@@ -3,32 +3,9 @@ import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsManager } from '../physics/PhysicsManager';
 import type { GravityFrame } from './GravityFrame';
 import { COLORS } from '../render/Materials';
+import { REFINED, type PhysicsTuning } from './PhysicsTuning';
 
 export const BALL_RADIUS = 0.5;
-
-/**
- * Tuning for how the sphere responds to input. Everything that affects feel is here.
- * Input is turned into an acceleration in the plane of the current floor, which Rapier
- * integrates together with gravity, friction and collisions. Rolling comes from contact
- * friction, so the spin you see is the physics engine's, not an animation.
- */
-export const BALL_TUNING = {
-  /** m/s² at full tilt (≈ a real ball on a ~60° slope; games need more than reality). */
-  maxAccel: 17,
-  /** Extra acceleration when pushing against current velocity, makes stopping crisp. */
-  brakeBoost: 1.5,
-  /** Horizontal speed cap, m/s. Above it input can only steer or slow, not speed up. */
-  maxSpeed: 11,
-  /** Fraction of control while airborne. */
-  airControl: 0.25,
-  /** Rolling resistance deceleration, m/s², when grounded. */
-  rollingResistance: 0.7,
-  friction: 1.0,
-  restitution: 0.25,
-  density: 2.0,
-  linearDamping: 0.04,
-  angularDamping: 0.12,
-};
 
 /**
  * The player sphere: Rapier dynamic body + metallic mesh. Records previous and current
@@ -39,6 +16,13 @@ export class BallController {
   readonly body: RAPIER.RigidBody;
   readonly collider: RAPIER.Collider;
   grounded = false;
+  /** Active feel profile (see PhysicsTuning). Input becomes acceleration in the floor plane,
+   * which Rapier integrates with gravity, friction and collisions; rolling comes from contact
+   * friction, so the spin you see is simulated, not animated. */
+  tuning: PhysicsTuning = REFINED;
+  /** Set after each step when the ball's velocity changed more than its forces explain. */
+  lastImpact = 0;
+  private expectedVel = new THREE.Vector3();
   /** Seconds since last grounded; used for a short "coyote" window. */
   airTime = 0;
 
@@ -59,15 +43,15 @@ export class BallController {
     this.body = physics.world.createRigidBody(
       R.RigidBodyDesc.dynamic()
         .setCcdEnabled(true)
-        .setLinearDamping(BALL_TUNING.linearDamping)
-        .setAngularDamping(BALL_TUNING.angularDamping)
+        .setLinearDamping(REFINED.linearDamping)
+        .setAngularDamping(REFINED.angularDamping)
         .setCanSleep(false),
     );
     this.collider = physics.world.createCollider(
       R.ColliderDesc.ball(BALL_RADIUS)
-        .setDensity(BALL_TUNING.density)
-        .setFriction(BALL_TUNING.friction)
-        .setRestitution(BALL_TUNING.restitution)
+        .setDensity(REFINED.density)
+        .setFriction(REFINED.friction)
+        .setRestitution(REFINED.restitution)
         .setFrictionCombineRule(R.CoefficientCombineRule.Max),
       this.body,
     );
@@ -87,6 +71,15 @@ export class BallController {
     const band2 = band.clone();
     band2.rotation.y = Math.PI / 2;
     this.mesh.add(band2);
+    // Faint cyan rim so the sphere stays visible against bright metal and dark void alike.
+    const rim = new THREE.Mesh(
+      new THREE.SphereGeometry(BALL_RADIUS * 1.08, 32, 16),
+      new THREE.MeshBasicMaterial({ color: COLORS.safe, transparent: true, opacity: 0.16, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    this.mesh.add(rim);
+    // Small cyan under-light: a pool of light on the floor marks the ball's position.
+    const under = new THREE.PointLight(COLORS.safe, 2.2, 2.6, 2);
+    this.mesh.add(under);
     scene.add(this.mesh);
 
     // Respawn flash.
@@ -120,6 +113,8 @@ export class BallController {
     this.currPos.copy(p);
     this.prevPos.copy(p);
     this.vel.set(0, 0, 0);
+    this.expectedVel.set(0, 0, 0);
+    this.lastImpact = 0;
     (this.glow.material as THREE.MeshBasicMaterial).opacity = 0.9;
   }
 
@@ -128,7 +123,7 @@ export class BallController {
    * `input` is (x right, y forward), |input| <= 1, expressed in the gravity frame.
    */
   applyInput(input: [number, number], frame: GravityFrame, dt: number): void {
-    const T = BALL_TUNING;
+    const T = this.tuning;
     const lv = this.body.linvel();
     this.vel.set(lv.x, lv.y, lv.z);
     this.updateGrounded(frame, dt);
@@ -160,6 +155,9 @@ export class BallController {
 
     const m = this.body.mass();
     this.body.applyImpulse({ x: accel.x * m * dt, y: accel.y * m * dt, z: accel.z * m * dt }, true);
+    // What the velocity should be after this step if nothing is hit (used for impact detection).
+    const g = this.physics.world.gravity;
+    this.expectedVel.copy(this.vel).addScaledVector(accel, dt).add(new THREE.Vector3(g.x, g.y, g.z).multiplyScalar(dt));
 
     // Soft speed limit for anything that slips past (falls are excluded: only planar).
     if (planarSpeed > T.maxSpeed * 1.25) {
@@ -168,8 +166,20 @@ export class BallController {
     }
   }
 
+  applyTuning(t: PhysicsTuning): void {
+    this.tuning = t;
+    this.body.setLinearDamping(t.linearDamping);
+    this.body.setAngularDamping(t.angularDamping);
+    this.collider.setRestitution(t.restitution);
+    this.collider.setFriction(t.friction);
+  }
+
   /** Called after each fixed physics step. */
   recordState(): void {
+    const lv = this.body.linvel();
+    // Any velocity change beyond applied forces + gravity came from a contact: that's an impact.
+    // Resting on a floor gives ~g·dt here, well below the threshold the feedback system uses.
+    this.lastImpact = Math.hypot(lv.x - this.expectedVel.x, lv.y - this.expectedVel.y, lv.z - this.expectedVel.z);
     this.prevPos.copy(this.currPos);
     this.prevRot.copy(this.currRot);
     const t = this.body.translation();

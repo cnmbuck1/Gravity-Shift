@@ -1,4 +1,5 @@
 import type { SaveManager } from './SaveManager';
+import type { PhysicsProfile } from '../game/PhysicsTuning';
 
 export type ControlMode = 'tilt' | 'touch';
 export type GraphicsQuality = 'low' | 'high';
@@ -15,17 +16,24 @@ export interface Settings {
   music: boolean;
   graphics: GraphicsQuality;
   showDebug: boolean;
+  physics: PhysicsProfile;
+  haptics: boolean;
+  /** Show the course flyover before the first attempt at a level. */
+  preview: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   controlMode: 'tilt',
   tiltSensitivity: 1,
   deadZoneDeg: 1.5,
-  smoothing: 0.045,
+  smoothing: 0.035,
   sfx: true,
   music: true,
   graphics: 'high',
   showDebug: false,
+  physics: 'refined',
+  haptics: true,
+  preview: true,
 };
 
 type Listener = (s: Readonly<Settings>) => void;

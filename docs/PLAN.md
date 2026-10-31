@@ -1,4 +1,4 @@
-# Gravity Shift — Technical Plan (v0.2)
+# Gravity Shift — Technical Plan (v0.3)
 
 _Tilt Your World. Defy Gravity._
 
@@ -11,6 +11,13 @@ This covers the build sheet's section 17 items, updated for two design changes: 
 - **Camera:** per-level settings (`camera`). Mazes use a steeper 58° pitch and 16 m distance, follow smoothly, and lead along the ball's velocity so the next corridor stays in view. It rotates only during a shift.
 - **Scoring:** per-level `par` times. Stars = time + falls; gravity shifts never affect stars.
 - **Benchmark level:** `levels/orbitalLabyrinth.ts`.
+
+### v0.3 refinements
+- **Camera:** maze camera at 64° pitch, 17 m, constant 1.2 m forward bias plus at most 2.2 m velocity look-ahead (smoothed), so the ball sits just below screen centre. Optional 4.5 s flyover (goal → checkpoint → start) on the first attempt only; any tap skips.
+- **HUD:** single 32 px stats strip (time, falls, shifts, gravity badge), 36 px buttons with 44 px touch targets, safe-area aware.
+- **Physics:** `game/PhysicsTuning.ts` holds CLASSIC (previous) and REFINED profiles, switchable in Settings. Measured on a flat floor (`tests/physicsProfiles.test.ts`): braking from 6 m/s 0.90 → 0.66 m, coasting from 4 m/s 12.1 → 7.6 m, top speed 11 → 9 m/s, 0–5 m/s at half tilt 0.93 → 1.08 s.
+- **Calibration:** only accepts a 300 ms window in which the phone moved less than 3°; retries for up to 1.5 s, then uses the steadiest window and says so.
+- **Feedback:** synthesised Web Audio (rolling layer tied to speed, metallic impacts, checkpoint, shift, fall, goal); Capacitor Haptics for impacts (throttled), shifts, checkpoint, falls and goal. Impacts are detected as velocity changes that applied forces and gravity don't explain.
 
 
 ## 1. Architecture

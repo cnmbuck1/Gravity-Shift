@@ -10,6 +10,9 @@ export class GoalPortal {
   private ring: THREE.Mesh;
   private inner: THREE.Mesh;
   private sparks: THREE.Points;
+  private outer: THREE.Group;
+  private beam: THREE.Mesh;
+  private rise: THREE.Points;
   private completed = 0;
 
   constructor(position: V3, upArr: V3, facingArr?: V3) {
@@ -49,6 +52,38 @@ export class GoalPortal {
     this.sparks = new THREE.Points(g, new THREE.PointsMaterial({ color: PORTAL_COLOR, size: 0.08, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
     this.object.add(this.sparks);
 
+    // Segmented outer ring that counter-rotates around the core ring.
+    this.outer = new THREE.Group();
+    this.outer.position.y = 1.3;
+    const segMat = new THREE.MeshStandardMaterial({ color: '#2a3446', metalness: 0.95, roughness: 0.25, emissive: PORTAL_COLOR, emissiveIntensity: 0.6 });
+    for (let i = 0; i < 6; i++) {
+      const seg = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.07, 8, 16, Math.PI / 4.5), segMat);
+      seg.rotation.z = (i / 6) * Math.PI * 2;
+      this.outer.add(seg);
+    }
+    this.object.add(this.outer);
+
+    // Vertical light column visible from anywhere in the maze.
+    this.beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 1.25, 7, 32, 1, true),
+      new THREE.MeshBasicMaterial({ color: PORTAL_COLOR, transparent: true, opacity: 0.1, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    this.beam.position.y = 3.5;
+    this.object.add(this.beam);
+
+    // Motes rising off the base.
+    const rn = 60;
+    const rp = new Float32Array(rn * 3);
+    for (let i = 0; i < rn; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 0.4 + Math.random() * 0.8;
+      rp.set([Math.cos(a) * r, Math.random() * 4, Math.sin(a) * r], i * 3);
+    }
+    const rg = new THREE.BufferGeometry();
+    rg.setAttribute('position', new THREE.BufferAttribute(rp, 3));
+    this.rise = new THREE.Points(rg, new THREE.PointsMaterial({ color: PORTAL_COLOR, size: 0.07, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.object.add(this.rise);
+
     const light = new THREE.PointLight(PORTAL_COLOR, 8, 7, 1.5);
     light.position.y = 1.3;
     this.object.add(light);
@@ -71,5 +106,15 @@ export class GoalPortal {
     this.inner.scale.setScalar(pulse * burst);
     (this.inner.material as THREE.MeshBasicMaterial).opacity = this.completed > 0 ? 0.5 * this.completed + 0.18 : 0.18 + Math.sin(time * 2) * 0.05;
     this.sparks.rotation.z = time * 0.8;
+    this.outer.rotation.z = -time * 0.5;
+    this.outer.scale.setScalar(burst);
+    (this.beam.material as THREE.MeshBasicMaterial).opacity = 0.08 + Math.sin(time * 2.2) * 0.03 + (this.completed > 0 ? this.completed * 0.3 : 0);
+    const rp = this.rise.geometry.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < rp.count; i++) {
+      let y = rp.getY(i) + dt * (0.6 + (i % 5) * 0.15);
+      if (y > 4) y = 0;
+      rp.setY(i, y);
+    }
+    rp.needsUpdate = true;
   }
 }

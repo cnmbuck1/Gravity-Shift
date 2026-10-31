@@ -20,6 +20,7 @@ interface MoverRuntime {
 export interface CheckpointRuntime {
   def: CheckpointDef;
   mesh: THREE.Mesh;
+  beam: THREE.Mesh;
   active: boolean;
 }
 
@@ -37,6 +38,7 @@ export class LevelManager {
 
   private movers: MoverRuntime[] = [];
   private hazardMaterial: THREE.MeshStandardMaterial | null = null;
+  private edgeMaterial: THREE.MeshStandardMaterial | null = null;
   private moverTime = 0;
 
   private body: RAPIER.RigidBody | null = null;
@@ -59,6 +61,7 @@ export class LevelManager {
       this.disposables.push(...maze.disposables);
       this.hazards = maze.hazards;
       this.hazardMaterial = maze.hazardMaterial;
+      this.edgeMaterial = maze.edgeMaterial;
       this.bounds.union(maze.bounds);
     }
     for (const p of def.platforms) {
@@ -85,6 +88,7 @@ export class LevelManager {
     this.movers = [];
     this.hazards = [];
     this.hazardMaterial = null;
+    this.edgeMaterial = null;
     this.body = null;
     this.group.clear();
     for (const d of this.disposables) d.dispose();
@@ -132,10 +136,16 @@ export class LevelManager {
       const t = m.body.translation();
       m.mesh.position.set(t.x, t.y, t.z);
     }
-    if (this.hazardMaterial) this.hazardMaterial.emissiveIntensity = 1.4 + Math.sin(time * 6) * 0.7;
+    if (this.hazardMaterial) {
+      this.hazardMaterial.emissiveIntensity = 1.3 + Math.sin(time * 6) * 0.6;
+      this.hazardMaterial.map!.offset.x = (time * 0.6) % 1;
+    }
+    if (this.edgeMaterial) this.edgeMaterial.emissiveIntensity = 1.6 + Math.sin(time * 4) * 0.9;
     for (const c of this.checkpoints) {
       const mat = c.mesh.material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity = c.active ? 2.5 + Math.sin(time * 4) * 0.6 : 0.8;
+      mat.emissiveIntensity = c.active ? 2.5 + Math.sin(time * 4) * 0.6 : 0.8 + Math.sin(time * 2) * 0.3;
+      const bm = c.beam.material as THREE.MeshBasicMaterial;
+      bm.opacity += ((c.active ? 0.14 + Math.sin(time * 3) * 0.04 : 0) - bm.opacity) * Math.min(1, dt * 4);
     }
   }
 
@@ -285,28 +295,74 @@ export class LevelManager {
       mesh.add(s);
     }
     mesh.position.copy(start);
+    // Amber running light on top so the piston is readable even at the edge of the screen.
+    const lamp = new THREE.PointLight(COLORS.moving, 3, 3.5, 1.8);
+    lamp.position.y = def.size[1] / 2 + 0.3;
+    mesh.add(lamp);
     this.group.add(mesh);
-    this.disposables.push(geo, mat, stripeGeo, stripeMat);
+
+    // Recessed guide track with glowing amber rails, showing exactly where the piston travels.
+    const end = v3(def.to);
+    const travel = end.clone().sub(start);
+    const len = travel.length() + Math.max(def.size[0], def.size[2]);
+    const alongX = Math.abs(travel.x) > Math.abs(travel.z);
+    const trackW = alongX ? def.size[2] : def.size[0];
+    const mid = start.clone().add(end).multiplyScalar(0.5);
+    const floorY = start.y - def.size[1] / 2;
+    const trackGeo = new THREE.BoxGeometry(alongX ? len : trackW + 0.2, 0.02, alongX ? trackW + 0.2 : len);
+    const trackMat = new THREE.MeshStandardMaterial({ color: '#141820', metalness: 0.9, roughness: 0.5 });
+    const track = new THREE.Mesh(trackGeo, trackMat);
+    track.position.set(mid.x, floorY + 0.011, mid.z);
+    track.receiveShadow = true;
+    this.group.add(track);
+    const railGeo = new THREE.BoxGeometry(alongX ? len : 0.05, 0.03, alongX ? 0.05 : len);
+    for (const sgn of [-1, 1]) {
+      const rail = new THREE.Mesh(railGeo, stripeMat);
+      const off = (trackW / 2 + 0.1) * sgn;
+      rail.position.set(mid.x + (alongX ? 0 : off), floorY + 0.02, mid.z + (alongX ? off : 0));
+      this.group.add(rail);
+    }
+    this.disposables.push(geo, mat, stripeGeo, stripeMat, trackGeo, trackMat, railGeo);
     this.movers.push({ def, body, mesh });
   }
 
   private addCheckpoint(def: CheckpointDef): CheckpointRuntime {
     const up = new THREE.Vector3(...def.frame.down).negate();
-    const geo = new THREE.RingGeometry(0.75, 0.95, 40);
-    const mat = new THREE.MeshStandardMaterial({
-      color: COLORS.safe,
-      emissive: COLORS.safe,
-      emissiveIntensity: 0.8,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.9,
-    });
+    const holder = new THREE.Group();
+    holder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), up);
+    holder.position.fromArray(def.position);
+    this.group.add(holder);
+
+    const geo = new THREE.RingGeometry(1.05, 1.3, 48);
+    geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshStandardMaterial({ color: '#3dffc8', emissive: '#3dffc8', emissiveIntensity: 0.8, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), up);
-    mesh.position.fromArray(def.position).addScaledVector(up, 0.02);
-    this.group.add(mesh);
-    this.disposables.push(geo, mat);
-    return { def, mesh, active: false };
+    mesh.position.y = 0.02;
+    holder.add(mesh);
+
+    // Four bevelled bollards frame the pad so it reads as a place, not just a decal.
+    const postGeo = new RoundedBoxGeometry(0.22, 0.5, 0.22, 2, 0.05);
+    const postMat = new THREE.MeshStandardMaterial({ color: '#b9c3d2', metalness: 0.95, roughness: 0.25 });
+    const capMat = trimMaterial('safe');
+    const capGeo = new THREE.BoxGeometry(0.24, 0.05, 0.24);
+    for (const [px, pz] of [[-1.25, -1.25], [1.25, -1.25], [-1.25, 1.25], [1.25, 1.25]]) {
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(px, 0.25, pz);
+      post.castShadow = true;
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.y = 0.26;
+      post.add(cap);
+      holder.add(post);
+    }
+
+    // Light column that appears once the checkpoint is active.
+    const beamGeo = new THREE.CylinderGeometry(1.0, 1.15, 3, 32, 1, true);
+    const beamMat = new THREE.MeshBasicMaterial({ color: '#3dffc8', transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.position.y = 1.5;
+    holder.add(beam);
+    this.disposables.push(geo, mat, postGeo, postMat, capMat, capGeo, beamGeo, beamMat);
+    return { def, mesh, beam, active: false };
   }
 }
 

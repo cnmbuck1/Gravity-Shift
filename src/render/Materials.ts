@@ -96,13 +96,33 @@ export function trimMaterial(role: SurfaceRole): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 2.2, metalness: 0.2, roughness: 0.4 });
 }
 
+/** Diagonal warning stripes for red energy floor; scroll its offset to animate. */
+export function hazardStripeTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#5a0a14';
+  g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#ff4a5c';
+  for (let i = -64; i < 128; i += 16) {
+    g.beginPath();
+    g.moveTo(i, 0); g.lineTo(i + 8, 0); g.lineTo(i + 8 + 64, 64); g.lineTo(i + 64, 64);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
 /** Maze floor: dark brushed metal panels, tiled in world space (see MazeBuilder). */
 export function mazeFloorMaterial(): THREE.MeshStandardMaterial {
   shared ??= brushedMetalTexture();
   const map = shared.map.clone();
   const rough = shared.rough.clone();
   map.needsUpdate = rough.needsUpdate = true;
-  return new THREE.MeshStandardMaterial({ color: '#8d97a8', map, roughnessMap: rough, metalness: 0.8, roughness: 0.6, envMapIntensity: 0.8 });
+  // Darker than the walls so corridors read instantly and the chrome ball stands out.
+  return new THREE.MeshStandardMaterial({ color: '#6b7484', map, roughnessMap: rough, metalness: 0.75, roughness: 0.62, envMapIntensity: 0.7 });
 }
 
 /** Maze walls: brighter polished metal so the corridors read clearly against the floor. */
@@ -110,5 +130,5 @@ export function mazeWallMaterial(): THREE.MeshStandardMaterial {
   shared ??= brushedMetalTexture();
   const map = shared.map.clone();
   map.needsUpdate = true;
-  return new THREE.MeshStandardMaterial({ color: '#dfe6f2', map, metalness: 0.9, roughness: 0.32, envMapIntensity: 1.2 });
+  return new THREE.MeshStandardMaterial({ color: '#cfd7e4', map, metalness: 0.95, roughness: 0.26, envMapIntensity: 1.35 });
 }

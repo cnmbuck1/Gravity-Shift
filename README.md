@@ -2,7 +2,7 @@
 
 _Tilt Your World. Defy Gravity._ A futuristic 3D physics puzzle game for iPhone: roll a metallic sphere by tilting your phone, and shift gravity 90° to turn walls and ceilings into floors.
 
-**Status:** v0.2: Orbital Labyrinth benchmark maze (about 80% tilt labyrinth, 20% gravity shifting) on the Milestone 1 tilt-control foundation. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
 
 Stack: Three.js · TypeScript · Vite · Rapier · Capacitor (iOS).
 
@@ -43,9 +43,11 @@ After code changes run `npm run ios:sync` again, then Run in Xcode.
 
 ## What to try
 
-- **Play: Orbital Labyrinth** (target 45–60 s). Roll through the maze: weave past three holes, time the amber sliding block, cross the checkpoint, climb the ramp and cross the narrow bridge over the chasm, dodge the red energy strips, and reach the portal. No gravity shift is needed.
-  - **Optional shortcut:** in the purple pad by the tall purple wall (near the start), the ▶ button appears. Shift onto the wall, climb a little (tilt right), roll forward over the chasm, and at the purple band near the far end press ◀ to drop back into the maze.
+- **Play: Orbital Labyrinth** (target 45–60 s). The first time you play, a 4–5 second flyover previews the course (tap to skip; it won't replay on retries). Roll through the maze: weave past three holes in the wide hall, climb the narrow two-wide passage, time the amber piston, reach the checkpoint pad in the hub, climb the ramp and cross the narrow raised bridge, dodge the red energy strips, and roll into the portal plaza. No gravity shift is needed.
+  - **Skywalk shortcut:** from the hole hall, a narrow unwalled catwalk leads straight north over a gap into the piston corridor.
+  - **Gravity shortcut:** on the purple pad by the tall purple wall (near the start), ▶ appears. Shift onto the wall, roll north over the chasm, and at the purple band press ◀ to drop back in near the end.
   - Stars depend on time and falls only: 3★ ≤ 50 s with no falls, 2★ ≤ 80 s with at most 2 falls.
+- **Physics comparison:** Settings → Physics switches between REFINED (new) and CLASSIC (previous build). `npm test` prints a side-by-side table (time to 5 m/s, top speed, braking distance, coasting distance).
 - **Shift Lab:** the earlier proof of concept, where shifts work anywhere (floor → wall → ceiling).
 - **Test Deck:** a flat platform with no goal for judging tilt feel. Turn on **Settings → Debug readout** to see tilt angles, sensor rate and FPS.
 - Hold the phone however is comfortable, then tap **◎** to make that the neutral pose.

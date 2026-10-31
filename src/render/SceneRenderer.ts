@@ -63,6 +63,8 @@ export class SceneRenderer {
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    // iOS changes the visible area without a window resize when the browser bars move.
+    window.visualViewport?.addEventListener('resize', () => this.resize());
   }
 
   setQuality(q: GraphicsQuality): void {

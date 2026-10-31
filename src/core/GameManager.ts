@@ -8,14 +8,19 @@ import { GravityFrame, type ShiftDirection } from '../game/GravityFrame';
 import { LevelManager, v3 } from '../game/LevelManager';
 import type { GravityFrameDef, LevelDef, ShiftZoneDef } from '../levels/LevelTypes';
 import type { SettingsManager, Settings } from '../settings/SettingsManager';
+import { PROFILES } from '../game/PhysicsTuning';
+import { AudioManager } from '../feedback/AudioManager';
+import { HapticsManager } from '../feedback/HapticsManager';
 import type { SaveManager } from '../settings/SaveManager';
 
 export const GRAVITY = 14;
 const RESPAWN_DELAY = 0.7;
 /** Short grace period after leaving a surface during which a shift is still allowed. */
 const COYOTE_TIME = 0.15;
+/** Velocity change (m/s) in one step, beyond applied forces, that counts as a collision. */
+const IMPACT_THRESHOLD = 1.6;
 
-export type GameState = 'menu' | 'playing' | 'paused' | 'complete';
+export type GameState = 'menu' | 'preview' | 'playing' | 'paused' | 'complete';
 
 export interface RunStats {
   time: number;
@@ -34,6 +39,7 @@ export interface GameEvents {
   onFall?(): void;
   onCheckpoint?(): void;
   onZoneEnter?(zone: ShiftZoneDef): void;
+  onPreviewEnd?(): void;
   onComplete?(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void;
 }
 
@@ -57,6 +63,9 @@ export class GameManager {
   private fpsTime = 0;
   /** Gravity zone the ball is currently in (only meaningful for levels with zones). */
   zone: ShiftZoneDef | null = null;
+  readonly audio = new AudioManager();
+  readonly haptics = new HapticsManager();
+  private frameImpact = 0;
 
   private constructor(
     readonly physics: PhysicsManager,
@@ -117,6 +126,36 @@ export class GameManager {
     this.state = 'playing';
   }
 
+  /**
+   * Plays the course flyover if previews are on and this level hasn't been previewed
+   * before. Returns false (and does nothing) otherwise. Retries never replay it.
+   */
+  startPreview(enabled: boolean): boolean {
+    const def = this.levels.level;
+    if (!def || !enabled) return false;
+    const key = `seen:${def.id}`;
+    if (this.save.load(key, { seen: false }).seen) return false;
+    this.save.save(key, { seen: true });
+    const pts: THREE.Vector3[] = [];
+    if (this.levels.goal) pts.push(this.levels.goal.centre.clone());
+    for (const c of [...this.levels.checkpoints].reverse()) pts.push(v3(c.def.position));
+    pts.push(this.levels.bounds.getCenter(new THREE.Vector3()).setY(v3(def.spawn).y));
+    pts.push(v3(def.spawn));
+    if (pts.length < 2) return false;
+    this.state = 'preview';
+    this.camera.flyover(pts, this.frame, 4.5, () => {
+      this.state = 'playing';
+      this.lastTime = performance.now();
+      this.physics.resetAccumulator();
+      this.events.onPreviewEnd?.();
+    });
+    return true;
+  }
+
+  skipPreview(): void {
+    if (this.state === 'preview') this.camera.skipFlyover();
+  }
+
   /** Shift directions available right now (drives which HUD buttons are shown). */
   availableShifts(): ShiftDirection[] {
     const def = this.levels.level;
@@ -137,6 +176,7 @@ export class GameManager {
 
   pause(): void {
     if (this.state === 'playing') this.state = 'paused';
+    this.audio.setRolling(0, false);
   }
 
   resume(): void {
@@ -166,6 +206,8 @@ export class GameManager {
     this.ball.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     this.camera.transitionTo(this.frame);
     this.stats.shifts++;
+    this.audio.shift();
+    this.haptics.shift();
     this.events.onShift?.(dir, this.surfaceName);
     return true;
   }
@@ -182,7 +224,13 @@ export class GameManager {
     this.input.tilt.shape.sensitivity = s.tiltSensitivity;
     this.input.tilt.shape.deadZoneDeg = s.deadZoneDeg;
     this.input.tilt.smoothing = s.smoothing;
+    const tuning = PROFILES[s.physics] ?? PROFILES.refined;
+    this.ball.applyTuning(tuning);
+    this.input.tilt.shape.maxTiltDeg = tuning.maxTiltDeg;
+    this.input.tilt.shape.curve = tuning.tiltCurve;
     this.view.setQuality(s.graphics);
+    this.audio.enabled = s.sfx;
+    this.haptics.enabled = s.haptics;
   }
 
   private loop = (now: number): void => {
@@ -208,11 +256,20 @@ export class GameManager {
           const move = this.state === 'playing' && this.respawnTimer < 0 ? this.input.sample(step) : ([0, 0] as [number, number]);
           this.ball.applyInput(move, this.frame, step);
         },
-        () => this.ball.recordState(),
+        () => {
+          this.ball.recordState();
+          this.frameImpact = Math.max(this.frameImpact, this.ball.lastImpact);
+        },
       );
+      if (this.frameImpact > IMPACT_THRESHOLD && this.respawnTimer < 0) {
+        this.audio.impact(this.frameImpact);
+        this.haptics.impact(this.frameImpact);
+      }
+      this.frameImpact = 0;
       if (this.state === 'playing') this.updateRules(dt);
     }
 
+    this.audio.setRolling(this.state === 'playing' ? this.ball.speed : 0, this.ball.grounded);
     this.ball.render(alpha, dt);
     this.camera.update(dt, this.ball.mesh.position, this.ball.body.linvel(), this.frame, this.ball.collider);
     this.levels.update(dt, this.elapsed);
@@ -235,6 +292,8 @@ export class GameManager {
       this.stats.falls++;
       this.respawnTimer = 0;
       this.camera.frozen = true;
+      this.audio.fall();
+      this.haptics.warning();
       this.events.onFall?.();
       return;
     }
@@ -242,7 +301,10 @@ export class GameManager {
     const zone = this.levels.shiftZoneAt(p, this.frame.down);
     if (zone !== this.zone) {
       this.zone = zone;
-      if (zone) this.events.onZoneEnter?.(zone);
+      if (zone) {
+        this.audio.zone();
+        this.events.onZoneEnter?.(zone);
+      }
     }
 
     for (const c of this.levels.checkpoints) {
@@ -254,6 +316,8 @@ export class GameManager {
         this.respawnFrame = c.def.frame;
         const up = v3(c.def.frame.down).negate();
         this.respawnPoint.copy(surfacePoint).addScaledVector(up, BALL_RADIUS + 0.1);
+        this.audio.checkpoint();
+        this.haptics.success();
         this.events.onCheckpoint?.();
       }
     }
@@ -265,6 +329,8 @@ export class GameManager {
   private complete(): void {
     this.state = 'complete';
     this.levels.goal?.celebrate();
+    this.audio.goal();
+    this.haptics.success();
     const def = this.levels.level!;
     const { time, falls } = this.stats;
     // Stars reward clean, fast navigation. Gravity shifts deliberately don't count.

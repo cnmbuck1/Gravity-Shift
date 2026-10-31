@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsManager } from '../physics/PhysicsManager';
 import type { MazeDef } from '../levels/LevelTypes';
-import { COLORS, mazeFloorMaterial, mazeWallMaterial, trimMaterial } from '../render/Materials';
+import { COLORS, hazardStripeTexture, mazeFloorMaterial, mazeWallMaterial, trimMaterial } from '../render/Materials';
 
 const FLOOR_THICKNESS = 0.6;
 const TRIM = 0.06;
@@ -15,8 +16,9 @@ export interface MazeBuildResult {
   disposables: { dispose(): void }[];
   /** Red energy floor volumes; touching one destroys the ball. */
   hazards: THREE.Box3[];
-  /** Animated materials (hazard pulse). */
+  /** Animated materials: red energy floor, red hole edges. */
   hazardMaterial: THREE.MeshStandardMaterial;
+  edgeMaterial: THREE.MeshStandardMaterial;
   bounds: THREE.Box3;
 }
 
@@ -49,6 +51,8 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
   const cyanTrims: THREE.BufferGeometry[] = [];
   const redTrims: THREE.BufferGeometry[] = [];
   const purpleTiles: THREE.BufferGeometry[] = [];
+  const baseGlows: THREE.BufferGeometry[] = [];
+  const padTiles: Record<string, THREE.BufferGeometry[]> = { S: [], C: [], G: [] };
   const hazardTiles: THREE.BufferGeometry[] = [];
   const hazards: THREE.Box3[] = [];
   const bounds = new THREE.Box3();
@@ -92,7 +96,12 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
         const bottom = floorY - FLOOR_THICKNESS;
         const centre = new THREE.Vector3((x0 + x1) / 2, (top + bottom) / 2, cz(r));
         const size = new THREE.Vector3(x1 - x0, top - bottom, cell);
-        (kind === 'wall' ? wallBoxes : floorBoxes).push(box(centre, size));
+        if (kind === 'wall') {
+          // Bevelled wall runs: the rounded edges catch the light and read as machined metal.
+          const g = new RoundedBoxGeometry(size.x, size.y, size.z, 2, 0.09);
+          g.translate(centre.x, centre.y, centre.z);
+          wallBoxes.push(g);
+        } else floorBoxes.push(box(centre, size));
         addCollider(centre, size);
         bounds.expandByPoint(new THREE.Vector3(x0, bottom, cz(r) - cell / 2)).expandByPoint(new THREE.Vector3(x1, top, cz(r) + cell / 2));
       }
@@ -108,6 +117,13 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
         // Glowing cyan border along wall tops wherever they face a pathway.
         const y = floorY + wallHeight;
         const h = cell / 2;
+        // Soft glow strip where each visible wall face meets the floor.
+        const gy = floorY + 0.03;
+        const G = 0.035;
+        if (FLOOR_CHARS.includes(at(r - 1, c2))) baseGlows.push(box(new THREE.Vector3(x, gy, z - h - G / 2), new THREE.Vector3(cell, G, G)));
+        if (FLOOR_CHARS.includes(at(r + 1, c2))) baseGlows.push(box(new THREE.Vector3(x, gy, z + h + G / 2), new THREE.Vector3(cell, G, G)));
+        if (FLOOR_CHARS.includes(at(r, c2 - 1))) baseGlows.push(box(new THREE.Vector3(x - h - G / 2, gy, z), new THREE.Vector3(G, G, cell)));
+        if (FLOOR_CHARS.includes(at(r, c2 + 1))) baseGlows.push(box(new THREE.Vector3(x + h + G / 2, gy, z), new THREE.Vector3(G, G, cell)));
         if (open(r - 1, c2)) cyanTrims.push(box(new THREE.Vector3(x, y, z - h), new THREE.Vector3(cell + TRIM, TRIM, TRIM)));
         if (open(r + 1, c2)) cyanTrims.push(box(new THREE.Vector3(x, y, z + h), new THREE.Vector3(cell + TRIM, TRIM, TRIM)));
         if (open(r, c2 - 1)) cyanTrims.push(box(new THREE.Vector3(x - h, y, z), new THREE.Vector3(TRIM, TRIM, cell + TRIM)));
@@ -123,6 +139,12 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
       if (NO_FLOOR.includes(at(r, c2 - 1))) redTrims.push(box(new THREE.Vector3(x - h + TRIM / 2, y, z), new THREE.Vector3(TRIM, TRIM, cell)));
       if (NO_FLOOR.includes(at(r, c2 + 1))) redTrims.push(box(new THREE.Vector3(x + h - TRIM / 2, y, z), new THREE.Vector3(TRIM, TRIM, cell)));
 
+      if (ch in padTiles) {
+        const tile = new THREE.PlaneGeometry(cell * 0.96, cell * 0.96);
+        tile.rotateX(-Math.PI / 2);
+        tile.translate(x, floorY + 0.01, z);
+        padTiles[ch].push(tile);
+      }
       if (ch === 'P' || ch === 'X') {
         const tile = new THREE.PlaneGeometry(cell * 0.92, cell * 0.92);
         tile.rotateX(-Math.PI / 2);
@@ -151,11 +173,19 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
 
   const floorMat = mazeFloorMaterial();
   const wallMat = mazeWallMaterial();
-  const hazardMat = new THREE.MeshStandardMaterial({ color: COLORS.hazard, emissive: COLORS.hazard, emissiveIntensity: 1.8, transparent: true, opacity: 0.85 });
+  // Red energy floor: scrolling warning stripes (animated via texture offset).
+  const stripes = hazardStripeTexture();
+  const hazardMat = new THREE.MeshStandardMaterial({ color: COLORS.hazard, emissive: COLORS.hazard, emissiveMap: stripes, map: stripes, emissiveIntensity: 1.8, transparent: true, opacity: 0.92 });
   const purpleMat = new THREE.MeshStandardMaterial({ color: COLORS.gravity, emissive: COLORS.gravity, emissiveIntensity: 0.9, transparent: true, opacity: 0.55 });
   const cyanMat = trimMaterial('safe');
   const redMat = trimMaterial('hazard');
-  disposables.push(floorMat, wallMat, hazardMat, purpleMat, cyanMat, redMat);
+  const baseMat = new THREE.MeshBasicMaterial({ color: COLORS.safe, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+  const padMats: Record<string, THREE.Material> = {
+    S: new THREE.MeshStandardMaterial({ color: '#0d3a4a', emissive: COLORS.safe, emissiveIntensity: 0.25, transparent: true, opacity: 0.5 }),
+    C: new THREE.MeshStandardMaterial({ color: '#0d4a3a', emissive: '#3dffc8', emissiveIntensity: 0.45, transparent: true, opacity: 0.55 }),
+    G: new THREE.MeshStandardMaterial({ color: '#0d3a4a', emissive: '#47f0ff', emissiveIntensity: 0.6, transparent: true, opacity: 0.55 }),
+  };
+  disposables.push(floorMat, wallMat, hazardMat, purpleMat, cyanMat, redMat, baseMat, stripes, ...Object.values(padMats));
 
   addMerged(floorBoxes, floorMat, { worldUV: 0.25 });
   addMerged(wallBoxes, wallMat, { shadow: true, worldUV: 0.5 });
@@ -163,8 +193,10 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
   addMerged(redTrims, redMat);
   addMerged(purpleTiles, purpleMat);
   addMerged(hazardTiles, hazardMat);
+  addMerged(baseGlows, baseMat);
+  for (const k of Object.keys(padTiles)) addMerged(padTiles[k], padMats[k]);
 
-  return { objects, disposables, hazards, hazardMaterial: hazardMat, bounds };
+  return { objects, disposables, hazards, hazardMaterial: hazardMat, edgeMaterial: redMat, bounds };
 }
 
 /** Box-projected UVs in world space, so merged geometry tiles its texture seamlessly. */

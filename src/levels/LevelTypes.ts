@@ -80,8 +80,10 @@ export interface ShiftZoneDef {
 export interface CameraDef {
   pitchDeg: number;
   distance: number;
-  /** Metres of look-ahead along the ball's direction of travel. */
+  /** Maximum metres of look-ahead along the ball's direction of travel. */
   lookAhead: number;
+  /** Constant metres the view is shifted forward, so the ball sits a little below centre. */
+  forwardBias?: number;
 }
 
 export interface LevelDef {
