@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Gravity Shift</string>
+        <string>Gravitor</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -66,6 +66,6 @@
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>NSMotionUsageDescription</key>
-	<string>Gravity Shift uses your iPhone's motion sensors so you can roll the sphere by tilting your phone.</string>
+	<string>Gravitor uses your iPhone's motion sensors so you can roll the sphere by tilting your phone.</string>
 </dict>
 </plist>

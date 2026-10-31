@@ -1,8 +1,8 @@
-# Gravity Shift
+# Gravitor
 
 _Tilt Your World. Defy Gravity._ A futuristic 3D physics puzzle game for iPhone: roll a metallic sphere by tilting your phone, and shift gravity 90° to turn walls and ceilings into floors.
 
-**Status:** v0.5: ten levels (Orbital Labyrinth is now level 7), Cnmbuck Orb mark on the title screen (the Orb ball itself is won by finishing all ten levels). v0.4 added the five-level progression, level select and How to Play. Previously v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** v0.6: the game is renamed Gravitor (title logo uses the chrome ball as the O; the Cnmbuck Orb mark is off the home screen, the Orb ball is still won by finishing the campaign). v0.5: ten levels (Orbital Labyrinth is now level 7), Cnmbuck Orb mark on the title screen (the Orb ball itself is won by finishing all ten levels). v0.4 added the five-level progression, level select and How to Play. Previously v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
 
 Stack: Three.js · TypeScript · Vite · Rapier · Capacitor (iOS).
 

@@ -2,7 +2,6 @@ import type { GameManager, LevelRecord, RunStats } from '../core/GameManager';
 import type { SettingsManager } from '../settings/SettingsManager';
 import type { LevelDef } from '../levels/LevelTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
-import { drawOrbIcon } from '../brand/cnmbuck-orb';
 
 /**
  * DOM overlay: menus, HUD, settings and toasts. Talks to the game only through
@@ -29,10 +28,6 @@ export class UIManager {
     this.levels = [...campaign, ...extras];
     this.root = root;
     this.build();
-    // Cnmbuck Studios' mark on the title screen: the Orb, drawn by the brand kit.
-    const orb = this.root.querySelector<HTMLCanvasElement>('.cnm-orb canvas');
-    const g = orb?.getContext('2d');
-    if (orb && g) drawOrbIcon(g, orb.width);
     this.bindGameEvents();
     this.refreshMenu();
     this.show('menu');
@@ -51,8 +46,7 @@ export class UIManager {
   private build(): void {
     this.root.innerHTML = `
       <section class="screen menu" data-screen="menu">
-        <div class="cnm-orb"><canvas width="240" height="240" aria-label="Cnmbuck Orb"></canvas><span>CNMBUCK</span></div>
-        <div class="logo"><span>GRAVITY</span><span class="accent">SHIFT</span></div>
+        <h1 class="logo" aria-label="Gravitor"><span>GRAVIT</span><i class="logo-ball"><i class="lb-band"></i><i class="lb-band b2"></i></i><span>R</span></h1>
         <div class="tagline">Tilt Your World. Defy Gravity.</div>
         <div class="menu-buttons">
           <button class="btn primary" data-action="play"><b>PLAY</b><small data-bind="play-sub"></small></button>
@@ -60,7 +54,7 @@ export class UIManager {
           <button class="btn" data-action="howto">HOW TO PLAY</button>
           <button class="btn" data-action="settings">SETTINGS</button>
         </div>
-        <div class="menu-foot">A CNMBUCK GAME · v0.5 · Ten levels</div>
+        <div class="menu-foot">A CNMBUCK GAME · v0.6 · Ten levels</div>
       </section>
 
       <section class="screen panel-screen" data-screen="levels">

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Gravity Shift - Tilt Your World. Defy Gravity.",
+  "description": "Gravitor - Tilt Your World. Defy Gravity.",
   "scripts": {
     "dev": "vite --host",
     "dev:phone": "vite --host --mode phone",

@@ -45,9 +45,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
   background: radial-gradient(ellipse at 50% 40%, rgba(5, 7, 13, 0.25), rgba(5, 7, 13, 0.85));
 }
-.logo { display: flex; flex-direction: column; align-items: center; font-weight: 800; letter-spacing: 0.18em; line-height: 0.95; font-size: clamp(40px, 13vw, 72px); }
+.logo { display: flex; align-items: center; justify-content: center; margin: 0 0 6px; font-weight: 800; letter-spacing: 0.12em; line-height: 1; font-size: clamp(38px, 11.5vw, 64px); }
 .logo span { text-shadow: 0 0 18px rgba(46, 230, 255, 0.55); }
-.logo .accent { color: transparent; background: linear-gradient(90deg, var(--cyan), var(--purple)); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 14px rgba(162, 75, 255, 0.6)); }
+.logo span:last-child { margin-left: 0.1em; }
+/* The O in GRAVITOR is the player's chrome sphere, with its glowing cyan bands rolling. */
+.logo-ball {
+  position: relative; display: inline-block; width: 0.78em; height: 0.78em; margin-left: 0.02em; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 33% 28%, #ffffff 0%, #e6eef8 14%, #9fb0c4 40%, #3c4a5e 72%, #121a26 100%);
+  box-shadow: 0 0 0 0.03em rgba(46, 230, 255, 0.55), 0 0 0.35em rgba(46, 230, 255, 0.55), inset -0.08em -0.1em 0.18em rgba(0, 0, 0, 0.5);
+}
+.lb-band { position: absolute; inset: 0; border-radius: 50%; border: 0.045em solid var(--cyan); box-shadow: 0 0 0.12em var(--cyan); transform: scaleX(0.3); animation: lb-roll 2.4s linear infinite; }
+.lb-band.b2 { transform: scaleY(0.3); animation: none; }
+@keyframes lb-roll { 0% { transform: scaleX(1); } 50% { transform: scaleX(0.02); } 100% { transform: scaleX(-1); } }
 .tagline { color: var(--muted); letter-spacing: 0.22em; font-size: 12px; text-transform: uppercase; margin-bottom: 26px; }
 .menu-buttons { display: flex; flex-direction: column; gap: 12px; width: min(320px, 100%); }
 .menu-foot { position: absolute; bottom: calc(var(--safe-bottom) + 14px); color: var(--muted); font-size: 11px; letter-spacing: 0.1em; }
@@ -221,8 +230,3 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hi-check::after { content: ''; width: 24px; height: 24px; border-radius: 50%; border: 3px solid #3dffc8; }
 .hi-grav { background: rgba(162, 75, 255, 0.25); border-color: rgba(162, 75, 255, 0.7); color: #e2ccff; }
 
-/* Cnmbuck Orb: studio mark above the title. */
-.cnm-orb { display: flex; flex-direction: column; align-items: center; margin-bottom: 14px; animation: cnm-float 4s ease-in-out infinite; }
-.cnm-orb canvas { width: 120px; height: 120px; }
-.cnm-orb span { margin-top: -6px; font-size: 11px; font-weight: 800; letter-spacing: 0.42em; color: #bfefff; text-shadow: 0 0 8px rgba(0, 216, 255, 0.7); }
-@keyframes cnm-float { 50% { transform: translateY(-5px); } }
