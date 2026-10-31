@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { GravityFrameDef, V3 } from '../levels/LevelTypes';
 
-export type ShiftDirection = 'left' | 'right' | 'forward';
+export type ShiftDirection = 'left' | 'right' | 'forward' | 'flip';
 
 /**
  * The player's reference frame. `down` is the gravity direction; `forward` is "away from
@@ -34,6 +34,7 @@ export class GravityFrame {
    *                 (the camera rolls around the direction of travel).
    *  forward      : the surface ahead becomes the floor; you now travel "up" what was the sky
    *                 (the camera pitches).
+   *  flip         : gravity reverses (180°): the ceiling becomes the floor; forward is unchanged.
    */
   shifted(dir: ShiftDirection): GravityFrameDef {
     switch (dir) {
@@ -43,6 +44,8 @@ export class GravityFrame {
         return { down: snap(this.right.clone().negate()), forward: snap(this.forward) };
       case 'forward':
         return { down: snap(this.forward), forward: snap(this.up) };
+      case 'flip':
+        return { down: snap(this.up), forward: snap(this.forward) };
     }
   }
 

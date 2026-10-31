@@ -35,6 +35,8 @@ export class LevelManager {
   checkpoints: CheckpointRuntime[] = [];
   goal: GoalPortal | null = null;
   hazards: THREE.Box3[] = [];
+  /** Colliders the camera looks straight through (glass ceilings). */
+  readonly seeThrough = new Set<number>();
 
   private movers: MoverRuntime[] = [];
   private hazardMaterial: THREE.MeshStandardMaterial | null = null;
@@ -56,7 +58,7 @@ export class LevelManager {
 
     this.bounds.makeEmpty();
     if (def.maze) {
-      const maze = buildMaze(def.maze, this.physics, this.body);
+      const maze = buildMaze(def.maze, this.physics, this.body, def.theme);
       maze.objects.forEach((o) => this.group.add(o));
       this.disposables.push(...maze.disposables);
       this.hazards = maze.hazards;
@@ -95,6 +97,7 @@ export class LevelManager {
     this.disposables = [];
     this.checkpoints = [];
     this.goal = null;
+    this.seeThrough.clear();
   }
 
   /** Ball has touched red energy floor. */
@@ -158,6 +161,15 @@ export class LevelManager {
     const dims = [sx, sy, sz].sort((a, b) => b - a);
     const geo = new RoundedBoxGeometry(sx, sy, sz, 2, Math.min(0.12, Math.min(sx, sy, sz) * 0.2));
     const mat = platformMaterial(dims[0] / TEXTURE_TILE, dims[1] / TEXTURE_TILE, role);
+    if (p.glass) {
+      // Gravity glass: see the course through it from above, and roll on it from below.
+      mat.transparent = true;
+      mat.opacity = 0.28;
+      mat.depthWrite = false;
+      mat.color.set('#c9a8ff');
+      mat.emissive = new THREE.Color('#a24bff');
+      mat.emissiveIntensity = 0.25;
+    }
     const holder = new THREE.Group();
     holder.position.copy(pos);
     const rot = p.rotation ? new THREE.Euler(...(p.rotation.map((d) => (d * Math.PI) / 180) as V3)) : null;
@@ -165,7 +177,7 @@ export class LevelManager {
     this.group.add(holder);
     const mesh = new THREE.Mesh(geo, mat);
     mesh.receiveShadow = true;
-    mesh.castShadow = role !== 'gravity';
+    mesh.castShadow = role !== 'gravity' && !p.glass;
     holder.add(mesh);
     this.disposables.push(geo, mat);
 
@@ -194,7 +206,7 @@ export class LevelManager {
     this.disposables.push(trimGeo, trimMat);
 
     // Mechanical underside detail on the face pointing away from the course.
-    if (role !== 'hazard' && !rot) this.addUnderside(p, levelCentre);
+    if (role !== 'hazard' && !rot && !p.glass) this.addUnderside(p, levelCentre);
 
     const R = this.physics.rapier;
     const q = new THREE.Quaternion().setFromEuler(rot ?? new THREE.Euler());
@@ -203,7 +215,8 @@ export class LevelManager {
       .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
       .setFriction(p.friction ?? 0.9)
       .setRestitution(0.15);
-    this.physics.world.createCollider(col, this.body!);
+    const collider = this.physics.world.createCollider(col, this.body!);
+    if (p.glass) this.seeThrough.add(collider.handle);
   }
 
   private addUnderside(p: PlatformDef, levelCentre: THREE.Vector3): void {
@@ -280,7 +293,12 @@ export class LevelManager {
     const R = this.physics.rapier;
     const start = v3(def.from);
     const body = this.physics.world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased().setTranslation(start.x, start.y, start.z));
-    this.physics.world.createCollider(R.ColliderDesc.cuboid(def.size[0] / 2, def.size[1] / 2, def.size[2] / 2).setFriction(0.6).setRestitution(0.3), body);
+    const platform = def.kind === 'platform';
+    this.physics.world.createCollider(R.ColliderDesc.cuboid(def.size[0] / 2, def.size[1] / 2, def.size[2] / 2).setFriction(platform ? 1 : 0.6).setRestitution(platform ? 0.05 : 0.3), body);
+    if (platform) {
+      this.addRidePlatform(def, body, start);
+      return;
+    }
 
     const geo = new RoundedBoxGeometry(def.size[0], def.size[1], def.size[2], 2, 0.08);
     const mat = new THREE.MeshStandardMaterial({ color: '#4a3a1c', metalness: 0.85, roughness: 0.35, emissive: COLORS.moving, emissiveIntensity: 0.35 });
@@ -323,6 +341,30 @@ export class LevelManager {
       this.group.add(rail);
     }
     this.disposables.push(geo, mat, stripeGeo, stripeMat, trackGeo, trackMat, railGeo);
+    this.movers.push({ def, body, mesh });
+  }
+
+  /** A cyan slab that carries the ball over the void, with a faint line showing its route. */
+  private addRidePlatform(def: MoverDef, body: RAPIER.RigidBody, start: THREE.Vector3): void {
+    const geo = new RoundedBoxGeometry(def.size[0], def.size[1], def.size[2], 2, 0.08);
+    const mat = platformMaterial(def.size[0] / TEXTURE_TILE, def.size[2] / TEXTURE_TILE, 'safe');
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.receiveShadow = mesh.castShadow = true;
+    mesh.position.copy(start);
+    const edgeGeo = new THREE.BoxGeometry(def.size[0] + 0.04, 0.05, def.size[2] + 0.04);
+    const edgeMat = trimMaterial('safe');
+    const edge = new THREE.Mesh(edgeGeo, edgeMat);
+    edge.position.y = def.size[1] / 2 - 0.02;
+    edge.scale.set(1, 1, 1);
+    mesh.add(edge);
+    this.group.add(mesh);
+    const end = v3(def.to);
+    const routeGeo = new THREE.BufferGeometry().setFromPoints([start.clone().setY(start.y - def.size[1] / 2 - 0.2), end.clone().setY(end.y - def.size[1] / 2 - 0.2)]);
+    const routeMat = new THREE.LineDashedMaterial({ color: COLORS.safe, dashSize: 0.3, gapSize: 0.25, transparent: true, opacity: 0.6 });
+    const route = new THREE.Line(routeGeo, routeMat);
+    route.computeLineDistances();
+    this.group.add(route);
+    this.disposables.push(geo, mat, edgeGeo, edgeMat, routeGeo, routeMat);
     this.movers.push({ def, body, mesh });
   }
 

@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsManager } from '../physics/PhysicsManager';
-import type { MazeDef } from '../levels/LevelTypes';
+import type { MazeDef, WorldTheme } from '../levels/LevelTypes';
 import { COLORS, hazardStripeTexture, mazeFloorMaterial, mazeWallMaterial, trimMaterial } from '../render/Materials';
 
 const FLOOR_THICKNESS = 0.6;
@@ -27,7 +27,7 @@ export interface MazeBuildResult {
  * boxes of a kind are merged into one mesh, so a whole labyrinth is a handful of draw calls
  * and a few dozen colliders.
  */
-export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.RigidBody): MazeBuildResult {
+export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.RigidBody, theme?: WorldTheme): MazeBuildResult {
   const { cell, floorY, wallHeight, rows } = def;
   const at = (r: number, c: number): string => rows[r]?.[c] ?? ' ';
   // A wall face is visible (and gets a glowing border) where it borders a pathway or a hole.
@@ -178,8 +178,15 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
   const hazardMat = new THREE.MeshStandardMaterial({ color: COLORS.hazard, emissive: COLORS.hazard, emissiveMap: stripes, map: stripes, emissiveIntensity: 1.8, transparent: true, opacity: 0.92 });
   const purpleMat = new THREE.MeshStandardMaterial({ color: COLORS.gravity, emissive: COLORS.gravity, emissiveIntensity: 0.9, transparent: true, opacity: 0.55 });
   const cyanMat = trimMaterial('safe');
+  if (theme) {
+    // World colours: accent on wall-top trim and base glow, tints on floor and walls.
+    cyanMat.color.set(theme.accent);
+    cyanMat.emissive.set(theme.accent);
+    floorMat.color.set(theme.floor);
+    wallMat.color.set(theme.wall);
+  }
   const redMat = trimMaterial('hazard');
-  const baseMat = new THREE.MeshBasicMaterial({ color: COLORS.safe, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+  const baseMat = new THREE.MeshBasicMaterial({ color: theme ? new THREE.Color(theme.accent) : COLORS.safe, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
   const padMats: Record<string, THREE.Material> = {
     S: new THREE.MeshStandardMaterial({ color: '#0d3a4a', emissive: COLORS.safe, emissiveIntensity: 0.25, transparent: true, opacity: 0.5 }),
     C: new THREE.MeshStandardMaterial({ color: '#0d4a3a', emissive: '#3dffc8', emissiveIntensity: 0.45, transparent: true, opacity: 0.55 }),

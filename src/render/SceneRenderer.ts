@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { GraphicsQuality } from '../settings/SettingsManager';
 import { COLORS } from './Materials';
+import type { WorldTheme } from '../levels/LevelTypes';
 
 const DUST_COUNT = 700;
 const DUST_RANGE = 40;
@@ -19,6 +20,7 @@ export class SceneRenderer {
   readonly ballLight: THREE.SpotLight;
 
   private dust: THREE.Points;
+  private hemi = new THREE.HemisphereLight('#6fa8ff', '#1a0f2e', 0.5);
   private dustVel = new THREE.Vector3(0, -1, 0);
   private dustCentre = new THREE.Vector3();
 
@@ -41,7 +43,7 @@ export class SceneRenderer {
 
     this.camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
 
-    this.scene.add(new THREE.HemisphereLight('#6fa8ff', '#1a0f2e', 0.5));
+    this.scene.add(this.hemi);
     const key = new THREE.DirectionalLight('#dfe8ff', 1.1);
     key.position.set(-6, 14, 8);
     this.scene.add(key);
@@ -69,6 +71,14 @@ export class SceneRenderer {
 
   setQuality(q: GraphicsQuality): void {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q === 'high' ? 2 : 1.25));
+  }
+
+  /** World colours: the void, fog and sky light take the world's tint (default: deep space). */
+  setTheme(theme?: WorldTheme): void {
+    const sky = new THREE.Color(theme?.sky ?? COLORS.void);
+    (this.scene.background as THREE.Color).copy(sky);
+    (this.scene.fog as THREE.FogExp2).color.copy(sky);
+    this.hemi.color.set(theme ? new THREE.Color(theme.accent).lerp(new THREE.Color('#6fa8ff'), 0.5) : '#6fa8ff');
   }
 
   setGravityDirection(down: THREE.Vector3): void {

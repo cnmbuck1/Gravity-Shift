@@ -6,6 +6,7 @@ import { COLORS } from '../render/Materials';
 import { REFINED, type PhysicsTuning } from './PhysicsTuning';
 import { createOrbMaterial, OrbFx } from '../brand/cnmbuck-orb';
 import type { BallSkin } from '../settings/SettingsManager';
+import type { SurfaceMod } from './FeatureManager';
 
 export const BALL_RADIUS = 0.5;
 
@@ -150,8 +151,10 @@ export class BallController {
    * Called before each fixed physics step.
    * `input` is (x right, y forward), |input| <= 1, expressed in the gravity frame.
    */
-  applyInput(input: [number, number], frame: GravityFrame, dt: number): void {
-    const T = this.tuning;
+  applyInput(input: [number, number], frame: GravityFrame, dt: number, mod?: SurfaceMod): void {
+    const B = this.tuning;
+    // Floor pads (ice, sticky, boost) scale the handling for this step.
+    const T = mod ? { ...B, maxAccel: B.maxAccel * mod.accel, rollingResistance: B.rollingResistance * mod.rr, maxSpeed: B.maxSpeed * mod.speed } : B;
     const lv = this.body.linvel();
     this.vel.set(lv.x, lv.y, lv.z);
     this.updateGrounded(frame, dt);
@@ -180,6 +183,9 @@ export class BallController {
         accel.addScaledVector(planar, -rr / planarSpeed);
       }
     }
+
+    // Conveyors and boost strips push regardless of the player's input and the braking boost.
+    if (mod?.push) accel.add(mod.push);
 
     const m = this.body.mass();
     this.body.applyImpulse({ x: accel.x * m * dt, y: accel.y * m * dt, z: accel.z * m * dt }, true);

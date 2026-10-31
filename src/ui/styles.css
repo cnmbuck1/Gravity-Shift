@@ -121,6 +121,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .shift-pad.active { opacity: 1; transform: translateX(-50%); }
 #ui .shift-pad.active .shift-btn { pointer-events: auto; animation: zone-pulse 1.4s ease-in-out infinite; }
 .shift-btn.hidden { visibility: hidden; }
+.shift-btn[data-shift='flip'].hidden { display: none; }
 @keyframes zone-pulse { 50% { box-shadow: 0 0 34px rgba(162, 75, 255, 0.9); } }
 .shift-btn:active { filter: brightness(1.4); }
 .shift-btn.denied { animation: denied 0.3s; border-color: var(--red); }
@@ -201,9 +202,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .level-row:active { transform: scale(0.98); }
 .level-row.locked { opacity: 0.45; }
 .lv-num {
-  width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px;
-  background: rgba(46, 230, 255, 0.14); color: var(--cyan); font-weight: 800;
+  min-width: 30px; height: 30px; padding: 0 4px; flex: none; display: grid; place-items: center; border-radius: 9px;
+  background: color-mix(in srgb, var(--accent, var(--cyan)) 16%, transparent); color: var(--accent, var(--cyan)); font-weight: 800; font-size: 13px;
 }
+.world-row { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.world-row .lv-num { width: 38px; height: 38px; font-size: 17px; }
 .lv-name { flex: 1; display: flex; flex-direction: column; font-weight: 700; letter-spacing: 0.04em; font-size: 14px; }
 .lv-name small, .lv-stats small { font-weight: 500; color: var(--muted); font-size: 11px; letter-spacing: 0.02em; }
 .lv-stats { display: flex; flex-direction: column; align-items: flex-end; }

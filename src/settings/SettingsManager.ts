@@ -25,6 +25,8 @@ export interface Settings {
   ball: BallSkin;
   /** The campaign is finished and the Cnmbuck Orb has been awarded (the announcement shows once). */
   orbWon: boolean;
+  /** Testing: every world and level is playable without unlocking. */
+  unlockAll: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -41,6 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
   preview: true,
   ball: 'chrome',
   orbWon: false,
+  unlockAll: true,
 };
 
 type Listener = (s: Readonly<Settings>) => void;
@@ -50,7 +53,8 @@ export class SettingsManager {
   private listeners: Listener[] = [];
 
   constructor(private save: SaveManager) {
-    this.settings = save.load('settings', { ...DEFAULT_SETTINGS });
+    // Fill in settings added since the save was written.
+    this.settings = { ...DEFAULT_SETTINGS, ...save.load('settings', { ...DEFAULT_SETTINGS }) };
   }
 
   get(): Readonly<Settings> {

@@ -6,6 +6,7 @@ import { BallController, BALL_RADIUS } from '../game/BallController';
 import { CameraController } from '../game/CameraController';
 import { GravityFrame, type ShiftDirection } from '../game/GravityFrame';
 import { LevelManager, v3 } from '../game/LevelManager';
+import { FeatureManager } from '../game/FeatureManager';
 import type { GravityFrameDef, LevelDef, ShiftZoneDef } from '../levels/LevelTypes';
 import type { SettingsManager, Settings } from '../settings/SettingsManager';
 import { PROFILES } from '../game/PhysicsTuning';
@@ -38,6 +39,7 @@ export interface GameEvents {
   onShiftRejected?(reason: string): void;
   onFall?(): void;
   onCheckpoint?(): void;
+  onSwitch?(): void;
   onZoneEnter?(zone: ShiftZoneDef): void;
   onPreviewEnd?(): void;
   onComplete?(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void;
@@ -66,6 +68,8 @@ export class GameManager {
   readonly audio = new AudioManager();
   readonly haptics = new HapticsManager();
   private frameImpact = 0;
+  /** Current gravity multiplier from gravity wells (1 outside them). */
+  private gravityScale = 1;
 
   private constructor(
     readonly physics: PhysicsManager,
@@ -74,6 +78,7 @@ export class GameManager {
     readonly ball: BallController,
     readonly camera: CameraController,
     readonly levels: LevelManager,
+    readonly features: FeatureManager,
     settings: SettingsManager,
     private save: SaveManager,
   ) {
@@ -88,7 +93,8 @@ export class GameManager {
     const ball = new BallController(physics, view.scene);
     const camera = new CameraController(view.camera, physics);
     const levels = new LevelManager(physics, view.scene);
-    return new GameManager(physics, view, input, ball, camera, levels, settings, save);
+    const features = new FeatureManager(physics, view.scene);
+    return new GameManager(physics, view, input, ball, camera, levels, features, settings, save);
   }
 
   get level(): LevelDef | null {
@@ -108,7 +114,10 @@ export class GameManager {
 
   loadLevel(def: LevelDef): void {
     this.levels.load(def);
+    this.features.load(def);
+    this.view.setTheme(def.theme);
     this.camera.configure(def.camera);
+    this.camera.seeThrough = this.levels.seeThrough;
     this.respawnFrame = def.frame;
     this.respawnPoint.copy(v3(def.spawn));
     this.restart();
@@ -120,6 +129,7 @@ export class GameManager {
     this.stats.time = this.stats.falls = this.stats.shifts = 0;
     for (const c of this.levels.checkpoints) c.active = false;
     this.levels.goal?.reset();
+    this.features.reset();
     this.respawnFrame = def.frame;
     this.respawnPoint.copy(v3(def.spawn));
     this.respawn();
@@ -165,13 +175,16 @@ export class GameManager {
     const def = this.levels.level;
     if (!def?.allowShifts) return [];
     if (!def.shiftZones) return ['left', 'forward', 'right'];
-    return this.zone ? this.zone.allow : [];
+    // Auto-shift pads shift by themselves, so they never offer buttons.
+    return this.zone && !this.zone.auto ? this.zone.allow : [];
   }
 
   /** Back to the latest checkpoint, without counting a fall (the RESET button). */
   respawn(): void {
     this.respawnTimer = -1;
     this.zone = null;
+    this.features.respawn();
+    this.camera.lean = null;
     this.setFrame(this.respawnFrame);
     this.ball.teleport(this.respawnPoint);
     this.camera.snap(this.frame, this.respawnPoint);
@@ -199,11 +212,12 @@ export class GameManager {
     if (this.state !== 'playing' || !this.levels.level?.allowShifts) return false;
     if (this.respawnTimer >= 0) return false;
     if (this.camera.transitioning) return false;
-    if (!this.availableShifts().includes(dir)) return false;
+    if (!this.availableShifts().includes(dir) && !this.zone?.auto) return false;
     if (!this.ball.grounded && this.ball.airTime > COYOTE_TIME) {
       this.events.onShiftRejected?.('Land on a surface to shift');
       return false;
     }
+    if (this.zone?.lean) this.camera.lean = v3(this.zone.lean);
     this.setFrame(this.frame.shifted(dir));
     // Keep momentum but drop spin: otherwise the old rolling spin grips the new surface and
     // flings the ball sideways on landing, which reads as random rather than skilful.
@@ -218,9 +232,13 @@ export class GameManager {
 
   private setFrame(def: GravityFrameDef): void {
     this.frame.set(def);
-    const g = this.frame.down.clone().multiplyScalar(GRAVITY);
-    this.physics.world.gravity = { x: g.x, y: g.y, z: g.z };
+    this.applyGravity();
     this.view.setGravityDirection(this.frame.down);
+  }
+
+  private applyGravity(): void {
+    const g = this.frame.down.clone().multiplyScalar(GRAVITY * this.gravityScale);
+    this.physics.world.gravity = { x: g.x, y: g.y, z: g.z };
   }
 
   private applySettings(s: Readonly<Settings>): void {
@@ -258,8 +276,16 @@ export class GameManager {
         dt,
         (step) => {
           this.levels.stepMovers(step);
+          this.features.step(step);
+          // Gravity wells scale gravity while the ball is inside them.
+          const scale = this.features.gravityScale(this.ball.position);
+          if (scale !== this.gravityScale) {
+            this.gravityScale = scale;
+            this.applyGravity();
+          }
           const move = this.state === 'playing' && this.respawnTimer < 0 ? this.input.sample(step) : ([0, 0] as [number, number]);
-          this.ball.applyInput(move, this.frame, step);
+          const mod = this.features.surface(this.ball.position, this.ball.grounded, this.frame.down.y < -0.5, this.ball.body);
+          this.ball.applyInput(move, this.frame, step, mod);
         },
         () => {
           this.ball.recordState();
@@ -278,6 +304,7 @@ export class GameManager {
     this.ball.render(alpha, dt, this.view.camera, this.view.renderer);
     this.camera.update(dt, this.ball.mesh.position, this.ball.body.linvel(), this.frame, this.ball.grounded, this.ball.collider);
     this.levels.update(dt, this.elapsed);
+    this.features.update(dt, this.elapsed);
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);
     this.view.ballLight.target.position.copy(this.ball.mesh.position);
     this.view.update(dt, this.ball.mesh.position);
@@ -293,7 +320,7 @@ export class GameManager {
     this.stats.time += dt;
     const p = this.ball.position;
 
-    if (this.levels.isOutOfBounds(p) || this.levels.inHazard(p)) {
+    if (this.levels.isOutOfBounds(p) || this.levels.inHazard(p) || this.features.inLaser(p)) {
       this.stats.falls++;
       this.respawnTimer = 0;
       this.audio.fall();
@@ -307,8 +334,15 @@ export class GameManager {
       this.zone = zone;
       if (zone) {
         this.audio.zone();
-        this.events.onZoneEnter?.(zone);
+        if (zone.auto) this.requestShift(zone.allow[0]);
+        else this.events.onZoneEnter?.(zone);
       }
+    }
+
+    if (this.features.checkSwitches(p)) {
+      this.audio.checkpoint();
+      this.haptics.success();
+      this.events.onSwitch?.();
     }
 
     for (const c of this.levels.checkpoints) {

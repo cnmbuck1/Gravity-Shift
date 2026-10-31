@@ -1,6 +1,7 @@
 import type { GameManager, LevelRecord, RunStats } from '../core/GameManager';
 import type { SettingsManager } from '../settings/SettingsManager';
 import type { LevelDef } from '../levels/LevelTypes';
+import type { WorldDef } from '../levels/worldTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
 import { drawOrbIcon } from '../brand/cnmbuck-orb';
 
@@ -22,11 +23,15 @@ export class UIManager {
   private settingsReturn: 'menu' | 'game' = 'menu';
 
   private levels: LevelDef[];
+  private campaign: LevelDef[];
   private current = 0;
+  /** World shown in the level list (-1: the world list). */
+  private openWorld = -1;
 
-  /** `campaign` levels unlock in order; `extras` (test courses) are always available. */
-  constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private campaign: LevelDef[], private extras: LevelDef[]) {
-    this.levels = [...campaign, ...extras];
+  /** Campaign levels (all worlds, in order) unlock one after another; `extras` (test courses) are always available. */
+  constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private worlds: WorldDef[], private extras: LevelDef[]) {
+    this.campaign = worlds.flatMap((w) => w.levels);
+    this.levels = [...this.campaign, ...extras];
     this.root = root;
     this.build();
     // The O in the GRAVITOR logo is the Cnmbuck Orb, drawn by the brand kit.
@@ -59,18 +64,20 @@ export class UIManager {
           <button class="btn" data-action="howto">HOW TO PLAY</button>
           <button class="btn" data-action="settings">SETTINGS</button>
         </div>
-        <div class="menu-foot">A CNMBUCK GAME · v0.6 · Ten levels</div>
+        <div class="menu-foot">A CNMBUCK GAME · v0.7 · ${this.worlds.length} worlds · ${this.campaign.length} levels</div>
       </section>
 
       <section class="screen panel-screen" data-screen="levels">
         <div class="panel levels-panel">
-          <h2>LEVELS</h2>
+          <h2 data-bind="levels-title">WORLDS</h2>
           <div class="level-list" data-bind-html="level-list"></div>
-          <div class="section-label">TEST COURSES</div>
-          <div class="level-list extras">
-            ${this.extras.map((l, i) => `<button class="level-row" data-level="${this.campaign.length + i}"><span class="lv-num">·</span><span class="lv-name">${l.name}<small>${l.subtitle}</small></span></button>`).join('')}
+          <div class="extras-block">
+            <div class="section-label">TEST COURSES</div>
+            <div class="level-list extras">
+              ${this.extras.map((l, i) => `<button class="level-row" data-level="${this.campaign.length + i}"><span class="lv-num">·</span><span class="lv-name">${l.name}<small>${l.subtitle}</small></span></button>`).join('')}
+            </div>
           </div>
-          <button class="btn" data-action="menu">BACK</button>
+          <button class="btn" data-action="levels-back">BACK</button>
         </div>
       </section>
 
@@ -83,6 +90,8 @@ export class UIManager {
           <div class="howto-card"><div class="hi hi-hazard"></div><div><b>Watch for hazards</b><p>Red edges mark holes and drops. Red striped floor destroys the sphere. Amber pistons slide back and forth; time your run past them.</p></div></div>
           <div class="howto-card"><div class="hi hi-check"></div><div><b>Checkpoints</b><p>Roll over a green ring to save your progress. After a fall you restart from the last one.</p></div></div>
           <div class="howto-card"><div class="hi hi-grav">▶</div><div><b>Gravity zones</b><p>On purple floor, a shift button appears. Tap it and gravity turns 90°: the wall beside you becomes the floor. Shifts are optional shortcuts, so use them when you're ready.</p></div></div>
+          <div class="howto-card"><div class="hi hi-grav">⇅</div><div><b>Flips</b><p>Under a glass ceiling, the ⇅ button flips gravity upside down. Roll across the ceiling, then flip back down.</p></div></div>
+          <div class="howto-card"><div class="hi">▦</div><div><b>Later worlds</b><p>Cracked orange tiles crumble after you touch them. Green chevrons boost you, blue ones carry you, pale floor is ice. Yellow switches open yellow doors. Red lasers blink: go when they're off. Pink rings launch you, and teal zones lower gravity.</p></div></div>
           <div class="howto-card"><div class="hi">✋</div><div><b>Prefer touch?</b><p>Settings → Controls → TOUCH. Drag anywhere on the screen to steer with a virtual joystick.</p></div></div>
           <button class="btn primary" data-action="menu">GOT IT</button>
         </div>
@@ -106,6 +115,7 @@ export class UIManager {
           <button class="shift-btn" data-shift="left" aria-label="Shift gravity left">◀</button>
           <button class="shift-btn" data-shift="forward" aria-label="Shift gravity forward">▲</button>
           <button class="shift-btn" data-shift="right" aria-label="Shift gravity right">▶</button>
+          <button class="shift-btn" data-shift="flip" aria-label="Flip gravity">⇅</button>
           <div class="shift-label">SHIFT GRAVITY</div>
         </div>
         <div class="shift-flash"></div>
@@ -171,6 +181,7 @@ export class UIManager {
             <span class="seg" data-setting="physics"><button data-value="refined">REFINED</button><button data-value="classic">CLASSIC</button></span>
           </div>
           <label class="row">Debug readout <input type="checkbox" data-setting="showDebug" /></label>
+          <label class="row">Unlock all levels (testing) <input type="checkbox" data-setting="unlockAll" /></label>
           <div class="note">Physics: REFINED is the new tuning; CLASSIC is the previous build, kept for comparison. Music arrives later; its toggle is saved now.</div>
           <button class="btn primary" data-action="close-settings">DONE</button>
         </div>
@@ -196,6 +207,10 @@ export class UIManager {
       const t = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
       if (!t) return;
       if (t.dataset.level) this.startLevel(Number(t.dataset.level));
+      else if (t.dataset.world) {
+        this.openWorld = Number(t.dataset.world);
+        this.refreshMenu();
+      }
       else if (t.dataset.action) this.action(t.dataset.action);
     });
     // Shift buttons react on pointerdown for zero added latency.
@@ -210,6 +225,7 @@ export class UIManager {
       if (e.key === 'q') this.shift('left');
       else if (e.key === 'e') this.shift('right');
       else if (e.key === 'r') this.shift('forward');
+      else if (e.key === 'f') this.shift('flip');
       else if (e.key === 'c') this.action('calibrate');
     });
 
@@ -282,6 +298,7 @@ export class UIManager {
       onShiftRejected: (reason) => this.toast(reason),
       onFall: () => this.toast('FELL INTO THE VOID'),
       onCheckpoint: () => this.toast('CHECKPOINT'),
+      onSwitch: () => this.toast('SWITCH · DOOR OPEN'),
       onZoneEnter: (zone) => this.toast(zone.hint, 2400),
       onPreviewEnd: () => {
         this.hud.classList.remove('flyover');
@@ -304,7 +321,7 @@ export class UIManager {
     this.show('hud');
     const previewing = this.game.startPreview(this.settings.get().preview);
     this.hud.classList.toggle('flyover', previewing);
-    this.toast(def.name.toUpperCase(), previewing ? 3000 : 1600);
+    this.toast(index < this.campaign.length ? `${this.levelLabel(index)} · ${def.name.toUpperCase()}` : def.name.toUpperCase(), previewing ? 3000 : 1600);
     const tiltOk = await permission;
     // Calibrate after the preview, once the player has settled into a grip.
     if (previewing) await new Promise<void>((r) => (this.previewDone = r));
@@ -372,8 +389,16 @@ export class UIManager {
         void this.startLevel(this.nextUnplayed());
         break;
       case 'levels':
+        // Open on the world being played, so the list starts where the player is.
+        this.openWorld = this.worldOf(this.current < this.campaign.length ? this.current : this.nextUnplayed());
         this.refreshMenu();
         this.show('levels');
+        break;
+      case 'levels-back':
+        if (this.openWorld >= 0) {
+          this.openWorld = -1;
+          this.refreshMenu();
+        } else this.show('menu');
         break;
       case 'howto':
         this.show('howto');
@@ -394,7 +419,29 @@ export class UIManager {
   }
 
   private unlocked(i: number): boolean {
+    if (this.settings.get().unlockAll) return true;
     return i === 0 || i >= this.campaign.length || this.game.recordFor(this.campaign[i - 1].id).bestTime !== null;
+  }
+
+  /** World index of campaign level `i`. */
+  private worldOf(i: number): number {
+    let n = 0;
+    for (let w = 0; w < this.worlds.length; w++) {
+      n += this.worlds[w].levels.length;
+      if (i < n) return w;
+    }
+    return this.worlds.length - 1;
+  }
+
+  /** Campaign index of a world's first level. */
+  private worldStart(w: number): number {
+    return this.worlds.slice(0, w).reduce((n, x) => n + x.levels.length, 0);
+  }
+
+  /** "3-7": world 3, level 7. */
+  private levelLabel(i: number): string {
+    const w = this.worldOf(i);
+    return `${w + 1}-${i - this.worldStart(w) + 1}`;
   }
 
   /** First campaign level not yet completed (or the last one once everything is done). */
@@ -405,16 +452,40 @@ export class UIManager {
 
   private refreshMenu(): void {
     const n = this.nextUnplayed();
-    this.bind('play-sub', `Level ${n + 1} · ${this.campaign[n].name}`);
+    this.bind('play-sub', `Level ${this.levelLabel(n)} · ${this.campaign[n].name}`);
     const list = this.root.querySelector<HTMLElement>('[data-bind-html="level-list"]')!;
-    list.innerHTML = this.campaign
-      .map((l, i) => {
+    const extras = this.root.querySelector<HTMLElement>('.extras-block')!;
+    extras.style.display = this.openWorld < 0 ? '' : 'none';
+    if (this.openWorld < 0) {
+      this.bind('levels-title', 'WORLDS');
+      list.innerHTML = this.worlds
+        .map((w, wi) => {
+          const start = this.worldStart(wi);
+          const recs = w.levels.map((l) => this.game.recordFor(l.id));
+          const stars = recs.reduce((a, r) => a + r.bestStars, 0);
+          const done = recs.filter((r) => r.bestTime !== null).length;
+          const open = this.unlocked(start);
+          return `<button class="level-row world-row ${open ? '' : 'locked'}" ${open ? `data-world="${wi}"` : 'disabled'} style="--accent:${w.theme.accent}">
+            <span class="lv-num">${wi + 1}</span>
+            <span class="lv-name">${w.name}<small>${open ? w.idea : 'Finish world ' + wi + ' to unlock'}</small></span>
+            <span class="lv-stats">${open ? `<span class="lv-stars">★ ${stars}/${w.levels.length * 3}</span><small>${done}/${w.levels.length} done</small>` : '🔒'}</span>
+          </button>`;
+        })
+        .join('');
+      return;
+    }
+    const w = this.worlds[this.openWorld];
+    const start = this.worldStart(this.openWorld);
+    this.bind('levels-title', `WORLD ${this.openWorld + 1} · ${w.name.toUpperCase()}`);
+    list.innerHTML = w.levels
+      .map((l, li) => {
+        const i = start + li;
         const r = this.game.recordFor(l.id);
         const open = this.unlocked(i);
         const stars = '★'.repeat(r.bestStars) + '☆'.repeat(3 - r.bestStars);
-        return `<button class="level-row ${open ? '' : 'locked'}" ${open ? `data-level="${i}"` : 'disabled'}>
-          <span class="lv-num">${i + 1}</span>
-          <span class="lv-name">${l.name}<small>${open ? l.subtitle : 'Complete level ' + i + ' to unlock'}</small></span>
+        return `<button class="level-row ${open ? '' : 'locked'}" ${open ? `data-level="${i}"` : 'disabled'} style="--accent:${w.theme.accent}">
+          <span class="lv-num">${this.levelLabel(i)}</span>
+          <span class="lv-name">${l.name}<small>${open ? l.subtitle : 'Finish the level before to unlock'}</small></span>
           <span class="lv-stats">${open ? `<span class="lv-stars">${stars}</span><small>${r.bestTime !== null ? r.bestTime.toFixed(1) + 's' : '—'}</small>` : '🔒'}</span>
         </button>`;
       })
