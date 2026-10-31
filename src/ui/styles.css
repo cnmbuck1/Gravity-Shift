@@ -46,7 +46,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: radial-gradient(ellipse at 50% 40%, rgba(5, 7, 13, 0.25), rgba(5, 7, 13, 0.85));
 }
 .logo { display: flex; align-items: center; justify-content: center; margin: 0 0 6px; font-weight: 800; letter-spacing: 0.12em; line-height: 1; font-size: clamp(38px, 11.5vw, 64px); }
-.logo span { text-shadow: 0 0 18px rgba(46, 230, 255, 0.55); }
+/* Letters share the Orb's back glow (Orb halo #00d8ff, band glow #0a8cff), so the word and the O read as one mark. */
+.logo span {
+  color: #f0feff;
+  text-shadow: 0 0 0.06em #ffffff, 0 0 0.16em #00e5ff, 0 0 0.34em rgba(0, 216, 255, 0.85), 0 0 0.7em rgba(10, 140, 255, 0.7), 0 0 1.2em rgba(10, 140, 255, 0.45);
+}
 .logo span:last-child { margin-left: 0.1em; }
 /* The O in GRAVITOR is the Cnmbuck Orb (drawn at 0.76 of its canvas, so the canvas is a bit larger than a letter). */
 .logo-orb { width: 1.12em; height: 1.12em; margin: -0.17em -0.1em; }
