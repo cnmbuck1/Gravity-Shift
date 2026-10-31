@@ -230,6 +230,7 @@ export class GameManager {
     this.input.tilt.smoothing = s.smoothing;
     const tuning = PROFILES[s.physics] ?? PROFILES.refined;
     this.ball.applyTuning(tuning);
+    this.ball.setSkin(s.orbWon ? s.ball : 'chrome');
     this.input.tilt.shape.maxTiltDeg = tuning.maxTiltDeg;
     this.input.tilt.shape.curve = tuning.tiltCurve;
     this.view.setQuality(s.graphics);
@@ -274,7 +275,7 @@ export class GameManager {
     }
 
     this.audio.setRolling(this.state === 'playing' ? this.ball.speed : 0, this.ball.grounded);
-    this.ball.render(alpha, dt);
+    this.ball.render(alpha, dt, this.view.camera, this.view.renderer);
     this.camera.update(dt, this.ball.mesh.position, this.ball.body.linvel(), this.frame, this.ball.grounded, this.ball.collider);
     this.levels.update(dt, this.elapsed);
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);

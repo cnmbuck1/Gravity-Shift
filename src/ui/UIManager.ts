@@ -158,6 +158,10 @@ export class UIManager {
           <label class="row">Music <input type="checkbox" data-setting="music" /></label>
           <label class="row">Haptics <input type="checkbox" data-setting="haptics" /></label>
           <label class="row">Course preview <input type="checkbox" data-setting="preview" /></label>
+          <div class="row">Ball
+            <span class="seg" data-setting="ball"><button data-value="chrome">CHROME</button><button data-value="orb" class="orb-choice">CNMBUCK ORB</button></span>
+          </div>
+          <div class="note" data-bind="orb-note"></div>
           <div class="row">Physics
             <span class="seg" data-setting="physics"><button data-value="refined">REFINED</button><button data-value="classic">CLASSIC</button></span>
           </div>
@@ -222,6 +226,10 @@ export class UIManager {
         e.preventDefault();
         const key = seg.dataset.setting!;
         const value = b.dataset.value!;
+        if (key === 'ball' && value === 'orb' && !this.settings.get().orbWon) {
+          this.toast('Finish the campaign to win the Cnmbuck Orb', 2200);
+          return;
+        }
         if (key === 'controlMode' && value === 'tilt' && this.game.input.permission !== 'granted') {
           const ok = await this.ensureTilt();
           if (!ok) return;
@@ -251,6 +259,11 @@ export class UIManager {
       smoothing: (v) => `${Math.round(v * 1000)} ms`,
     };
     panel.querySelectorAll<HTMLOutputElement>('output').forEach((o) => (o.textContent = fmt[o.dataset.out!](s[o.dataset.out!] as number)));
+    const orbWon = this.settings.get().orbWon;
+    panel.querySelector('.orb-choice')?.classList.toggle('locked', !orbWon);
+    this.bind('orb-note', orbWon
+      ? 'The Cnmbuck Orb: Cnmbuck Studios\' signature ball, in every Cnmbuck game.'
+      : '🔒 Cnmbuck Orb: finish the campaign to win Cnmbuck Studios\' signature ball.');
     this.debugEl.style.display = this.settings.get().showDebug ? 'block' : 'none';
     this.hud.classList.toggle('touch-mode', this.settings.get().controlMode === 'touch');
   }
@@ -412,6 +425,11 @@ export class UIManager {
     this.bind('r-shifts', String(stats.shifts));
     this.bind('r-best', `${record.bestTime?.toFixed(2)}s${newBest ? ' · NEW!' : ''}`);
     window.setTimeout(() => this.show('complete'), 900);
+    // Finishing the whole campaign wins the Cnmbuck Orb: put it straight on and say so, once
+    if (!this.settings.get().orbWon && this.campaign.every((l) => this.game.recordFor(l.id).bestTime !== null)) {
+      this.settings.update({ orbWon: true, ball: 'orb' });
+      window.setTimeout(() => this.toast('🏆 You won the Cnmbuck Orb! Change ball in Settings', 3600), 1200);
+    }
   }
 
   // ---------- helpers ----------
