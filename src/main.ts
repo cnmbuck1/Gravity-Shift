@@ -7,6 +7,7 @@ import { SHIFT_PROOF } from './levels/shiftProof';
 import { TEST_DECK } from './levels/testDeck';
 import { ORBITAL_LABYRINTH } from './levels/orbitalLabyrinth';
 import { CORNERS, FIRST_ROLL, MIND_THE_GAP, MOVING_PARTS } from './levels/campaign';
+import { CROSSFIRE, EVENT_HORIZON, SWITCHBACK, TWIN_WALLS, WALL_WALK } from './levels/campaignAdvanced';
 
 async function boot(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -15,7 +16,10 @@ async function boot(): Promise<void> {
   const settings = new SettingsManager(save);
   const game = await GameManager.create(canvas, ui, settings, save);
 
-  const campaign = [FIRST_ROLL, CORNERS, MIND_THE_GAP, MOVING_PARTS, ORBITAL_LABYRINTH];
+  const campaign = [
+    FIRST_ROLL, CORNERS, MIND_THE_GAP, MOVING_PARTS, SWITCHBACK,
+    WALL_WALK, ORBITAL_LABYRINTH, CROSSFIRE, TWIN_WALLS, EVENT_HORIZON,
+  ];
   const extras = [SHIFT_PROOF, TEST_DECK];
   // The menu shows the final maze idling in the background.
   game.loadLevel(ORBITAL_LABYRINTH);

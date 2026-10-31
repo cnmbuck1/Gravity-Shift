@@ -2,7 +2,7 @@
 
 _Tilt Your World. Defy Gravity._ A futuristic 3D physics puzzle game for iPhone: roll a metallic sphere by tilting your phone, and shift gravity 90° to turn walls and ceilings into floors.
 
-**Status:** v0.4: five-level progression (levels 1–4 ease players in; level 5 is the refined Orbital Labyrinth benchmark), level select, How to Play. Previously v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** v0.5: ten levels (Orbital Labyrinth is now level 7), Cnmbuck Orb mark on the title screen (the Orb ball itself is won by finishing all ten levels). v0.4 added the five-level progression, level select and How to Play. Previously v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
 
 Stack: Three.js · TypeScript · Vite · Rapier · Capacitor (iOS).
 
@@ -51,7 +51,14 @@ After code changes run `npm run ios:sync` again, then Run in Xcode.
 | 2 | Corners | Three-wide corridors, many turns, a dead end, first checkpoint |
 | 3 | Mind the Gap | Holes in the floor, a narrow two-wide passage |
 | 4 | Moving Parts | Red energy strips, two sliding pistons, ramp and raised bridge |
-| 5 | Orbital Labyrinth | Everything, plus the skywalk and gravity-wall shortcuts |
+| 5 | Switchback | Longer runs, a two-wide stretch, a 2 m raised bridge, three pistons, two checkpoints |
+| 6 | Wall Walk | First required gravity shift: onto a wall, over a chasm, and back down |
+| 7 | Orbital Labyrinth | Everything so far, plus the skywalk and gravity-wall shortcuts |
+| 8 | Crossfire | Two-wide corridors, faster pistons, an energy slalom, a 1.4 m bridge |
+| 9 | Twin Walls | Two required wall crossings (right wall, then left wall), pistons between |
+| 10 | Event Horizon | Finale: holes, slalom, thin bridge, fast pistons and a long wall crossing |
+
+Levels 5, 6 and 8–10 live in `src/levels/campaignAdvanced.ts`.
 
 **How to Play** on the main menu explains tilt, calibration, hazards, checkpoints, gravity zones and touch controls.
 
