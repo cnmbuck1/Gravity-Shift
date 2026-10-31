@@ -3,6 +3,8 @@ import type { PhysicsProfile } from '../game/PhysicsTuning';
 
 export type ControlMode = 'tilt' | 'touch';
 export type GraphicsQuality = 'low' | 'high';
+/** The player's ball: the original chrome sphere, or the Cnmbuck Orb (won by finishing the campaign). */
+export type BallSkin = 'chrome' | 'orb';
 
 export interface Settings {
   controlMode: ControlMode;
@@ -20,6 +22,9 @@ export interface Settings {
   haptics: boolean;
   /** Show the course flyover before the first attempt at a level. */
   preview: boolean;
+  ball: BallSkin;
+  /** The campaign is finished and the Cnmbuck Orb has been awarded (the announcement shows once). */
+  orbWon: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -34,6 +39,8 @@ export const DEFAULT_SETTINGS: Settings = {
   physics: 'refined',
   haptics: true,
   preview: true,
+  ball: 'chrome',
+  orbWon: false,
 };
 
 type Listener = (s: Readonly<Settings>) => void;

@@ -164,6 +164,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .seg button { background: transparent; border: 0; padding: 8px 12px; font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
 .seg button.on { background: rgba(46, 230, 255, 0.18); color: var(--ink); }
 .note { font-size: 11px; color: var(--muted); }
+.seg button.orb-choice { color: #7fe6ff; text-shadow: 0 0 8px rgba(0, 229, 255, 0.7); }
+.seg button.orb-choice.on { background: linear-gradient(100deg, rgba(0, 216, 255, 0.28), rgba(58, 106, 255, 0.22) 55%, rgba(255, 154, 26, 0.28)); color: #ffffff; }
+.seg button.orb-choice.locked { opacity: 0.5; text-shadow: none; }
 
 .stars { text-align: center; font-size: 40px; color: var(--amber); letter-spacing: 0.2em; text-shadow: 0 0 16px rgba(255, 176, 46, 0.6); }
 .result-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: baseline; margin: 4px 0 10px; }

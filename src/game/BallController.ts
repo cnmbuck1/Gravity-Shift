@@ -4,6 +4,8 @@ import type { PhysicsManager } from '../physics/PhysicsManager';
 import type { GravityFrame } from './GravityFrame';
 import { COLORS } from '../render/Materials';
 import { REFINED, type PhysicsTuning } from './PhysicsTuning';
+import { createOrbMaterial, OrbFx } from '../brand/cnmbuck-orb';
+import type { BallSkin } from '../settings/SettingsManager';
 
 export const BALL_RADIUS = 0.5;
 
@@ -37,6 +39,14 @@ export class BallController {
   private trail: THREE.Mesh[] = [];
   private trailTimer = 0;
   private trailIndex = 0;
+  /** The chrome look's parts, hidden while the Cnmbuck Orb is the ball. */
+  private sphere: THREE.Mesh;
+  private chromeMaterial: THREE.Material;
+  private chromeParts: THREE.Object3D[] = [];
+  /** The Cnmbuck Orb's glow and light trail, made the first time the Orb is chosen (they need a page to draw on). */
+  private orbFx: OrbFx | null = null;
+  private scene: THREE.Scene;
+  private skin: BallSkin = 'chrome';
 
   constructor(private physics: PhysicsManager, scene: THREE.Scene) {
     const R = physics.rapier;
@@ -64,6 +74,8 @@ export class BallController {
     );
     sphere.castShadow = true;
     this.mesh.add(sphere);
+    this.sphere = sphere;
+    this.chromeMaterial = sphere.material;
     // Glowing equator + meridian bands make the rotation readable.
     const bandMat = new THREE.MeshStandardMaterial({ color: COLORS.safe, emissive: COLORS.safe, emissiveIntensity: 2.5 });
     const band = new THREE.Mesh(new THREE.TorusGeometry(BALL_RADIUS * 1.001, 0.025, 8, 64), bandMat);
@@ -71,16 +83,19 @@ export class BallController {
     const band2 = band.clone();
     band2.rotation.y = Math.PI / 2;
     this.mesh.add(band2);
+    this.chromeParts.push(band, band2);
     // Faint cyan rim so the sphere stays visible against bright metal and dark void alike.
     const rim = new THREE.Mesh(
       new THREE.SphereGeometry(BALL_RADIUS * 1.08, 32, 16),
       new THREE.MeshBasicMaterial({ color: COLORS.safe, transparent: true, opacity: 0.16, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false }),
     );
     this.mesh.add(rim);
+    this.chromeParts.push(rim);
     // Small cyan under-light: a pool of light on the floor marks the ball's position.
     const under = new THREE.PointLight(COLORS.safe, 2.2, 2.6, 2);
     this.mesh.add(under);
     scene.add(this.mesh);
+    this.scene = scene;
 
     // Respawn flash.
     this.glow = new THREE.Mesh(
@@ -96,6 +111,19 @@ export class BallController {
       scene.add(t);
       this.trail.push(t);
     }
+  }
+
+  /** Switch between the chrome sphere and the Cnmbuck Orb. */
+  setSkin(skin: BallSkin): void {
+    this.skin = skin;
+    const orb = skin === 'orb';
+    this.sphere.material = orb ? createOrbMaterial() : this.chromeMaterial;
+    for (const p of this.chromeParts) p.visible = !orb;
+    if (orb && !this.orbFx) {
+      this.orbFx = new OrbFx(BALL_RADIUS, { groundGlow: false });
+      this.scene.add(this.orbFx.group);
+    }
+    if (this.orbFx) this.orbFx.on = orb;
   }
 
   get position(): THREE.Vector3 {
@@ -188,8 +216,8 @@ export class BallController {
     this.currRot.set(r.x, r.y, r.z, r.w);
   }
 
-  /** Called once per rendered frame. */
-  render(alpha: number, dt: number): void {
+  /** Called once per rendered frame (the camera and renderer size the Orb's light trail). */
+  render(alpha: number, dt: number, camera?: THREE.PerspectiveCamera, renderer?: THREE.WebGLRenderer): void {
     this.mesh.position.lerpVectors(this.prevPos, this.currPos, alpha);
     this.mesh.quaternion.slerpQuaternions(this.prevRot, this.currRot, alpha);
     this.glow.position.copy(this.mesh.position);
@@ -202,12 +230,14 @@ export class BallController {
       this.trailTimer = 0;
       const t = this.trail[this.trailIndex++ % this.trail.length];
       t.position.copy(this.mesh.position);
-      (t.material as THREE.MeshBasicMaterial).opacity = Math.min(0.35, this.speed / 30);
+      // The Orb draws its own light trail instead of the ghost spheres
+      (t.material as THREE.MeshBasicMaterial).opacity = this.skin === 'orb' ? 0 : Math.min(0.35, this.speed / 30);
     }
     for (const t of this.trail) {
       const m = t.material as THREE.MeshBasicMaterial;
       m.opacity = Math.max(0, m.opacity - dt * 1.2);
     }
+    if (camera && renderer) this.orbFx?.update(this.mesh.position, null, this.speed > 0.4, this.mesh.visible, dt, camera, renderer);
   }
 
   private updateGrounded(frame: GravityFrame, dt: number): void {
