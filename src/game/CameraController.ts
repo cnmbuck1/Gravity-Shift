@@ -6,6 +6,8 @@ import type { GravityFrame } from './GravityFrame';
 
 const DEFAULT_CAMERA: CameraDef = { pitchDeg: 40, distance: 10.5, lookAhead: 2.5 };
 const SHIFT_DURATION = 0.75;
+/** How far (m) the camera sinks after a falling ball before letting it vanish below. */
+const FALL_FOLLOW = 5;
 
 /**
  * Elevated follow camera locked to the gravity frame (no free rotation). Screen-up is
@@ -27,6 +29,8 @@ export class CameraController {
   private cfg: CameraDef = DEFAULT_CAMERA;
   private ray: RAPIER.Ray;
   frozen = false;
+  /** Ball position the last time it touched a surface; falls are followed relative to it. */
+  private groundRef = new THREE.Vector3();
   private fly: { curve: THREE.CatmullRomCurve3; t: number; duration: number; done: () => void } | null = null;
 
   constructor(private camera: THREE.PerspectiveCamera, private physics: PhysicsManager) {
@@ -51,6 +55,7 @@ export class CameraController {
     this.focus.copy(focus);
     this.lead.set(0, 0, 0);
     this.frozen = false;
+    this.groundRef.copy(focus);
   }
 
   get inFlyover(): boolean {
@@ -80,7 +85,7 @@ export class CameraController {
     this.t = 0;
   }
 
-  update(dt: number, target: THREE.Vector3, velocity: { x: number; y: number; z: number }, frame: GravityFrame, ignore?: RAPIER.Collider): void {
+  update(dt: number, target: THREE.Vector3, velocity: { x: number; y: number; z: number }, frame: GravityFrame, grounded: boolean, ignore?: RAPIER.Collider): void {
     if (this.fly) {
       const f = this.fly;
       f.t = Math.min(f.duration, f.t + dt);
@@ -109,10 +114,17 @@ export class CameraController {
       this.frameQ.slerpQuaternions(this.fromQ, this.toQ, e);
     }
 
+    if (grounded) this.groundRef.copy(target);
     if (!this.frozen) {
-      // Follow fast, but slower while rotating so the move reads as one smooth motion.
-      const k = this.t < 1 ? 4 : 6;
-      this.focus.lerp(target, 1 - Math.exp(-dt * k));
+      // Falling into the abyss: keep following, but more lazily and only FALL_FOLLOW metres
+      // below where the ball left the course, so it visibly drops away into the void.
+      const t = target.clone();
+      const drop = t.clone().sub(this.groundRef).dot(frame.down);
+      const falling = drop > 0.6 && this.t >= 1;
+      if (drop > FALL_FOLLOW) t.addScaledVector(frame.down, FALL_FOLLOW - drop);
+      // Follow fast, but slower while rotating or falling so the move reads as one smooth motion.
+      const k = this.t < 1 ? 4 : falling ? 3 : 6;
+      this.focus.lerp(t, 1 - Math.exp(-dt * k));
 
       // Velocity look-ahead in the floor plane, heavily smoothed so the view never jerks.
       const v = new THREE.Vector3(velocity.x, velocity.y, velocity.z);

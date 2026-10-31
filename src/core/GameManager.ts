@@ -14,7 +14,7 @@ import { HapticsManager } from '../feedback/HapticsManager';
 import type { SaveManager } from '../settings/SaveManager';
 
 export const GRAVITY = 14;
-const RESPAWN_DELAY = 0.7;
+const RESPAWN_DELAY = 1.1;
 /** Short grace period after leaving a surface during which a shift is still allowed. */
 const COYOTE_TIME = 0.15;
 /** Velocity change (m/s) in one step, beyond applied forces, that counts as a collision. */
@@ -156,6 +156,10 @@ export class GameManager {
     if (this.state === 'preview') this.camera.skipFlyover();
   }
 
+  recordFor(levelId: string): LevelRecord {
+    return this.save.load<LevelRecord>(`record:${levelId}`, { bestTime: null, bestStars: 0 });
+  }
+
   /** Shift directions available right now (drives which HUD buttons are shown). */
   availableShifts(): ShiftDirection[] {
     const def = this.levels.level;
@@ -271,7 +275,7 @@ export class GameManager {
 
     this.audio.setRolling(this.state === 'playing' ? this.ball.speed : 0, this.ball.grounded);
     this.ball.render(alpha, dt);
-    this.camera.update(dt, this.ball.mesh.position, this.ball.body.linvel(), this.frame, this.ball.collider);
+    this.camera.update(dt, this.ball.mesh.position, this.ball.body.linvel(), this.frame, this.ball.grounded, this.ball.collider);
     this.levels.update(dt, this.elapsed);
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);
     this.view.ballLight.target.position.copy(this.ball.mesh.position);
@@ -291,7 +295,6 @@ export class GameManager {
     if (this.levels.isOutOfBounds(p) || this.levels.inHazard(p)) {
       this.stats.falls++;
       this.respawnTimer = 0;
-      this.camera.frozen = true;
       this.audio.fall();
       this.haptics.warning();
       this.events.onFall?.();

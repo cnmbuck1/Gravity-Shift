@@ -181,3 +181,39 @@ button { font: inherit; color: inherit; cursor: pointer; }
   position: absolute; left: 8px; bottom: calc(var(--safe-bottom) + 110px); margin: 0; padding: 6px 8px; border-radius: 8px;
   font: 10px/1.4 ui-monospace, Menlo, monospace; background: rgba(0, 0, 0, 0.55); color: #9ff; display: none;
 }
+
+/* ---------- level select ---------- */
+.levels-panel, .howto { width: min(400px, 100%); }
+.level-list { display: flex; flex-direction: column; gap: 8px; }
+.level-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; text-align: left;
+  border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 16, 28, 0.6);
+}
+.level-row:active { transform: scale(0.98); }
+.level-row.locked { opacity: 0.45; }
+.lv-num {
+  width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px;
+  background: rgba(46, 230, 255, 0.14); color: var(--cyan); font-weight: 800;
+}
+.lv-name { flex: 1; display: flex; flex-direction: column; font-weight: 700; letter-spacing: 0.04em; font-size: 14px; }
+.lv-name small, .lv-stats small { font-weight: 500; color: var(--muted); font-size: 11px; letter-spacing: 0.02em; }
+.lv-stats { display: flex; flex-direction: column; align-items: flex-end; }
+.lv-stars { color: var(--amber); letter-spacing: 0.1em; font-size: 13px; }
+.section-label { margin-top: 6px; font-size: 10px; letter-spacing: 0.24em; color: var(--muted); }
+
+/* ---------- how to play ---------- */
+.howto-card { display: flex; gap: 12px; align-items: flex-start; }
+.howto-card b { font-size: 14px; letter-spacing: 0.04em; }
+.howto-card p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.45; color: #b8c8da; }
+.hi {
+  width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; font-size: 20px;
+  background: rgba(46, 230, 255, 0.1); border: 1px solid var(--line); color: var(--cyan); position: relative; overflow: hidden;
+}
+.hi-tilt .phone {
+  width: 16px; height: 28px; border-radius: 4px; border: 2px solid var(--cyan); animation: tilt 2.4s ease-in-out infinite;
+}
+@keyframes tilt { 0%, 100% { transform: rotate(-18deg); } 50% { transform: rotate(18deg); } }
+.hi-goal::after { content: ''; width: 22px; height: 22px; border-radius: 50%; border: 3px solid #47f0ff; box-shadow: 0 0 10px #47f0ff; }
+.hi-hazard { background: repeating-linear-gradient(45deg, #5a0a14 0 6px, #ff4a5c 6px 10px); border-color: rgba(255, 59, 78, 0.6); }
+.hi-check::after { content: ''; width: 24px; height: 24px; border-radius: 50%; border: 3px solid #3dffc8; }
+.hi-grav { background: rgba(162, 75, 255, 0.25); border-color: rgba(162, 75, 255, 0.7); color: #e2ccff; }

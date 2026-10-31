@@ -2,7 +2,7 @@
 
 _Tilt Your World. Defy Gravity._ A futuristic 3D physics puzzle game for iPhone: roll a metallic sphere by tilting your phone, and shift gravity 90° to turn walls and ceilings into floors.
 
-**Status:** v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** v0.4: five-level progression (levels 1–4 ease players in; level 5 is the refined Orbital Labyrinth benchmark), level select, How to Play. Previously v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
 
 Stack: Three.js · TypeScript · Vite · Rapier · Capacitor (iOS).
 
@@ -42,6 +42,19 @@ In the native app there's no motion prompt; access is granted automatically.
 After code changes run `npm run ios:sync` again, then Run in Xcode.
 
 ## What to try
+
+**Levels** (unlock in order; Main menu → LEVELS shows stars and best times; PLAY resumes at your next unfinished level):
+
+| # | Level | Teaches |
+|---|---|---|
+| 1 | First Roll | Tilt to roll: wide corridors, four gentle turns, no hazards |
+| 2 | Corners | Three-wide corridors, many turns, a dead end, first checkpoint |
+| 3 | Mind the Gap | Holes in the floor, a narrow two-wide passage |
+| 4 | Moving Parts | Red energy strips, two sliding pistons, ramp and raised bridge |
+| 5 | Orbital Labyrinth | Everything, plus the skywalk and gravity-wall shortcuts |
+
+**How to Play** on the main menu explains tilt, calibration, hazards, checkpoints, gravity zones and touch controls.
+
 
 - **Play: Orbital Labyrinth** (target 45–60 s). The first time you play, a 4–5 second flyover previews the course (tap to skip; it won't replay on retries). Roll through the maze: weave past three holes in the wide hall, climb the narrow two-wide passage, time the amber piston, reach the checkpoint pad in the hub, climb the ramp and cross the narrow raised bridge, dodge the red energy strips, and roll into the portal plaza. No gravity shift is needed.
   - **Skywalk shortcut:** from the hole hall, a narrow unwalled catwalk leads straight north over a gap into the piston corridor.

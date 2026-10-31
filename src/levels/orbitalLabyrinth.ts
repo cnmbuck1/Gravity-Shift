@@ -1,21 +1,5 @@
-import type { LevelDef, PlatformDef, V3 } from './LevelTypes';
-
-/**
- * Ramp between two heights along the x axis, as a tilted slab.
- * The top surface runs from (xLow, yLow) to (xHigh, yHigh).
- */
-function rampX(xLow: number, yLow: number, xHigh: number, yHigh: number, z: number, width: number): PlatformDef {
-  const t = 0.3;
-  const dx = xHigh - xLow;
-  const dy = yHigh - yLow;
-  const len = Math.hypot(dx, dy);
-  // Rotate about z so the slab's x axis lies along the slope (either way round).
-  const angle = dx >= 0 ? Math.atan2(dy, dx) : Math.atan2(-dy, -dx);
-  const nx = -Math.sin(angle);
-  const ny = Math.cos(angle);
-  const position: V3 = [(xLow + xHigh) / 2 - (nx * t) / 2, (yLow + yHigh) / 2 - (ny * t) / 2, z];
-  return { position, size: [len, t, width], rotation: [0, 0, (angle * 180) / Math.PI], role: 'safe' };
-}
+import type { LevelDef } from './LevelTypes';
+import { MAZE_CAMERA, rampX } from './levelHelpers';
 
 const BRIDGE_Y = 0.8;
 const BRIDGE_Z = -4;
@@ -40,7 +24,7 @@ const BRIDGE_Z = -4;
 export const ORBITAL_LABYRINTH: LevelDef = {
   id: 'orbital-labyrinth',
   name: 'Orbital Labyrinth',
-  subtitle: 'Benchmark maze',
+  subtitle: 'Shortcuts and the gravity wall',
   spawn: [-10.5, 0.6, 17],
   frame: { down: [0, -1, 0], forward: [0, 0, -1] },
   allowShifts: true,
@@ -116,8 +100,8 @@ export const ORBITAL_LABYRINTH: LevelDef = {
   ],
   checkpoints: [{ position: [5, 0, -2], frame: { down: [0, -1, 0], forward: [0, 0, -1] } }],
   goal: { position: [-10, 0, -18], up: [0, 1, 0], facing: [0, 0, 1] },
-  camera: { pitchDeg: 64, distance: 17, lookAhead: 2.2, forwardBias: 1.2 },
-  killY: -3,
-  par: { three: 50, two: 80 },
+  camera: MAZE_CAMERA,
+  killY: -6,
+  par: { three: 60, two: 95 },
   fallMargin: 6,
 };

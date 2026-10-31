@@ -6,6 +6,7 @@ import { UIManager } from './ui/UIManager';
 import { SHIFT_PROOF } from './levels/shiftProof';
 import { TEST_DECK } from './levels/testDeck';
 import { ORBITAL_LABYRINTH } from './levels/orbitalLabyrinth';
+import { CORNERS, FIRST_ROLL, MIND_THE_GAP, MOVING_PARTS } from './levels/campaign';
 
 async function boot(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -14,11 +15,12 @@ async function boot(): Promise<void> {
   const settings = new SettingsManager(save);
   const game = await GameManager.create(canvas, ui, settings, save);
 
-  // The menu shows the first level idling in the background.
-  const levels = [ORBITAL_LABYRINTH, SHIFT_PROOF, TEST_DECK];
-  game.loadLevel(levels[0]);
+  const campaign = [FIRST_ROLL, CORNERS, MIND_THE_GAP, MOVING_PARTS, ORBITAL_LABYRINTH];
+  const extras = [SHIFT_PROOF, TEST_DECK];
+  // The menu shows the final maze idling in the background.
+  game.loadLevel(ORBITAL_LABYRINTH);
   game.toMenu();
-  new UIManager(ui, game, settings, levels);
+  new UIManager(ui, game, settings, campaign, extras);
   game.start();
 
   // Prevent iOS rubber-band scrolling and double-tap zoom during play.

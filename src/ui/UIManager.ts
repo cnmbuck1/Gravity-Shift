@@ -20,10 +20,16 @@ export class UIManager {
   private previewDone: (() => void) | null = null;
   private settingsReturn: 'menu' | 'game' = 'menu';
 
-  constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private levels: LevelDef[]) {
+  private levels: LevelDef[];
+  private current = 0;
+
+  /** `campaign` levels unlock in order; `extras` (test courses) are always available. */
+  constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private campaign: LevelDef[], private extras: LevelDef[]) {
+    this.levels = [...campaign, ...extras];
     this.root = root;
     this.build();
     this.bindGameEvents();
+    this.refreshMenu();
     this.show('menu');
     requestAnimationFrame(this.tick);
 
@@ -43,10 +49,38 @@ export class UIManager {
         <div class="logo"><span>GRAVITY</span><span class="accent">SHIFT</span></div>
         <div class="tagline">Tilt Your World. Defy Gravity.</div>
         <div class="menu-buttons">
-          ${this.levels.map((l, i) => `<button class="btn ${i === 0 ? 'primary' : ''}" data-level="${i}"><b>${i === 0 ? 'PLAY' : l.name.toUpperCase()}</b><small>${l.subtitle}</small></button>`).join('')}
+          <button class="btn primary" data-action="play"><b>PLAY</b><small data-bind="play-sub"></small></button>
+          <button class="btn" data-action="levels">LEVELS</button>
+          <button class="btn" data-action="howto">HOW TO PLAY</button>
           <button class="btn" data-action="settings">SETTINGS</button>
         </div>
-        <div class="menu-foot">v0.2 · Orbital Labyrinth benchmark</div>
+        <div class="menu-foot">v0.4 · Five-level progression</div>
+      </section>
+
+      <section class="screen panel-screen" data-screen="levels">
+        <div class="panel levels-panel">
+          <h2>LEVELS</h2>
+          <div class="level-list" data-bind-html="level-list"></div>
+          <div class="section-label">TEST COURSES</div>
+          <div class="level-list extras">
+            ${this.extras.map((l, i) => `<button class="level-row" data-level="${this.campaign.length + i}"><span class="lv-num">·</span><span class="lv-name">${l.name}<small>${l.subtitle}</small></span></button>`).join('')}
+          </div>
+          <button class="btn" data-action="menu">BACK</button>
+        </div>
+      </section>
+
+      <section class="screen panel-screen" data-screen="howto">
+        <div class="panel howto">
+          <h2>HOW TO PLAY</h2>
+          <div class="howto-card"><div class="hi hi-tilt"><span class="phone"></span></div><div><b>Tilt to roll</b><p>Hold your phone however is comfortable. Tilt it and the sphere rolls downhill, building momentum. Small tilts give small pushes; level the phone and it slows to a stop.</p></div></div>
+          <div class="howto-card"><div class="hi">◎</div><div><b>Calibrate anytime</b><p>Changed how you're holding the phone? Tap ◎ and hold still for a moment. That position becomes "level".</p></div></div>
+          <div class="howto-card"><div class="hi hi-goal"></div><div><b>Reach the portal</b><p>Find your way through the maze to the glowing ring. Fewer falls and a faster time earn more stars.</p></div></div>
+          <div class="howto-card"><div class="hi hi-hazard"></div><div><b>Watch for hazards</b><p>Red edges mark holes and drops. Red striped floor destroys the sphere. Amber pistons slide back and forth; time your run past them.</p></div></div>
+          <div class="howto-card"><div class="hi hi-check"></div><div><b>Checkpoints</b><p>Roll over a green ring to save your progress. After a fall you restart from the last one.</p></div></div>
+          <div class="howto-card"><div class="hi hi-grav">▶</div><div><b>Gravity zones</b><p>On purple floor, a shift button appears. Tap it and gravity turns 90°: the wall beside you becomes the floor. Shifts are optional shortcuts, so use them when you're ready.</p></div></div>
+          <div class="howto-card"><div class="hi">✋</div><div><b>Prefer touch?</b><p>Settings → Controls → TOUCH. Drag anywhere on the screen to steer with a virtual joystick.</p></div></div>
+          <button class="btn primary" data-action="menu">GOT IT</button>
+        </div>
       </section>
 
       <section class="hud" data-screen="hud">
@@ -93,7 +127,8 @@ export class UIManager {
             <small>SHIFTS</small><b data-bind="r-shifts"></b>
             <small>BEST</small><b data-bind="r-best"></b>
           </div>
-          <button class="btn primary" data-action="restart">RETRY</button>
+          <button class="btn primary" data-action="next" data-bind-show="has-next">NEXT LEVEL</button>
+          <button class="btn" data-action="restart">RETRY</button>
           <button class="btn" data-action="menu">MAIN MENU</button>
         </div>
       </section>
@@ -245,6 +280,7 @@ export class UIManager {
     // Must run synchronously inside the tap so iOS will show the motion permission prompt.
     const permission = this.settings.get().controlMode === 'tilt' ? this.ensureTilt() : Promise.resolve(true);
     const def = this.levels[index];
+    this.current = index;
     this.game.loadLevel(def);
     this.hud.classList.toggle('no-shifts', !def.allowShifts);
     this.show('hud');
@@ -311,7 +347,21 @@ export class UIManager {
         break;
       case 'menu':
         this.game.toMenu();
+        this.refreshMenu();
         this.show('menu');
+        break;
+      case 'play':
+        void this.startLevel(this.nextUnplayed());
+        break;
+      case 'levels':
+        this.refreshMenu();
+        this.show('levels');
+        break;
+      case 'howto':
+        this.show('howto');
+        break;
+      case 'next':
+        void this.startLevel(this.current + 1);
         break;
     }
   }
@@ -325,7 +375,37 @@ export class UIManager {
     }
   }
 
+  private unlocked(i: number): boolean {
+    return i === 0 || i >= this.campaign.length || this.game.recordFor(this.campaign[i - 1].id).bestTime !== null;
+  }
+
+  /** First campaign level not yet completed (or the last one once everything is done). */
+  private nextUnplayed(): number {
+    const i = this.campaign.findIndex((l) => this.game.recordFor(l.id).bestTime === null);
+    return i === -1 ? this.campaign.length - 1 : i;
+  }
+
+  private refreshMenu(): void {
+    const n = this.nextUnplayed();
+    this.bind('play-sub', `Level ${n + 1} · ${this.campaign[n].name}`);
+    const list = this.root.querySelector<HTMLElement>('[data-bind-html="level-list"]')!;
+    list.innerHTML = this.campaign
+      .map((l, i) => {
+        const r = this.game.recordFor(l.id);
+        const open = this.unlocked(i);
+        const stars = '★'.repeat(r.bestStars) + '☆'.repeat(3 - r.bestStars);
+        return `<button class="level-row ${open ? '' : 'locked'}" ${open ? `data-level="${i}"` : 'disabled'}>
+          <span class="lv-num">${i + 1}</span>
+          <span class="lv-name">${l.name}<small>${open ? l.subtitle : 'Complete level ' + i + ' to unlock'}</small></span>
+          <span class="lv-stats">${open ? `<span class="lv-stars">${stars}</span><small>${r.bestTime !== null ? r.bestTime.toFixed(1) + 's' : '—'}</small>` : '🔒'}</span>
+        </button>`;
+      })
+      .join('');
+  }
+
   private showComplete(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void {
+    const hasNext = this.current + 1 < this.campaign.length;
+    this.root.querySelectorAll<HTMLElement>('[data-bind-show="has-next"]').forEach((el) => (el.style.display = hasNext ? '' : 'none'));
     this.bind('stars', '★'.repeat(stars) + '☆'.repeat(3 - stars));
     this.bind('r-time', `${stats.time.toFixed(2)}s`);
     this.bind('r-falls', String(stats.falls));
