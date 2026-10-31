@@ -206,7 +206,7 @@ W10 = [
         R(cw=5, feats=[arm(1.2)]), C(len=3), M(mw=3, ny=3, checkpoint=True, feats=[('ice', {}), ('lasers', {'n': 2})]), C(len=3),
         R(cw=3, checkpoint=True, feats=[door(), laser(2.4)]), C(len=3), R(cw=3, feats=[plat(5), holes()])),
     lvl('ACCRETION', 'w10-accretion', 'Accretion', 'Crumbling floors between crossings', 107,
-        R(cw=3, feats=[crumble(5), piston()]), C(len=10, feat='wall'), R(cw=3, checkpoint=True, feats=[crumble(4), pad('boost', 3)]), C(len=10, feat='flip'),
+        R(cw=3, feats=[piston(), crumble(5)]), C(len=10, feat='wall'), R(cw=3, checkpoint=True, feats=[crumble(4), pad('boost', 3)]), C(len=10, feat='flip'),
         M(mw=3, ny=3, checkpoint=True, feats=[('crumble', {'n': 5}), ('deadholes', {'n': 2})]), C(len=3), R(cw=3, feats=[disc(0.8), laser(2.2)])),
     lvl('REDSHIFT', 'w10-redshift', 'Redshift', 'Fast pads, faster arms', 108,
         R(cw=3, feats=[pad('boost', 3), strips(), crumble(3)]), C(len=3), R(cw=5, checkpoint=True, feats=[arm(1.4)]), C(len=10, feat='autowall'),

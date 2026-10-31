@@ -29,21 +29,40 @@ W2 = [
         R(cw=3, feats=[('piston', {})]), C(len=3), R(cw=3, checkpoint=True, feats=[('piston', {'period': 3.0}), ('piston', {'period': 3.0, 'phase': 0.5})]), C(len=3), R(cw=3, feats=[('piston', {'period': 2.8})])])),
     ('HOT_FLOOR', dict(id='w2-hot-floor', name='Hot Floor', sub='Red striped floor destroys the sphere', seed=22, segments=[
         R(cw=3, feats=[('strips', {}), ('strips', {}), ('strips', {})]), C(len=4, feat='strips'), R(cw=3, checkpoint=True, feats=[('strips', {}), ('piston', {})]), C(len=3), R(cw=3, feats=[('strips', {}), ('strips', {})])])),
-    ('OVERPASS', dict(id='w2-overpass', name='Overpass', sub='Ramps up to raised bridges', seed=23, segments=[
-        R(cw=3, feats=[('bridge', {'deck': 5, 'width': 2.2})]), C(len=3), R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 6, 'width': 2.0})]), C(len=3), R(cw=3)])),
-    ('COFFEE_BREAK', dict(id='w2-coffee-break', name='Coffee Break', sub='A short one: one piston, one wide bridge', seed=24, segments=[
-        R(cw=4, feats=[('piston', {'period': 3.6})]), C(len=3), R(cw=3, feats=[('bridge', {'deck': 4, 'width': 2.4})])])),
-    ('GEARS', dict(id='w2-gears', name='Gears', sub='Pistons guard the maze doors', seed=25, segments=[
-        R(cw=3, feats=[('piston', {})]), C(len=3, feat='pistonX'), M(mw=3, ny=2), C(len=2), R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 5, 'width': 2.0})]),
-        C(len=3, feat='pistonX', period=2.8), R(cw=3, feats=[('piston', {'period': 2.8})])])),
-    ('RED_LINE', dict(id='w2-red-line', name='Red Line', sub='Energy strips, a maze, a narrow bridge', seed=26, segments=[
-        R(cw=3, feats=[('strips', {}), ('piston', {})]), C(len=4, feat='strips'), M(mw=3, ny=3, feats=[('deadholes', {'n': 2})]), C(len=2),
-        R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 6, 'width': 1.8})]), C(len=3), R(cw=3, feats=[('strips', {}), ('piston', {'period': 2.6}), ('strips', {})])])),
-    ('PISTON_WORKS', dict(id='w2-piston-works', name='Piston Works', sub='World 2 finale', seed=27, segments=[
-        R(cw=3, feats=[('piston', {}), ('strips', {})]), C(len=3, feat='pistonX'), M(mw=3, ny=3, checkpoint=True), C(len=2),
-        R(cw=3, feats=[('bridge', {'deck': 7, 'width': 1.6})]), C(len=3, feat='pistonX', period=2.6),
-        R(cw=3, checkpoint=True, feats=[('piston', {'period': 2.6}), ('piston', {'period': 2.6, 'phase': 0.5}), ('strips', {})]), C(len=2, w=2), M(mw=2, ny=3), C(len=2, w=2),
-        R(cw=3, feats=[('holes', {}), ('piston', {'period': 2.4})])])),
+    # Levels 4-10 rebuilt busier after Chris's playtest ("too easy, need more obstacles").
+    ('OVERPASS', dict(id='w2-overpass', name='Overpass', sub='Ramps up to raised bridges, pistons between', seed=23, layout=2, segments=[
+        R(cw=3, feats=[('bridge', {'deck': 5, 'width': 2.0})]), C(len=3, feat='pistonX'),
+        R(cw=3, checkpoint=True, feats=[('strips', {}), ('piston', {}), ('holes', {}), ('piston', {'phase': 0.5})]), C(len=3),
+        R(cw=3, feats=[('bridge', {'deck': 4, 'width': 1.8})])])),
+    ('COFFEE_BREAK', dict(id='w2-coffee-break', name='Coffee Break', sub='A short one: pistons and a wide bridge', seed=24, layout=2, segments=[
+        R(cw=3, feats=[('piston', {'period': 3.4}), ('holes', {}), ('piston', {'period': 3.4, 'phase': 0.5})]), C(len=4, feat='strips'),
+        R(cw=3, feats=[('bridge', {'deck': 4, 'width': 2.2})])])),
+    ('SWITCHBACK2', dict(id='w2-switchback', name='Switchback', sub='Back and forth past pistons and strips', seed=28, layout=2, segments=[
+        R(cw=3, feats=[('piston', {}), ('holes', {}), ('piston', {'phase': 0.4})]), C(len=3, feat='pistonX'),
+        R(cw=3, checkpoint=True, feats=[('strips', {}), ('piston', {'period': 2.8}), ('strips', {}), ('holes', {})]), C(len=4, feat='holes'),
+        M(mw=2, ny=3, feats=[('pistons', {'n': 2})]), C(len=3, w=2), R(cw=3, feats=[('bridge', {'deck': 5, 'width': 1.6})])])),
+    ('GEARS', dict(id='w2-gears', name='Gears', sub='Pistons guard the maze doors', seed=25, layout=2, segments=[
+        R(cw=3, feats=[('piston', {}), ('strips', {}), ('piston', {'phase': 0.5})]), C(len=3, feat='pistonX'),
+        M(mw=3, ny=3, feats=[('pistons', {'n': 3}), ('deadholes', {'n': 1})]), C(len=3, feat='pistonX'),
+        R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 5, 'width': 1.8})]), C(len=3, feat='pistonX', period=2.8),
+        R(cw=3, feats=[('piston', {'period': 2.8}), ('holes', {}), ('piston', {'period': 2.6, 'phase': 0.5})])])),
+    ('RED_LINE', dict(id='w2-red-line', name='Red Line', sub='Energy strips, a piston maze, a narrow bridge', seed=26, layout=2, segments=[
+        R(cw=3, feats=[('strips', {}), ('piston', {}), ('strips', {}), ('holes', {})]), C(len=4, feat='strips'),
+        M(mw=3, ny=3, checkpoint=True, feats=[('deadholes', {'n': 2}), ('pistons', {'n': 2})]), C(len=3),
+        R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 6, 'width': 1.6})]), C(len=4, feat='strips'),
+        R(cw=3, feats=[('strips', {}), ('piston', {'period': 2.6}), ('strips', {}), ('piston', {'period': 2.4, 'phase': 0.5})])])),
+    ('CROSSFIRE2', dict(id='w2-crossfire', name='Crossfire', sub='Fast pistons, a thin bridge, a guarded maze', seed=29, layout=2, segments=[
+        R(cw=3, feats=[('piston', {'period': 2.6}), ('piston', {'period': 2.6, 'phase': 0.5}), ('strips', {})]), C(len=3, feat='pistonX', period=2.6),
+        R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 6, 'width': 1.4})]), C(len=4, feat='strips'),
+        M(mw=3, ny=3, checkpoint=True, feats=[('pistons', {'n': 3, 'period': 2.8}), ('deadholes', {'n': 2})]), C(len=3, feat='pistonX', period=2.4),
+        R(cw=3, feats=[('strips', {}), ('piston', {'period': 2.4}), ('holes', {}), ('piston', {'period': 2.2, 'phase': 0.5})])])),
+    ('PISTON_WORKS', dict(id='w2-piston-works', name='Piston Works', sub='World 2 finale', seed=27, layout=2, segments=[
+        R(cw=3, feats=[('piston', {}), ('strips', {}), ('piston', {'phase': 0.5})]), C(len=3, feat='pistonX'),
+        M(mw=3, ny=3, checkpoint=True, feats=[('pistons', {'n': 3}), ('deadholes', {'n': 2})]), C(len=4, feat='holes'),
+        R(cw=3, feats=[('bridge', {'deck': 6, 'width': 1.5})]), C(len=3, feat='pistonX', period=2.6),
+        R(cw=3, checkpoint=True, feats=[('piston', {'period': 2.6}), ('piston', {'period': 2.6, 'phase': 0.5}), ('strips', {}), ('holes', {})]), C(len=3, w=2),
+        M(mw=2, ny=4, feats=[('pistons', {'n': 2, 'period': 2.8}), ('deadholes', {'n': 2})]), C(len=3, w=2),
+        R(cw=3, feats=[('holes', {}), ('piston', {'period': 2.4}), ('strips', {}), ('piston', {'period': 2.2, 'phase': 0.5})])])),
 ]
 
 W3 = [
@@ -51,15 +70,31 @@ W3 = [
         R(cw=3), C(len=9, feat='wall'), R(cw=3)])),
     ('WALL_RUN', dict(id='w3-wall-run', name='Wall Run', sub='A longer wall over a wider chasm', seed=32, segments=[
         R(cw=3), C(len=3), R(cw=3, checkpoint=True), C(len=12, feat='wall'), R(cw=3, feats=[('holes', {})])])),
-    ('BOTH_WAYS', dict(id='w3-both-ways', name='Both Ways', sub='A right wall, then a left wall', seed=33, segments=[
-        R(cw=3), C(len=9, feat='wall'), R(cw=3, checkpoint=True, feats=[('piston', {'period': 3.4})]), C(len=9, feat='wall'), R(cw=3)])),
-    ('EASY_RIDER', dict(id='w3-easy-rider', name='Easy Rider', sub='A short breather', seed=34, segments=[
-        R(cw=4), C(len=9, feat='wall'), R(cw=4)])),
-    ('WALL_MAZE', dict(id='w3-wall-maze', name='Wall Maze', sub='Over the wall and into a maze', seed=35, segments=[
-        R(cw=3, feats=[('holes', {})]), C(len=10, feat='wall'), M(mw=3, ny=3, checkpoint=True), C(len=2), R(cw=3, feats=[('piston', {})])])),
-    ('HIGH_WIRE', dict(id='w3-high-wire', name='High Wire', sub='Two walls and a thin bridge', seed=36, segments=[
-        R(cw=3, feats=[('holes', {}), ('piston', {})]), C(len=12, feat='wall'), R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 6, 'width': 1.8})]),
-        C(len=10, feat='wall'), M(mw=3, ny=3), C(len=2), R(cw=3, feats=[('strips', {}), ('strips', {})])])),
+    # Levels 4-10 rebuilt after Chris's playtest: the walls now carry obstacles of their own.
+    ('BOTH_WAYS', dict(id='w3-both-ways', name='Both Ways', sub='A right wall, then a left wall', seed=33, layout=2, segments=[
+        R(cw=3, feats=[('piston', {}), ('holes', {})]), C(len=10, feat='wall', notches=['low']),
+        R(cw=3, checkpoint=True, feats=[('piston', {'period': 3.0}), ('strips', {}), ('piston', {'phase': 0.5})]), C(len=10, feat='wall', notches=['high']),
+        R(cw=3, feats=[('holes', {}), ('piston', {})])])),
+    ('EASY_RIDER', dict(id='w3-easy-rider', name='Easy Rider', sub='A breather', seed=34, layout=2, segments=[
+        R(cw=4, feats=[('holes', {})]), C(len=10, feat='wall', notches=['low']), R(cw=4, feats=[('piston', {})])])),
+    ('WALL_MAZE', dict(id='w3-wall-maze', name='Wall Maze', sub='Over the wall and into a maze', seed=35, layout=2, segments=[
+        R(cw=3, feats=[('holes', {}), ('piston', {})]), C(len=12, feat='wall', notches=['high'], wpistons=1),
+        M(mw=3, ny=3, checkpoint=True, feats=[('deadholes', {'n': 2}), ('pistons', {'n': 2})]), C(len=3),
+        R(cw=3, feats=[('piston', {}), ('strips', {}), ('piston', {'phase': 0.5})])])),
+    ('TWIN_WALLS2', dict(id='w3-twin-walls', name='Twin Walls', sub='Two walls, each with its own traps', seed=37, layout=2, segments=[
+        R(cw=3, feats=[('piston', {}), ('strips', {})]), C(len=12, feat='wall', notches=['low'], wpistons=1),
+        R(cw=3, checkpoint=True, feats=[('piston', {}), ('holes', {}), ('piston', {'phase': 0.5})]), C(len=12, feat='wall', notches=['high'], wpistons=1),
+        R(cw=3, feats=[('strips', {}), ('piston', {'period': 2.8})])])),
+    ('HIGH_WIRE', dict(id='w3-high-wire', name='High Wire', sub='Two walls and a thin bridge', seed=36, layout=2, segments=[
+        R(cw=3, feats=[('holes', {}), ('piston', {}), ('strips', {})]), C(len=13, feat='wall', notches=['low', 'high']),
+        R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 6, 'width': 1.6})]), C(len=12, feat='wall', notches=['high'], wpistons=1),
+        M(mw=3, ny=3, feats=[('deadholes', {'n': 2}), ('pistons', {'n': 2})]), C(len=3),
+        R(cw=3, feats=[('strips', {}), ('piston', {}), ('strips', {})])])),
+    ('EVENT_HORIZON2', dict(id='w3-event-horizon', name='Event Horizon', sub='Long walls, pistons and a thin bridge', seed=38, layout=2, segments=[
+        R(cw=3, feats=[('piston', {}), ('holes', {}), ('piston', {'phase': 0.5})]), C(len=15, feat='wall', notches=['high', 'low'], wpistons=1),
+        M(mw=3, ny=3, checkpoint=True, feats=[('pistons', {'n': 2}), ('deadholes', {'n': 2})]), C(len=12, feat='wall', notches=['low'], wpistons=1),
+        R(cw=3, checkpoint=True, feats=[('bridge', {'deck': 5, 'width': 1.5})]), C(len=3, feat='pistonX'),
+        R(cw=3, feats=[('piston', {'period': 2.6}), ('strips', {}), ('piston', {'period': 2.4, 'phase': 0.5}), ('holes', {})])])),
 ]
 
 routes = {}

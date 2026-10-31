@@ -88,7 +88,7 @@ The player's world is described by a **gravity frame**: `down` (gravity), `forwa
 gravity-shift/
 ├─ index.html                 # canvas + UI root
 ├─ vite.config.ts             # relative base for Capacitor; HTTPS phone mode
-├─ capacitor.config.ts        # appId com.gravityshift.game
+├─ capacitor.config.ts        # appId com.cnmbuckstudios.gravitor
 ├─ ios/                       # Xcode project (portrait-only, status bar hidden)
 ├─ docs/PLAN.md               # this document
 ├─ src/
@@ -117,4 +117,4 @@ gravity-shift/
 1. **Shift controls:** three on-screen buttons (◀ ▲ ▶) are in now. Would you rather try swipe gestures, or a "back" shift too?
 2. **Shift rules:** should shifts be unlimited, or limited per level (a puzzle resource, with the counter feeding star rating)?
 3. **Repository:** where should this live? Create an empty GitHub repo and tell me its name, and I'll push it there.
-4. **Bundle ID / Apple team:** is `com.gravityshift.game` OK, and do you have a paid Apple Developer account (free accounts work for testing but need re-signing every 7 days)?
+4. **Bundle ID / Apple team:** is `com.cnmbuckstudios.gravitor` OK, and do you have a paid Apple Developer account (free accounts work for testing but need re-signing every 7 days)?

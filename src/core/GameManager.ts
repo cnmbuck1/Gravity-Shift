@@ -290,7 +290,11 @@ export class GameManager {
             this.applyGravity();
           }
           const move = this.state === 'playing' && this.respawnTimer < 0 ? this.input.sample(step) : ([0, 0] as [number, number]);
-          const mod = this.features.surface(this.ball.position, this.ball.grounded, this.frame.down.y < -0.5, this.ball.body);
+          let mod = this.features.surface(this.ball.position, this.ball.grounded, this.frame.down.y < -0.5, this.ball.body);
+          // Holes tug the sphere in when it rolls over their edge (not while it rides a platform across one,
+          // or while a conveyor or boost pad is already pushing it).
+          const pull = this.frame.down.y < -0.5 && !carry && !mod.push ? this.features.holePull(this.ball.position, this.ball.grounded) : null;
+          if (pull) mod = { ...mod, push: mod.push ? mod.push.clone().add(pull) : pull };
           this.ball.applyInput(move, this.frame, step, mod);
         },
         () => {

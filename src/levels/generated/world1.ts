@@ -136,7 +136,7 @@ export const HOLE_PUNCH: LevelDef = {
   goal: { position: [9.0, 0, -7.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 40, two: 60 },
+  par: { three: 45, two: 70 },
   fallMargin: 6,
 };
 
@@ -184,7 +184,7 @@ export const BRANCHES: LevelDef = {
   goal: { position: [9.0, 0, -9.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 40, two: 65 },
+  par: { three: 45, two: 65 },
   fallMargin: 6,
 };
 
@@ -229,7 +229,7 @@ export const NARROW_WAYS: LevelDef = {
   goal: { position: [9.0, 0, -7.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 35, two: 60 },
+  par: { three: 40, two: 60 },
   fallMargin: 6,
 };
 
@@ -355,6 +355,6 @@ export const LAUNCH_FINALE: LevelDef = {
   goal: { position: [9.0, 0, -19.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 80, two: 130 },
+  par: { three: 85, two: 135 },
   fallMargin: 6,
 };

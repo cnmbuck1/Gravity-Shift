@@ -4,8 +4,10 @@ import type { PhysicsManager } from '../physics/PhysicsManager';
 import type { CameraDef } from '../levels/LevelTypes';
 import type { GravityFrame } from './GravityFrame';
 
-/** How far (radians) the view rolls toward world up while the ball is on a wall. */
-const WALL_LIFT = 0.6;
+/** How far (radians) the view rolls toward world up while the ball is on a wall. Zero keeps the full 90° turn. */
+const WALL_LIFT = 0;
+/** On a wall, the view is kept at least this high so it looks over the maze walls of the floor below. */
+const WALL_VIEW_Y = 3;
 /** How far the view leans out while the ball rolls on a ceiling. */
 const CEILING_LEAN = 1.05;
 const DEFAULT_CAMERA: CameraDef = { pitchDeg: 40, distance: 10.5, lookAhead: 2.5 };
@@ -37,6 +39,10 @@ export class CameraController {
   private groundRef = new THREE.Vector3();
   /** Radians the view is rolled toward world up while on a wall (smoothed), see WALL_LIFT. */
   private lift = 0;
+  /** Smoothed camera distance and raise after the anti-clipping pull-in. */
+  private camDist = -1;
+  private camRaise = 0;
+  private wallRaise = 0;
   /** World direction to lean the view toward while on a ceiling (set by the shift zone used). */
   lean: THREE.Vector3 | null = null;
   /** Colliders the anti-clipping ray ignores (glass). */
@@ -66,6 +72,8 @@ export class CameraController {
     this.lead.set(0, 0, 0);
     this.frozen = false;
     this.groundRef.copy(focus);
+    this.camDist = -1;
+    this.camRaise = 0;
   }
 
   get inFlyover(): boolean {
@@ -159,19 +167,37 @@ export class CameraController {
     const lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camQ);
     // A small constant forward bias keeps more of the course ahead than behind on screen.
     const lookAt = this.focus.clone().addScaledVector(forward, this.cfg.forwardBias ?? this.cfg.lookAhead * 0.35).add(this.lead);
+    // Just after shifting onto a wall the ball sits at floor height, so a camera level with it would be
+    // inside the maze walls. Slide the view (not tilt it) up to clear them; it centres again as the ball climbs.
+    const wallRaise = onWall ? Math.max(0, WALL_VIEW_Y - lookAt.y) : 0;
+    this.wallRaise += (wallRaise - this.wallRaise) * (1 - Math.exp(-dt * 4));
+    lookAt.y += this.wallRaise;
 
     // Pull the camera in if geometry sits between it and the ball. The ray starts a little
     // above the look point so low maze walls right beside the ball don't count.
     let dist = this.cfg.distance;
+    let raise = 0;
     const back = lookDir.clone().negate();
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.frameQ).applyQuaternion(roll);
     const origin = lookAt.clone().addScaledVector(up, 1.2);
     this.ray.origin = { x: origin.x, y: origin.y, z: origin.z };
     this.ray.dir = { x: back.x, y: back.y, z: back.z };
     const skip = this.seeThrough;
-    const hit = this.physics.world.castRay(this.ray, dist, true, undefined, undefined, ignore, undefined, skip.size ? (c: RAPIER.Collider) => !skip.has(c.handle) : undefined);
-    if (hit) dist = Math.max(2, hit.timeOfImpact - 0.4);
-    if (hit) lookAt.addScaledVector(up, 1.2);
+    // Mid-shift the view swings through the floor plane; ignore the ray then or the camera lurches in at the ball.
+    const hit = this.t < 1 ? null : this.physics.world.castRay(this.ray, dist, true, undefined, undefined, ignore, undefined, skip.size ? (c: RAPIER.Collider) => !skip.has(c.handle) : undefined);
+    if (hit) {
+      dist = Math.max(2, hit.timeOfImpact - 0.4);
+      raise = 1.2;
+    }
+    // Ease the pull-in so the view never pops when the ray flickers on and off an edge
+    // (snap in quickly so geometry doesn't cover the ball, drift back out slowly).
+    if (this.camDist < 0) this.camDist = dist;
+    const kIn = 1 - Math.exp(-dt * 14);
+    const kOut = 1 - Math.exp(-dt * 2.5);
+    this.camDist += (dist - this.camDist) * (dist < this.camDist ? kIn : kOut);
+    this.camRaise += (raise - this.camRaise) * (raise > this.camRaise ? kIn : kOut);
+    dist = this.camDist;
+    lookAt.addScaledVector(up, this.camRaise);
 
     this.camera.position.copy(lookAt).addScaledVector(back, dist);
     this.camera.quaternion.copy(camQ);

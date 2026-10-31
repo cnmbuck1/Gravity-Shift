@@ -22,6 +22,10 @@ const NORMAL: SurfaceMod = { accel: 1, rr: 1, speed: 1, push: null };
 /** Seconds a crumbling tile shakes before it drops. */
 const CRUMBLE_DELAY = 0.75;
 const JUMP_SPEED = 6;
+/** Pull (m/s²) toward a hole when the sphere hangs over its edge, so holes catch it instead of letting it skim past. */
+const HOLE_PULL = 10;
+/** How far (m) the sphere must hang over a hole's edge before the pull starts. */
+const HOLE_GRACE = 0.22;
 
 interface CrumbleRt { def: CrumbleDef; collider: RAPIER.Collider; mesh: THREE.Mesh; timer: number; gone: boolean; drop: number }
 interface LaserRt { def: LaserDef; beam: THREE.Mesh; a: THREE.Vector3; b: THREE.Vector3; on: boolean }
@@ -66,6 +70,47 @@ export class FeatureManager {
     for (const s of def.switches ?? []) this.addSwitch(s);
     for (const r of def.rotators ?? []) this.addRotator(r);
     this.time = 0;
+    this.findHoles(def);
+  }
+
+  /** Holes in the floor grid that should catch the sphere. Chasms beside gravity pads are left out (you wait beside them to shift). */
+  private holes: [number, number][] = [];
+  private findHoles(def: LevelDef): void {
+    this.holes = [];
+    const m = def.maze;
+    if (!m) return;
+    const at = (r: number, c: number) => m.rows[r]?.[c] ?? '#';
+    for (let r = 1; r < m.rows.length - 1; r++) {
+      for (let c = 1; c < m.rows[r].length - 1; c++) {
+        if (at(r, c) !== ' ') continue;
+        let nearPad = false;
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if ('P|'.includes(at(r + dr, c + dc))) nearPad = true;
+        if (!nearPad) this.holes.push([m.origin[0] + c * m.cell, m.origin[1] + r * m.cell]);
+      }
+    }
+  }
+
+  /** Sideways pull toward any hole the sphere overlaps (null when clear). `p` must be on the floor frame. */
+  holePull(p: THREE.Vector3, grounded: boolean): THREE.Vector3 | null {
+    if (!grounded || !this.def?.maze || p.y > this.def.maze.floorY + BALL_RADIUS + 0.2) return null;
+    // A turning disc covers its hole.
+    for (const r of this.rotators) {
+      if (r.def.kind === 'disc' && Math.hypot(p.x - r.def.centre[0], p.z - r.def.centre[2]) < r.def.size + 0.3) return null;
+    }
+    const half = this.def.maze.cell / 2;
+    let best: THREE.Vector3 | null = null;
+    for (const [hx, hz] of this.holes) {
+      const dx = p.x - Math.max(hx - half, Math.min(hx + half, p.x));
+      const dz = p.z - Math.max(hz - half, Math.min(hz + half, p.z));
+      const d = Math.hypot(dx, dz);
+      const reach = BALL_RADIUS - HOLE_GRACE;
+      if (d >= reach) continue;
+      const toward = new THREE.Vector3(hx - p.x, 0, hz - p.z);
+      if (toward.lengthSq() < 1e-6) continue;
+      const pull = toward.normalize().multiplyScalar(HOLE_PULL * (1 - d / reach));
+      if (!best || pull.lengthSq() > best.lengthSq()) best = pull;
+    }
+    return best;
   }
 
   unload(): void {

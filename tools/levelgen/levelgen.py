@@ -19,6 +19,8 @@ import random
 
 W = 25            # board width in cells (fits maze pitches 3 and 4)
 CEIL = 4.0        # underside of glass ceilings over flip crossings
+NOTCH_Y = 2.6     # a 'low' wall notch is cut from the wall's bottom edge up to here; a 'high' one from the top down to 6 - NOTCH_Y + 1
+WALL_PISTON_PERIOD = 3.0
 BRIDGE_Y = 0.8
 
 
@@ -37,7 +39,9 @@ class Level:
         self.switches = []
         self.wells = []
         self.rotators = []
-        self.maze_lasers = []      # indexes of lasers placed inside mazes (the route finds them itself)
+        self.maze_lasers = []
+        self.wall_notches = []     # (crossing index, row a, row b, 'low' | 'high')
+        self.wall_pistons = []     # (crossing index, row)      # indexes of lasers placed inside mazes (the route finds them itself)
         self.checkpoints = []      # (cx, cy) cell coords (float)
         self.legs = []             # route legs, cell coords until resolved
         self.y = 1                 # next free row (y-up); row 0 is the border
@@ -101,9 +105,9 @@ class Level:
         return (y0, y1)
 
     # Clear cells needed before a feature for the approach (waiting spot, run-up).
-    APPROACH = {'platform': 2, 'laser': 2, 'jump': 2, 'door': 6}
+    APPROACH = {'platform': 2, 'laser': 2, 'jump': 2, 'door': 6, 'bridge': 0}
     # Clear cells needed after a feature (where the route steps off it).
-    EXIT = {'platform': 2, 'arm': 2}
+    EXIT = {'platform': 2, 'arm': 2, 'bridge': 0}
 
     def _slots(self, usable, feats):
         if self.spec.get('layout', 1) == 1:
@@ -114,7 +118,7 @@ class Level:
             return []
         widths = [self._feat_width(f, a) for f, a in feats]
         names = [f for f, _ in feats]
-        need = [max(self.APPROACH.get(f, 1), self.EXIT.get(names[k - 1], 1) if k else 1) for k, f in enumerate(names)] + [self.EXIT.get(names[-1], 1)]
+        need = [max(self.APPROACH.get(f, 1), self.EXIT.get(names[k - 1], 1) if k else 0) for k, f in enumerate(names)] + [self.EXIT.get(names[-1], 1)]
         free = len(usable) - sum(widths) - sum(need)
         assert free >= 0, f'features {feats} do not fit in {len(usable)} columns'
         extra = [free // len(need)] * len(need)
@@ -162,6 +166,7 @@ class Level:
             self.carve(lo, hi, rows[0], rows[1], ' ')
         elif f == 'piston':
             self.movers.append(('pistonZ', a, y0, y1, args.get('period', 3.2), args.get('phase', 0)))
+            return ('piston', len(self.movers) - 1, a)
         elif f == 'strips':
             row = y1 if args.get('top', self.rng.random() < 0.5) else y0
             self.put(a, row, 'X')
@@ -317,6 +322,20 @@ class Level:
                 self.doors.append(('maze', ex[0], ex[1], y0 + h))
                 self.switches.append((sx, sy, len(self.doors) - 1))
                 self.maze_switch = (sx, sy)
+            elif f == 'pistons':
+                # Pistons sliding across doorways between maze cells.
+                ls = sorted(links, key=lambda l: sorted(l))
+                rng.shuffle(ls)
+                for k, l in enumerate(ls[:args.get('n', 2)]):
+                    (a, b) = tuple(l)
+                    (i1, j1), (i2, j2) = sorted((a, b))
+                    period = args.get('period', 3.0) - 0.2 * (k % 3)
+                    if j1 == j2:
+                        c = cell_c(i1) + mw
+                        self.movers.append(('pistonZ', c, cell_y(j1), cell_y(j1) + mw - 1, period, round(k * 0.31 % 1, 2)))
+                    else:
+                        yy = cell_y(j1) + mw
+                        self.movers.append(('pistonX', yy, cell_c(i1), cell_c(i1) + mw - 1, period, round(k * 0.31 % 1, 2)))
             elif f == 'deadholes':
                 for d in dead[1:1 + args.get('n', 2)]:
                     self.carve(cell_c(d[0]), cell_c(d[0]) + mw - 1, cell_y(d[1]), cell_y(d[1]) + mw - 1, ' ')
@@ -423,12 +442,42 @@ class Level:
                     self.put(wc, yy, '|')
             crossing = (feat, side, c0, c1, y0, y1)
             self.crossings.append(crossing)
+            # Obstacles on the wall itself: notches cut from its bottom or top edge (steer around them or fall
+            # through) and pistons sliding across it. Laid out evenly along the chasm, in travel order.
+            notches, pist = list(args.get('notches', [])), args.get('wpistons', 0)
+            items = _interleave(list(notches), pist)
+            if feat in ('wall', 'autowall') and items:
+                rows = list(range(y0 + 3, y1 - 2))       # chasm rows, travel order (y-up = forward)
+                need = sum(2 if k == 'n' else 1 for k, _ in items)
+                # At least one clear row before, between and after the obstacles (room to line up for the next one).
+                assert need + len(items) + 1 <= len(rows), f'wall obstacles {items} need a longer crossing ({len(rows)} chasm rows)'
+                gap = (len(rows) - need) // (len(items) + 1)
+                r = rows[0] + gap
+                for k, v in items:
+                    if k == 'n':
+                        self.wall_notches.append((len(self.crossings) - 1, r, r + 1, v))
+                        r += 2 + gap
+                    else:
+                        self.wall_pistons.append((len(self.crossings) - 1, r))
+                        r += 1 + gap
             self.specials += 1
         if args.get('checkpoint'):
             pass
         self.conn_route = (side, (c0 + c1) / 2, y0, y1, crossing)
         self.y = y1 + 1
         return (y0, y1)
+
+
+def _interleave(notches, pist):
+    out, i = [], 0
+    while notches or pist:
+        if notches and (i % 2 == 0 or not pist):
+            out.append(('n', notches.pop(0)))
+        elif pist:
+            out.append(('p', None))
+            pist -= 1
+        i += 1
+    return out
 
 
 def args_loops(feats):
@@ -485,7 +534,7 @@ def build(spec):
                 legs.append(('path', last_exit, (cx, cy0 + 1)))
                 if feat in ('wall', 'autowall'):
                     legs.append(('shift', side, feat))
-                    legs.append(('wall', side, cy0 + 1, cy1 - 1))
+                    legs.append(('wall', side, cy0 + 1, cy1 - 1, len(L.crossings) - 1))
                     legs.append(('shift', side, feat, 'back'))
                 else:
                     legs.append(('shift', side, feat))
@@ -516,6 +565,11 @@ def route_mark(legs, last, m, mid, s):
         legs.append(('path', last, (a - 2 * s, mid)))
         legs.append(('platform', idx, (a - s, mid), (b + 2 * s, mid)))
         return (b + 2 * s, mid)
+    if kind == 'piston':
+        idx, c = m[1], m[2]
+        legs.append(('path', last, (c - 2 * s, mid)))
+        legs.append(('piston', idx, (c - 2 * s, mid), (c + 2 * s, mid)))
+        return (c + 2 * s, mid)
     if kind == 'laser':
         idx, c = m[1], m[2]
         legs.append(('path', last, (c - 2 * s, mid)))
@@ -555,6 +609,7 @@ def emit(L, const, meta):
     for y in range(H - 1, -1, -1):
         rows.append(''.join(L.get(c, y) if 0 < c < W - 1 and 0 < y < H - 1 else ('|' if L.get(c, y) == '|' else '#') for c in range(W)))
     plats, movers, zones = [], [], []
+    L.wall_piston_idx = {}
     for p in L.platforms:
         if p[0] == 'ramp':
             _, cols, deckc, mid, cw = p
@@ -596,7 +651,23 @@ def emit(L, const, meta):
         if feat in ('wall', 'autowall'):
             wc = W - 1 if side == 'E' else 0
             face = X(wc) - 0.5 * sgn
-            plats.append(f"{{ position: [{X(wc)}, 3, {zc}], size: [1, 8, {zl}], role: 'gravity' }}")
+            ci = L.crossings.index((feat, side, c0, c1, y0, y1))
+            # The wall is built in z slices; a notched slice keeps only the band the notch leaves.
+            cuts = sorted(((Z(rb) - 0.5, Z(ra) + 0.5, v) for (k, ra, rb, v) in L.wall_notches if k == ci), key=lambda t: t[0])
+            zlo, zhi = Z(y1) - 0.5, Z(y0) + 0.5
+            z = zlo
+            for (za, zb, v) in cuts + [(zhi, zhi, None)]:
+                if za > z + 1e-6:
+                    plats.append(f"{{ position: [{X(wc)}, 3, {round((z + za) / 2, 3)}], size: [1, 8, {round(za - z, 3)}], role: 'gravity' }}")
+                if v:
+                    ylo, yhi = (NOTCH_Y, 7) if v == 'low' else (-1, 8 - NOTCH_Y - 2)
+                    plats.append(f"{{ position: [{X(wc)}, {(ylo + yhi) / 2}, {round((za + zb) / 2, 3)}], size: [1, {yhi - ylo}, {round(zb - za, 3)}], role: 'gravity' }}")
+                z = zb
+            for (k, r) in L.wall_pistons:
+                if k == ci:
+                    px = round(face - 0.45 * sgn, 3)
+                    L.wall_piston_idx[(ci, r)] = len(movers)
+                    movers.append(f"{{ from: [{px}, 0.6, {Z(r)}], to: [{px}, 5.4, {Z(r)}], size: [0.9, 0.9, 1.3], period: {WALL_PISTON_PERIOD}, phase: {round((r * 0.37) % 1, 2)} }}")
             plats.append(f"{{ position: [{face - 0.02 * sgn}, 3.2, {(zb0 + zb1) / 2}], size: [0.04, 6.2, 3], role: 'gravity' }}")
             on, off = ('right', 'left') if side == 'E' else ('left', 'right')
             arrow_on, arrow_off = ('▶', '◀') if side == 'E' else ('◀', '▶')
@@ -697,6 +768,9 @@ def grid_path(rows, a, b):
             for dc in (-1, 0, 1):
                 if not ok(r + dr, c + dc) or (rows[r + dr][c + dc] == 'B') != (rows[r][c] == 'B'):
                     pen += 1
+                # Keep well clear of holes: they pull the sphere in when it brushes their edge.
+                if 0 <= r + dr < H and 0 <= c + dc < Wd and rows[r + dr][c + dc] == ' ':
+                    pen += 3
         return 1 + pen * 2
 
     sc, sr = int(round(a[0])), int(round(a[1]))
@@ -789,6 +863,18 @@ def resolve_route(L, rows, X, Z, R):
             sgn = 1 if side == 'E' else -1
             xw = X(wc) - 0.5 * sgn - 0.5 * sgn
             steps.append({'p': [xw, 3, Z(y0)]})
+            ci = leg[4]
+            obstacles = [(ra, 'n', rb, v) for (k, ra, rb, v) in L.wall_notches if k == ci] + [(r, 'p', r, None) for (k, r) in L.wall_pistons if k == ci]
+            lane = 3
+            for (ra, kind, rb, v) in sorted(obstacles):
+                if kind == 'n':
+                    # Line up in the clear row before the notch, on the side the notch leaves, then pass it.
+                    lane = 4.9 if v == 'low' else 1.4
+                    steps.append({'p': [xw, lane, Z(ra - 1)], 'v': 2.5})
+                    steps.append({'p': [xw, lane, Z(rb + 1)], 'v': 2.5})
+                else:
+                    steps.append({'p': [xw, lane, Z(ra - 1)], 'v': 2.5})
+                    steps.append({'piston': L.wall_piston_idx[(ci, ra)], 'near': [xw, lane, Z(ra - 1)], 'far': [xw, lane, Z(ra + 1)]})
             steps.append({'p': [xw, 3, Z(y1)], 'v': 2.5})
             L.route_len += (y1 - y0) + 4
         elif k == 'ceil':
@@ -799,6 +885,10 @@ def resolve_route(L, rows, X, Z, R):
             idx, a, b = leg[1], leg[2], leg[3]
             steps.append({'platform': idx, 'near': [X(a[0]), 0.5, Z(a[1])], 'far': [X(b[0]), 0.5, Z(b[1])]})
             L.route_len += abs(b[0] - a[0]) + 8
+        elif k == 'piston':
+            idx, a, b = leg[1], leg[2], leg[3]
+            steps.append({'piston': idx, 'near': [X(a[0]), 0.5, Z(a[1])], 'far': [X(b[0]), 0.5, Z(b[1])]})
+            L.route_len += 4
         elif k == 'laser':
             idx, a, b = leg[1], leg[2], leg[3]
             steps.append({'laser': idx, 'near': [X(a[0]), 0.5, Z(a[1])], 'far': [X(b[0]), 0.5, Z(b[1])]})

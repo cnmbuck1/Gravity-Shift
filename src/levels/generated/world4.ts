@@ -563,7 +563,7 @@ export const QUICK_FEET: LevelDef = {
   goal: { position: [9.0, 0, -8.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 55, two: 85 },
+  par: { three: 55, two: 90 },
   fallMargin: 6,
 };
 
@@ -711,7 +711,7 @@ export const BREAKAWAY: LevelDef = {
   goal: { position: [-9.0, 0, -13.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 60, two: 100 },
+  par: { three: 65, two: 100 },
   fallMargin: 6,
 };
 

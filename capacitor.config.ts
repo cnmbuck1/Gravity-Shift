@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.gravityshift.game',
+  appId: 'com.cnmbuckstudios.gravitor',
   appName: 'Gravitor',
   webDir: 'dist',
   backgroundColor: '#05070d',

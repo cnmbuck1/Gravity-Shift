@@ -31,13 +31,14 @@ const SHOTS = process.argv[3];
   // Roll toward a point, steering in the current gravity frame. Returns 'ok', 'frame' (gravity changed), 'state', or 'timeout'.
   // Time limits are in game seconds, so a slow machine doesn't fail levels.
   const gameTime = () => page.evaluate(() => window.gravityShift.stats.time);
-  async function go(T, cruise = 3.2, tol = 0.6, maxS = 25, live = null) {
+  async function go(T, cruise = 3.2, tol = 0.4, maxS = 25, live = null) {
     const t0 = await gameTime();
     const d0 = await downKey();
     const f0 = await page.evaluate(() => window.gravityShift.stats.falls);
     const s0 = await page.evaluate(() => { const p = window.gravityShift.ball.position; return [p.x, p.y, p.z]; });
     let n = 0;
     let stuck = 0;
+    let forced = false;
     while ((await gameTime()) - t0 < maxS && n++ < 4000) {
       if (live) T = await live();
       const r = await page.evaluate(([T, s0]) => {
@@ -59,16 +60,20 @@ const SHOTS = process.argv[3];
       if (!live && ll > 1.5 && dist > 1) {
         const nf = -r.lr / ll, nr = r.lf / ll;
         const cross = r.pf * nf + r.pr * nr;
-        wf -= nf * cross * 2.5; wr -= nr * cross * 2.5;
+        wf -= nf * cross * 4; wr -= nr * cross * 4;
       }
       // Wedged on a wall corner: line up with the target along the short axis first.
-      stuck = Math.hypot(r.vf, r.vr) < 0.15 && dist > 1 ? stuck + 1 : Math.max(0, stuck - 1);
+      stuck = Math.hypot(r.vf, r.vr) < 0.15 && dist > 0.7 ? stuck + 1 : Math.max(0, stuck - 1);
       if (stuck > 20 && !live) {
-        if (Math.abs(r.er) > Math.abs(r.ef)) { wf = r.ef * 3; wr = 0; } else { wr = r.er * 3; wf = 0; }
+        if (Math.abs(r.er) > Math.abs(r.ef)) { wf = r.ef * 3; wr = Math.sign(r.er) * 1.5; } else { wr = r.er * 3; wf = Math.sign(r.ef) * 1.5; }
         if (stuck > 45) stuck = 0;
       }
-      const tf = Math.max(-16, Math.min(16, (wf - r.vf) * 7));
-      const tr = Math.max(-16, Math.min(16, (wr - r.vr) * 7));
+      // Push harder while stuck (against a conveyor, say).
+      const gain = stuck > 20 ? 14 : 7;
+      let tf = Math.max(-20, Math.min(20, (wf - r.vf) * gain));
+      let tr = Math.max(-20, Math.min(20, (wr - r.vr) * gain));
+      if (stuck > 20) forced = true;
+      if (forced && !live) { if (Math.abs(wr) > Math.abs(wf)) tr = Math.sign(wr) * 20; else tf = Math.sign(wf) * 20; }
       await tilt(40 - tf, tr);
       await page.waitForTimeout(40);
       if (live && live.done && (await live.done())) return 'ok';
@@ -147,6 +152,20 @@ const SHOTS = process.argv[3];
       i++;
       continue;
     }
+    if (s.piston !== undefined) {
+      await go(s.near);
+      await settle();
+      // Go as the piston swings out of the middle toward one end (it stays clear for about half a cycle).
+      // Where the piston is along its stroke (0..1), and where our lane crosses that stroke.
+      const k = () => page.evaluate((m) => { const mv = window.gravityShift.levels['movers'][m]; const t = mv.body.translation(); const f = mv.def.from, to = mv.def.to; const L = Math.hypot(to[0] - f[0], to[1] - f[1], to[2] - f[2]); return Math.hypot(t.x - f[0], t.y - f[1], t.z - f[2]) / L; }, s.piston);
+      const lane = await page.evaluate(([m, p]) => { const mv = window.gravityShift.levels['movers'][m]; const f = mv.def.from, to = mv.def.to; const d = [to[0] - f[0], to[1] - f[1], to[2] - f[2]]; const L2 = d[0] ** 2 + d[1] ** 2 + d[2] ** 2; return ((p[0] - f[0]) * d[0] + (p[1] - f[1]) * d[1] + (p[2] - f[2]) * d[2]) / L2; }, [s.piston, s.near]);
+      let prev = Math.abs((await k()) - lane);
+      for (let n = 0; n < 300; n++) { await page.waitForTimeout(20); const c = Math.abs((await k()) - lane); if (c > 0.32 && prev <= 0.32) break; prev = c; }
+      const r = await go(s.far, 4, 0.4);
+      if (r !== 'ok') { status = r; break; }
+      i++;
+      continue;
+    }
     if (s.arm !== undefined) {
       await go(s.near);
       await settle();
@@ -159,6 +178,13 @@ const SHOTS = process.argv[3];
       if (r !== 'ok') { status = r; break; }
       i++;
       continue;
+    }
+    // Sharp turn here (on the floor): brake first so momentum doesn't carry us wide into a hole.
+    const pv = steps[i - 1], pp = steps[i - 2];
+    if (pv && pp && pv.p && pp.p && !s.v && pv.p[1] < 1) {
+      const a1 = [pv.p[0] - pp.p[0], pv.p[2] - pp.p[2]], a2 = [s.p[0] - pv.p[0], s.p[2] - pv.p[2]];
+      const cos = (a1[0] * a2[0] + a1[1] * a2[1]) / ((Math.hypot(...a1) * Math.hypot(...a2)) || 1);
+      if (cos < 0.5 && Math.hypot(...a1) > 0.3) await settle();
     }
     const r = await go(s.p, s.v ?? 3.2);
     if (r === 'frame') { skipToAfterShift(); await page.waitForTimeout(1500); continue; }

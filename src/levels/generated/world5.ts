@@ -322,7 +322,7 @@ export const THIN_ICE: LevelDef = {
   goal: { position: [9.0, 0, -6.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 40, two: 60 },
+  par: { three: 40, two: 65 },
   fallMargin: 6,
 };
 
@@ -381,7 +381,7 @@ export const FAST_LANE: LevelDef = {
   goal: { position: [-9.0, 0, -10.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 50, two: 80 },
+  par: { three: 55, two: 85 },
   fallMargin: 6,
 };
 
@@ -446,7 +446,7 @@ export const RAILS: LevelDef = {
   goal: { position: [-9.0, 0, -13.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 70, two: 110 },
+  par: { three: 70, two: 115 },
   fallMargin: 6,
 };
 
@@ -529,6 +529,6 @@ export const FLUX_RAILS: LevelDef = {
   goal: { position: [-9.0, 0, -21.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 90, two: 140 },
+  par: { three: 90, two: 145 },
   fallMargin: 6,
 };

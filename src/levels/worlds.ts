@@ -1,6 +1,6 @@
 import { world, THEMES, type WorldDef } from './worldTypes';
 import { CORNERS, FIRST_ROLL, MIND_THE_GAP, MOVING_PARTS } from './campaign';
-import { CROSSFIRE, EVENT_HORIZON, SWITCHBACK, TWIN_WALLS, WALL_WALK } from './campaignAdvanced';
+import { WALL_WALK } from './campaignAdvanced';
 import { ORBITAL_LABYRINTH } from './orbitalLabyrinth';
 import * as W1 from './generated/world1';
 import * as W2 from './generated/world2';
@@ -25,11 +25,11 @@ export const WORLDS: WorldDef[] = [
   ]),
   world('w2', 'Piston Works', 'Pistons, energy strips and bridges', THEMES.piston, [
     MOVING_PARTS, W2.PISTON_ALLEY, W2.HOT_FLOOR, W2.OVERPASS, W2.COFFEE_BREAK,
-    SWITCHBACK, W2.GEARS, W2.RED_LINE, CROSSFIRE, W2.PISTON_WORKS,
+    W2.SWITCHBACK2, W2.GEARS, W2.RED_LINE, W2.CROSSFIRE2, W2.PISTON_WORKS,
   ]),
   world('w3', 'Wall Walk', 'Gravity walls: shift left and right', THEMES.wall, [
     WALL_WALK, W3.SIDE_STEP, W3.WALL_RUN, W3.BOTH_WAYS, W3.EASY_RIDER,
-    W3.WALL_MAZE, TWIN_WALLS, W3.HIGH_WIRE, EVENT_HORIZON, ORBITAL_LABYRINTH,
+    W3.WALL_MAZE, W3.TWIN_WALLS2, W3.HIGH_WIRE, W3.EVENT_HORIZON2, ORBITAL_LABYRINTH,
   ]),
   world('w4', 'Crumble Belt', 'Crumbling floors and moving platforms', THEMES.crumble, [
     W4.SOFT_GROUND, W4.FERRY, W4.FALLING_FLOOR, W4.CROSSING, W4.REST_STOP,

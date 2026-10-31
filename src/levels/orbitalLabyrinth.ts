@@ -83,8 +83,14 @@ export const ORBITAL_LABYRINTH: LevelDef = {
     ],
   },
   platforms: [
-    // Tall purple gravity wall along the east edge (inner face x = 12.5).
-    { position: [13, 3, -2], size: [1, 8, 25], role: 'gravity' },
+    // Tall purple gravity wall along the east edge (inner face x = 12.5), built in slices so the
+    // shortcut has obstacles of its own: a notch cut from the bottom edge (z 3..5) and one from the
+    // top edge (z -6..-4). Roll above the first and below the second, or drop through into space.
+    { position: [13, 3, 7.75], size: [1, 8, 5.5], role: 'gravity' },
+    { position: [13, 4.8, 4], size: [1, 4.4, 2], role: 'gravity' },
+    { position: [13, 3, -0.5], size: [1, 8, 7], role: 'gravity' },
+    { position: [13, 1.2, -5], size: [1, 4.4, 2], role: 'gravity' },
+    { position: [13, 3, -10.25], size: [1, 8, 8.5], role: 'gravity' },
     // Purple band on the wall marking where to shift back down.
     { position: [12.52, 3.2, -13], size: [0.04, 6.2, 3], role: 'gravity' },
     // Ramp up, narrow raised bridge across the chasm, ramp down.
@@ -97,6 +103,9 @@ export const ORBITAL_LABYRINTH: LevelDef = {
   movers: [
     // Piston sliding across the eastbound corridor.
     { from: [-6, 0.45, 1.95], to: [-6, 0.45, 4.05], size: [1.3, 0.9, 0.9], period: 3.4 },
+    // Pistons sliding up and down the gravity wall.
+    { from: [12.05, 0.6, 0], to: [12.05, 5.4, 0], size: [0.9, 0.9, 1.3], period: 3.0 },
+    { from: [12.05, 0.6, -9], to: [12.05, 5.4, -9], size: [0.9, 0.9, 1.3], period: 2.6, phase: 0.4 },
   ],
   checkpoints: [{ position: [5, 0, -2], frame: { down: [0, -1, 0], forward: [0, 0, -1] } }],
   goal: { position: [-10, 0, -18], up: [0, 1, 0], facing: [0, 0, 1] },

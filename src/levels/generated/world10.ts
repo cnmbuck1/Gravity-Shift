@@ -50,7 +50,7 @@ export const HORIZON_LINE: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 3.0], size: [1, 8, 9], role: 'gravity' },
+    { position: [12, 3, 3.0], size: [1, 8, 9.0], role: 'gravity' },
     { position: [11.48, 3.2, 0.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [],
@@ -135,7 +135,7 @@ export const MIXED_SIGNALS: LevelDef = {
   goal: { position: [9.0, 0, -6.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 50, two: 80 },
+  par: { three: 55, two: 85 },
   fallMargin: 6,
 };
 
@@ -310,7 +310,7 @@ export const GRAVITY_WELL: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 6.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, 6.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, 3.0], size: [0.04, 6.2, 3], role: 'gravity' },
     { position: [-10.0, 4.2, -6.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
@@ -486,7 +486,7 @@ export const SINGULARITY: LevelDef = {
   goal: { position: [-9.0, 0, -14.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 85, two: 130 },
+  par: { three: 85, two: 135 },
   fallMargin: 6,
 };
 
@@ -550,37 +550,37 @@ export const ACCRETION: LevelDef = {
       '#####################PPP|', // 38
       '#####################PPP|', // 39
       '#####################PPP|', // 40
-      '#SSSS.....KKKKK.........#', // 41
-      '#SSSS.....KKKKK.........#', // 42
-      '#SSSS.....KKKKK.........#', // 43
+      '#SSSS........KKKKK......#', // 41
+      '#SSSS........KKKKK......#', // 42
+      '#SSSS........KKKKK......#', // 43
       '#########################', // 44
     ],
   },
   platforms: [
-    { position: [12, 3, 13.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, 13.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, 10.0], size: [0.04, 6.2, 3], role: 'gravity' },
     { position: [-10.0, 4.2, 0.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
   movers: [
-    { from: [5, 0.45, 18.95], to: [5, 0.45, 21.05], size: [1.3, 0.9, 0.9], period: 3.2, phase: 0 },
+    { from: [-2, 0.45, 18.95], to: [-2, 0.45, 21.05], size: [1.3, 0.9, 0.9], period: 3.2, phase: 0 },
   ],
   checkpoints: [{ position: [9.5, 0, 7.0], frame: FLOOR }, { position: [-10.0, 0, -5], frame: FLOOR }],
   crumble: [
-    { position: [-2, 0, 21], size: [1, 1] },
-    { position: [-2, 0, 20], size: [1, 1] },
-    { position: [-2, 0, 19], size: [1, 1] },
-    { position: [-1, 0, 21], size: [1, 1] },
-    { position: [-1, 0, 20], size: [1, 1] },
-    { position: [-1, 0, 19], size: [1, 1] },
-    { position: [0, 0, 21], size: [1, 1] },
-    { position: [0, 0, 20], size: [1, 1] },
-    { position: [0, 0, 19], size: [1, 1] },
     { position: [1, 0, 21], size: [1, 1] },
     { position: [1, 0, 20], size: [1, 1] },
     { position: [1, 0, 19], size: [1, 1] },
     { position: [2, 0, 21], size: [1, 1] },
     { position: [2, 0, 20], size: [1, 1] },
     { position: [2, 0, 19], size: [1, 1] },
+    { position: [3, 0, 21], size: [1, 1] },
+    { position: [3, 0, 20], size: [1, 1] },
+    { position: [3, 0, 19], size: [1, 1] },
+    { position: [4, 0, 21], size: [1, 1] },
+    { position: [4, 0, 20], size: [1, 1] },
+    { position: [4, 0, 19], size: [1, 1] },
+    { position: [5, 0, 21], size: [1, 1] },
+    { position: [5, 0, 20], size: [1, 1] },
+    { position: [5, 0, 19], size: [1, 1] },
     { position: [1, 0, 8], size: [1, 1] },
     { position: [1, 0, 7], size: [1, 1] },
     { position: [1, 0, 6], size: [1, 1] },
@@ -716,7 +716,7 @@ export const REDSHIFT: LevelDef = {
     ],
   },
   platforms: [
-    { position: [-12, 3, 3.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [-12, 3, 3.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [-11.48, 3.2, 0.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [],
@@ -829,7 +829,7 @@ export const EVENT_HORIZON_X: LevelDef = {
   },
   platforms: [
     { position: [10.0, 4.2, 18.0], size: [3.0, 0.4, 11], role: 'gravity', glass: true },
-    { position: [-12, 3, -3.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [-12, 3, -3.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [-11.48, 3.2, -7.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [
@@ -989,10 +989,10 @@ export const HORIZON: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 30.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, 30.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, 27.0], size: [0.04, 6.2, 3], role: 'gravity' },
     { position: [10.0, 4.2, 3.0], size: [3.0, 0.4, 11], role: 'gravity', glass: true },
-    { position: [12, 3, -18.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, -18.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, -22.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [
@@ -1078,6 +1078,6 @@ export const HORIZON: LevelDef = {
   goal: { position: [9.0, 0, -35.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 185, two: 290 },
+  par: { three: 185, two: 295 },
   fallMargin: 6,
 };

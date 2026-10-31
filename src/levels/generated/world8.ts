@@ -140,7 +140,7 @@ export const AUTOPILOT: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 3.0], size: [1, 8, 9], role: 'gravity' },
+    { position: [12, 3, 3.0], size: [1, 8, 9.0], role: 'gravity' },
     { position: [11.48, 3.2, 0.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [],
@@ -297,7 +297,7 @@ export const LONG_JUMP: LevelDef = {
     ],
   },
   platforms: [
-    { position: [-12, 3, -3.0], size: [1, 8, 9], role: 'gravity' },
+    { position: [-12, 3, -3.0], size: [1, 8, 9.0], role: 'gravity' },
     { position: [-11.48, 3.2, -6.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [],
@@ -452,7 +452,7 @@ export const ZERO_G: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 13.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, 13.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, 10.0], size: [0.04, 6.2, 3], role: 'gravity' },
     { position: [10.0, 4.2, -13.0], size: [3.0, 0.4, 9], role: 'gravity', glass: true },
   ],
@@ -470,7 +470,7 @@ export const ZERO_G: LevelDef = {
   goal: { position: [-9.0, 0, -19.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 85, two: 130 },
+  par: { three: 85, two: 135 },
   fallMargin: 6,
 };
 
@@ -542,7 +542,7 @@ export const ESCAPE_VELOCITY: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 13.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, 13.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, 10.0], size: [0.04, 6.2, 3], role: 'gravity' },
     { position: [-10.0, 4.2, 0.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
@@ -561,7 +561,7 @@ export const ESCAPE_VELOCITY: LevelDef = {
   goal: { position: [-9.0, 0, -20.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 85, two: 135 },
+  par: { three: 85, two: 140 },
   fallMargin: 6,
 };
 
@@ -658,10 +658,10 @@ export const LOW_ORBIT: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 25.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, 25.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, 22.0], size: [0.04, 6.2, 3], role: 'gravity' },
     { position: [10.0, 4.2, -2.0], size: [3.0, 0.4, 11], role: 'gravity', glass: true },
-    { position: [-12, 3, -15.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [-12, 3, -15.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [-11.48, 3.2, -19.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [
@@ -683,6 +683,6 @@ export const LOW_ORBIT: LevelDef = {
   goal: { position: [-9.0, 0, -32.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 115, two: 180 },
+  par: { three: 115, two: 185 },
   fallMargin: 6,
 };

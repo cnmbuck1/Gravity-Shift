@@ -347,7 +347,7 @@ export const GEARBOX: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 8.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, 8.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, 5.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [
@@ -362,7 +362,7 @@ export const GEARBOX: LevelDef = {
   goal: { position: [-9.0, 0, -15.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 65, two: 100 },
+  par: { three: 65, two: 105 },
   fallMargin: 6,
 };
 
@@ -597,7 +597,7 @@ export const SPIN_CYCLE: LevelDef = {
     ],
   },
   platforms: [
-    { position: [-12, 3, 10.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [-12, 3, 10.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [-11.48, 3.2, 7.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [

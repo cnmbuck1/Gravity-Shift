@@ -426,7 +426,7 @@ export const SHORT_CIRCUIT: LevelDef = {
     ],
   },
   platforms: [
-    { position: [12, 3, 8.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [12, 3, 8.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [11.48, 3.2, 5.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [
@@ -618,7 +618,7 @@ export const CIRCUIT: LevelDef = {
     ],
   },
   platforms: [
-    { position: [-12, 3, 5.5], size: [1, 8, 10], role: 'gravity' },
+    { position: [-12, 3, 5.5], size: [1, 8, 10.0], role: 'gravity' },
     { position: [-11.48, 3.2, 2.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [
