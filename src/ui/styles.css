@@ -48,15 +48,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .logo { display: flex; align-items: center; justify-content: center; margin: 0 0 6px; font-weight: 800; letter-spacing: 0.12em; line-height: 1; font-size: clamp(38px, 11.5vw, 64px); }
 .logo span { text-shadow: 0 0 18px rgba(46, 230, 255, 0.55); }
 .logo span:last-child { margin-left: 0.1em; }
-/* The O in GRAVITOR is the player's chrome sphere, with its glowing cyan bands rolling. */
-.logo-ball {
-  position: relative; display: inline-block; width: 0.78em; height: 0.78em; margin-left: 0.02em; border-radius: 50%; overflow: hidden;
-  background: radial-gradient(circle at 33% 28%, #ffffff 0%, #e6eef8 14%, #9fb0c4 40%, #3c4a5e 72%, #121a26 100%);
-  box-shadow: 0 0 0 0.03em rgba(46, 230, 255, 0.55), 0 0 0.35em rgba(46, 230, 255, 0.55), inset -0.08em -0.1em 0.18em rgba(0, 0, 0, 0.5);
-}
-.lb-band { position: absolute; inset: 0; border-radius: 50%; border: 0.045em solid var(--cyan); box-shadow: 0 0 0.12em var(--cyan); transform: scaleX(0.3); animation: lb-roll 2.4s linear infinite; }
-.lb-band.b2 { transform: scaleY(0.3); animation: none; }
-@keyframes lb-roll { 0% { transform: scaleX(1); } 50% { transform: scaleX(0.02); } 100% { transform: scaleX(-1); } }
+/* The O in GRAVITOR is the Cnmbuck Orb (drawn at 0.76 of its canvas, so the canvas is a bit larger than a letter). */
+.logo-orb { width: 1.12em; height: 1.12em; margin: -0.17em -0.1em; }
 .tagline { color: var(--muted); letter-spacing: 0.22em; font-size: 12px; text-transform: uppercase; margin-bottom: 26px; }
 .menu-buttons { display: flex; flex-direction: column; gap: 12px; width: min(320px, 100%); }
 .menu-foot { position: absolute; bottom: calc(var(--safe-bottom) + 14px); color: var(--muted); font-size: 11px; letter-spacing: 0.1em; }

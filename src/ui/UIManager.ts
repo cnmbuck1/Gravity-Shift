@@ -2,6 +2,7 @@ import type { GameManager, LevelRecord, RunStats } from '../core/GameManager';
 import type { SettingsManager } from '../settings/SettingsManager';
 import type { LevelDef } from '../levels/LevelTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
+import { drawOrbIcon } from '../brand/cnmbuck-orb';
 
 /**
  * DOM overlay: menus, HUD, settings and toasts. Talks to the game only through
@@ -28,6 +29,10 @@ export class UIManager {
     this.levels = [...campaign, ...extras];
     this.root = root;
     this.build();
+    // The O in the GRAVITOR logo is the Cnmbuck Orb, drawn by the brand kit.
+    const orb = this.root.querySelector<HTMLCanvasElement>('.logo-orb');
+    const g = orb?.getContext('2d');
+    if (orb && g) drawOrbIcon(g, orb.width);
     this.bindGameEvents();
     this.refreshMenu();
     this.show('menu');
@@ -46,7 +51,7 @@ export class UIManager {
   private build(): void {
     this.root.innerHTML = `
       <section class="screen menu" data-screen="menu">
-        <h1 class="logo" aria-label="Gravitor"><span>GRAVIT</span><i class="logo-ball"><i class="lb-band"></i><i class="lb-band b2"></i></i><span>R</span></h1>
+        <h1 class="logo" aria-label="Gravitor"><span>GRAVIT</span><canvas class="logo-orb" width="240" height="240" aria-hidden="true"></canvas><span>R</span></h1>
         <div class="tagline">Tilt Your World. Defy Gravity.</div>
         <div class="menu-buttons">
           <button class="btn primary" data-action="play"><b>PLAY</b><small data-bind="play-sub"></small></button>
