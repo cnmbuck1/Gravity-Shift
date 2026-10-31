@@ -53,6 +53,9 @@ const SHOTS = process.argv[3];
       if (r.down !== d0) return 'frame';
       const dist = Math.hypot(r.ef, r.er);
       if (dist < tol && !live) return 'ok';
+      // Carried past the target along the leg (boost pads, conveyors): count it as reached.
+      const lineLen = Math.hypot(r.lf, r.lr);
+      if (!live && lineLen > 0.5 && dist < 1 && (r.pf * r.lf + r.pr * r.lr) / lineLen >= lineLen) return 'ok';
       const sp = live ? Math.min(cruise, dist * 3) : Math.max(1.2, Math.min(cruise, dist * 1.5));
       let wf = (r.ef / (dist || 1)) * sp, wr = (r.er / (dist || 1)) * sp;
       // Hold the straight line from where this leg started (resists conveyors and ice drift).
@@ -99,7 +102,7 @@ const SHOTS = process.argv[3];
   const skipToAfterShift = () => { while (i < steps.length && !steps[i].shift) i++; i++; };
   while (i < steps.length) {
     const s = steps[i];
-    const now = await st();
+    const now = await st(); if (process.env.DBG) console.log('step', i, JSON.stringify(now));
     if (now.state !== 'playing') break;
     if (now.falls > fallsSeen) {
       fallsSeen = now.falls;
@@ -142,11 +145,22 @@ const SHOTS = process.argv[3];
     }
     if (s.laser !== undefined) {
       // Wait close to the beam (1.3 m short of it) so one off-phase is enough to cross.
-      if (s.near) { const m = s.at ?? [0, 1, 2].map((k) => (s.near[k] + s.far[k]) / 2); const L = Math.hypot(m[0] - s.near[0], m[2] - s.near[2]); await go(m.map((v, k) => v - ((m[k] - s.near[k]) / L) * 1.3 * (k === 1 ? 0 : 1)), 2.0, 0.3); }
+      let wait = null; if (s.near) { const m = s.at ?? [0, 1, 2].map((k) => (s.near[k] + s.far[k]) / 2); const L = Math.hypot(m[0] - s.near[0], m[2] - s.near[2]); wait = m.map((v, k) => v - ((m[k] - s.near[k]) / L) * Math.min(1.6, L) * (k === 1 ? 0 : 1)); await go(wait, 1.4, 0.3); }
       await settle();
+      if ((await st()).falls > fallsSeen) continue;
       const on = () => page.evaluate((k) => window.gravityShift.features['lasers'][k].on, s.laser);
-      for (let k = 0; k < 200 && !(await on()); k++) await page.waitForTimeout(30);
-      for (let k = 0; k < 200 && (await on()); k++) await page.waitForTimeout(30);
+      // Hold this spot while waiting (on ice the ball would otherwise creep into the beam).
+      const here = wait ?? (await st()).pos; if (process.env.DBG) console.log('hold at', here);
+      const hold = async () => {
+        const r = await page.evaluate((H) => { const gm = window.gravityShift; const v = gm.ball.body.linvel(); const p = gm.ball.position; const f = gm.frame; const d = (a, b) => a[0] * b.x + a[1] * b.y + a[2] * b.z; const e = [H[0] - p.x, 0, H[2] - p.z]; const V = [v.x, v.y, v.z]; return [d(e, f.forward), d(e, f.right), d(V, f.forward), d(V, f.right)]; }, here);
+        const tf = Math.max(-16, Math.min(16, (r[0] * 2 - r[2]) * 7)), tr = Math.max(-16, Math.min(16, (r[1] * 2 - r[3]) * 7));
+        await tilt(40 - tf, tr);
+        await page.waitForTimeout(30);
+      };
+      for (let k = 0; k < 200 && !(await on()); k++) await hold();
+      for (let k = 0; k < 200 && (await on()); k++) await hold();
+      if (process.env.DBG) console.log('after wait', JSON.stringify(await st()));
+      if ((await st()).falls > fallsSeen) continue;
       const r = await go(s.far, 4, 0.3);
       if (r !== 'ok') { status = r; break; }
       i++;
