@@ -37,6 +37,7 @@ class Level:
         self.switches = []
         self.wells = []
         self.rotators = []
+        self.maze_lasers = []      # indexes of lasers placed inside mazes (the route finds them itself)
         self.checkpoints = []      # (cx, cy) cell coords (float)
         self.legs = []             # route legs, cell coords until resolved
         self.y = 1                 # next free row (y-up); row 0 is the border
@@ -62,6 +63,7 @@ class Level:
     def run(self, cw=3, feats=(), start=False, goal=False, checkpoint=False):
         """Corridor across the board, entered at self.side, left at the other side."""
         y0, y1 = self.y, self.y + cw - 1
+        assert y0 >= getattr(self, 'pocket_top', -9) + 2, 'switch pocket would open into this segment: lengthen the connector'
         self.carve(1, W - 2, y0, y1)
         east = self.side == 'W'          # travelling east?
         step = 1 if east else -1
@@ -98,8 +100,35 @@ class Level:
         self.side = 'E' if east else 'W'
         return (y0, y1)
 
+    # Clear cells needed before a feature for the approach (waiting spot, run-up).
+    APPROACH = {'platform': 2, 'laser': 2, 'jump': 2, 'door': 6}
+    # Clear cells needed after a feature (where the route steps off it).
+    EXIT = {'platform': 2, 'arm': 2}
+
     def _slots(self, usable, feats):
-        """Splits the usable columns evenly among the features: returns (first, last) index pairs into usable."""
+        if self.spec.get('layout', 1) == 1:
+            return self._slots_v1(usable, feats)
+        """Places the features along the usable columns, spreading spare room evenly.
+        Returns (first, last) column pairs in travel order."""
+        if not feats:
+            return []
+        widths = [self._feat_width(f, a) for f, a in feats]
+        names = [f for f, _ in feats]
+        need = [max(self.APPROACH.get(f, 1), self.EXIT.get(names[k - 1], 1) if k else 1) for k, f in enumerate(names)] + [self.EXIT.get(names[-1], 1)]
+        free = len(usable) - sum(widths) - sum(need)
+        assert free >= 0, f'features {feats} do not fit in {len(usable)} columns'
+        extra = [free // len(need)] * len(need)
+        for k in range(free % len(need)):
+            extra[k] += 1
+        out, i = [], 0
+        for k, w in enumerate(widths):
+            i += need[k] + extra[k]
+            out.append((usable[i], usable[i + w - 1]))
+            i += w
+        return out
+
+    def _slots_v1(self, usable, feats):
+        """Worlds 1-3 layout (kept so those tested levels stay as they are). Splits the usable columns evenly among the features: returns (first, last) index pairs into usable."""
         if not feats:
             return []
         widths = [self._feat_width(f, a) for f, a in feats]
@@ -114,7 +143,7 @@ class Level:
     def _feat_width(self, f, args):
         return {'holes': 2, 'piston': 1, 'strips': 1, 'bridge': 6 + args.get('deck', 5), 'crumble': args.get('len', 4),
                 'platform': args.get('gap', 5), 'pad': args.get('len', 5), 'laser': 1, 'door': 1, 'arm': args.get('size', 5),
-                'disc': 5, 'jump': 1 + args.get('gap', 3), 'well': args.get('len', 6), 'ice': args.get('len', 6)}.get(f, 1)
+                'disc': 5, 'jump': 2 + args.get('gap', 3), 'well': args.get('len', 6), 'ice': args.get('len', 6)}.get(f, 1)
 
     def _run_feature(self, f, args, order, a, b, y0, y1, east):
         cw = y1 - y0 + 1
@@ -164,24 +193,25 @@ class Level:
         elif f == 'pad':
             kind = args['kind']
             d = args.get('dir')
-            if d is None:
+            if args.get('against'):
+                d = (-step, 0)
+            elif args.get('side'):
+                d = (0, 1 if args['side'] == 'top' else -1)
+            elif d is None:
                 d = (step, 0)
-            self.pads.append(dict(kind=kind, c0=lo, c1=hi, y0=y0, y1=y1, dir=d))
-            if args.get('holes'):
-                # Holes along one edge make the pad dangerous (ice drift, conveyor push).
-                side_row = y0 if args.get('holes') == 'low' else y1
-                for c in range(lo, hi + 1, 3):
-                    self.carve(c, min(c + 1, hi), side_row, side_row, ' ')
+            py0, py1 = self._edge_holes(args.get('holes'), lo, hi, y0, y1)
+            self.pads.append(dict(kind=kind, c0=lo, c1=hi, y0=py0, y1=py1, dir=d))
             if kind == 'sticky' or kind == 'ice':
                 return ('slow', lo, hi) if kind == 'ice' else None
         elif f == 'laser':
-            self.lasers.append((a, y0, y1, args.get('period', 2.6), args.get('on', 0.5), args.get('phase', 0)))
+            self.lasers.append((a, y0, y1, args.get('period', 2.6), args.get('on', 0.42), args.get('phase', 0)))
             return ('laser', len(self.lasers) - 1, a)
         elif f == 'door':
             # Door across the corridor; its switch sits in a pocket off the corridor a few cells before.
             sw = a - step * args.get('back', 4)
             pocket = (y1 + 1, y1 + 2) if args.get('top', True) else (y0 - 2, y0 - 1)
             self.carve(sw, sw + step, pocket[0], pocket[1])
+            self.pocket_top = max(getattr(self, 'pocket_top', 0), pocket[1])
             self.doors.append((a, y0, y1))
             sx = sw + step * 0.5
             sy = pocket[1] if args.get('top', True) else pocket[0]
@@ -190,8 +220,10 @@ class Level:
         elif f == 'arm':
             size = args.get('size', cw)
             cx = (a + b) / 2
-            self.rotators.append(('arm', cx, mid, size - 0.3, args.get('speed', 1.3), args.get('phase', 0)))
-            return ('arm', len(self.rotators) - 1, a, b)
+            self.rotators.append(('arm', cx, mid, size - 1.6, args.get('speed', 1.3), args.get('phase', 0)))
+            # The ball slips past along an edge lane while the bar lies along the corridor.
+            lane = y1 if args.get('top', True) else y0
+            return ('arm', len(self.rotators) - 1, a, b, lane)
         elif f == 'disc':
             for c in range(lo, hi + 1):
                 self.carve(c, c, y0, y1, ' ')
@@ -201,27 +233,40 @@ class Level:
         elif f == 'jump':
             gap = args.get('gap', 3)
             self.pads.append(dict(kind='jump', c0=a, c1=a, y0=y0, y1=y1, dir=(step, 0)))
+            if args.get('low'):
+                # Low gravity over the jump: a longer, floatier flight.
+                far = a + step * (gap + 1)
+                self.wells.append((min(a, far), max(a, far), y0, y1, args['low']))
             for i in range(gap):
                 c = a + step * (1 + i)
                 self.carve(c, c, y0, y1, ' ')
-            return ('jump', a, a + step * (gap + 2))
+            return ('jump', a, a + step * (gap + 1))
         elif f == 'well':
             self.wells.append((lo, hi, y0, y1, args.get('scale', 0.4)))
         elif f == 'ice':
-            self.pads.append(dict(kind='ice', c0=lo, c1=hi, y0=y0, y1=y1, dir=None))
-            if args.get('holes'):
-                for c in range(lo + 1, hi, 3):
-                    r = y1 if (c // 3) % 2 else y0
-                    self.put(c, r, ' ')
-                    self.put(c + 1 if c + 1 < hi else c, r, ' ')
+            py0, py1 = self._edge_holes(args.get('holes'), lo, hi, y0, y1)
+            self.pads.append(dict(kind='ice', c0=lo, c1=hi, y0=py0, y1=py1, dir=None))
             return ('slow', lo, hi)
         return None
+
+    def _edge_holes(self, where, lo, hi, y0, y1):
+        """2x2 holes every few cells along one edge of a pad ('top' or 'low'), punched outward into the wall.
+        Returns the rows the pad itself covers, so the pad never hides a hole."""
+        if not where:
+            return y0, y1
+        top = where != 'low'
+        rows = (y1, y1 + 1) if top else (y0 - 1, y0)
+        assert rows[0] >= 1, 'edge holes would cut the border'
+        for c in range(lo, hi, 4):
+            self.carve(c, min(c + 1, hi), rows[0], rows[1], ' ')
+        return (y0, y1 - 1) if top else (y0 + 1, y1)
 
     def maze(self, mw=3, ny=3, feats=(), goal=False, checkpoint=False):
         """Labyrinth room. Entered at the bottom corner on self.side, left at the top corner on the other side."""
         p = mw + 1
         nx = (W - 1) // p
         y0 = self.y
+        assert y0 >= getattr(self, 'pocket_top', -9) + 2, 'switch pocket would open into this segment: lengthen the connector'
         h = ny * p - 1
         cell_c = lambda i: 1 + i * p
         cell_y = lambda j: y0 + j * p
@@ -285,24 +330,30 @@ class Level:
                     i = rng.randrange(nx - 1)
                     if frozenset(((i, j), (i + 1, j))) in links:
                         c = cell_c(i) + mw
-                        self.lasers.append((c, cell_y(j), cell_y(j) + mw - 1, 2.4 + k * 0.4, 0.45, k * 0.3))
+                        self.lasers.append((c, cell_y(j), cell_y(j) + mw - 1, 2.4 + k * 0.4, 0.4, k * 0.3))
+                        self.maze_lasers.append(len(self.lasers) - 1)
             elif f == 'crumble':
-                # Crumbling tiles in the openings between maze cells.
-                ls = list(links)
-                rng.shuffle(ls)
-                for l in ls[:args.get('n', 4)]:
-                    (a, b) = tuple(l)
-                    (i1, j1), (i2, j2) = sorted((a, b))
-                    if j1 == j2:
-                        c = cell_c(i1) + mw
-                        for yy in range(cell_y(j1), cell_y(j1) + mw):
-                            self.put(c, yy, 'K')
-                            self.crumble.append((c, yy))
-                    else:
-                        yy = cell_y(j1) + mw
-                        for c in range(cell_c(i1), cell_c(i1) + mw):
-                            self.put(c, yy, 'K')
-                            self.crumble.append((c, yy))
+                # Whole maze cells crumble (a one-cell strip would trap the ball half-sunk instead of dropping it).
+                skip = {start, end}
+                if getattr(self, 'maze_switch', None):
+                    # The trip to the switch and back crosses these cells twice, so they must hold.
+                    sw = dead[0] if dead else start
+                    skip |= set(self._cell_path(links, start, sw)) & set(self._cell_path(links, sw, end))
+                    skip.add(sw)
+                # On the way through, only cells the route crosses in a straight line (no stopping to turn on them).
+                main = list(reversed(self._cell_path(links, start, end)))
+                for k in range(1, len(main) - 1):
+                    a_, b_, c_ = main[k - 1], main[k], main[k + 1]
+                    if (b_[0] - a_[0], b_[1] - a_[1]) != (c_[0] - b_[0], c_[1] - b_[1]):
+                        skip.add(b_)
+                cells = [(i, j) for i in range(nx) for j in range(ny) if (i, j) not in skip]
+                rng.shuffle(cells)
+                for (i, j) in cells[:args.get('n', 4)]:
+                    for c in range(cell_c(i), cell_c(i) + mw):
+                        for yy in range(cell_y(j), cell_y(j) + mw):
+                            if self.get(c, yy) == '.':
+                                self.put(c, yy, 'K')
+                                self.crumble.append((c, yy))
         if goal:
             self.carve(ex[0], ex[1], y0 + h - mw, y0 + h - 1, 'G')
             self.goal = ((ex[0] + ex[1]) / 2, y0 + h - (mw + 1) / 2)
@@ -310,6 +361,26 @@ class Level:
         self.y = y0 + h
         self.side = 'E' if self.side == 'W' else 'W'
         return (y0, y0 + h - 1)
+
+    def _cell_path(self, links, a, b):
+        """Maze cells on the way from a to b."""
+        nb = {}
+        for l in links:
+            p, q = tuple(l)
+            nb.setdefault(p, []).append(q)
+            nb.setdefault(q, []).append(p)
+        prev, todo = {a: None}, [a]
+        while todo:
+            n = todo.pop(0)
+            for m in nb.get(n, []):
+                if m not in prev:
+                    prev[m] = n
+                    todo.append(m)
+        out, n = [], b
+        while n is not None:
+            out.append(n)
+            n = prev.get(n)
+        return out
 
     def _dead_ends(self, nx, ny, links, start, end):
         deg = {}
@@ -433,16 +504,17 @@ def route_mark(legs, last, m, mid, s):
         return last          # the grid path already runs over the bridge cells
     if kind == 'fast':
         a, b = m[1], m[2]
-        legs.append(('path', last, (a - (1 if b > a else -1) * 2, mid)))
-        legs.append(('go', (b + (1 if b > a else -1) * 2, mid), 3.2))
-        return (b + (1 if b > a else -1) * 2, mid)
+        s = 1 if b > a else -1
+        legs.append(('path', last, (a - s, mid)))
+        legs.append(('go', (b + s, mid), 3.2))
+        return (b + s, mid)
     if kind == 'slow':
         return last
     if kind == 'platform':
         idx, a, b = m[1], m[2], m[3]
         s = 1 if b > a else -1
         legs.append(('path', last, (a - 2 * s, mid)))
-        legs.append(('platform', idx, (a - 2 * s, mid), (b + 2 * s, mid)))
+        legs.append(('platform', idx, (a - s, mid), (b + 2 * s, mid)))
         return (b + 2 * s, mid)
     if kind == 'laser':
         idx, c = m[1], m[2]
@@ -454,15 +526,15 @@ def route_mark(legs, last, m, mid, s):
         legs.append(('path', last, (sx, sy)))
         return (sx, sy)
     if kind == 'arm':
-        idx, a, b = m[1], m[2], m[3]
+        idx, a, b, lane = m[1], m[2], m[3], m[4]
         s = 1 if b > a else -1
-        legs.append(('path', last, (a - 2 * s, mid)))
-        legs.append(('arm', idx, (a - 2 * s, mid), (b + 2 * s, mid)))
-        return (b + 2 * s, mid)
+        legs.append(('path', last, (a - s, lane)))
+        legs.append(('arm', idx, (a - s, lane), (b + 2 * s, lane)))
+        return (b + 2 * s, lane)
     if kind == 'jump':
         a, land = m[1], m[2]
         s = 1 if land > a else -1
-        legs.append(('path', last, (a - 3 * s, mid)))
+        legs.append(('path', last, (a - 2 * s, mid)))
         legs.append(('go', (land + s, mid), 6.0))
         return (land + s, mid)
     return last
@@ -660,7 +732,7 @@ def grid_path(rows, a, b):
         if (p1[0] - p0[0], p1[1] - p0[1]) != (p2[0] - p1[0], p2[1] - p1[1]):
             pts.append(p1)
     pts.append(path[-1])
-    return pts, len(path)
+    return pts, len(path), path
 
 
 def resolve_route(L, rows, X, Z, R):
@@ -671,8 +743,30 @@ def resolve_route(L, rows, X, Z, R):
         k = leg[0]
         if k == 'path':
             a, b = leg[1], leg[2]
-            pts, n = grid_path(rows, (a[0], R(a[1])), (b[0], R(b[1])))
+            pts, n, cells = grid_path(rows, (a[0], R(a[1])), (b[0], R(b[1])))
             L.route_len += n
+            # Maze lasers on this stretch: stop short, wait for the beam, cross.
+            beams = {}
+            for idx in L.maze_lasers:
+                c, y0, y1 = L.lasers[idx][0], L.lasers[idx][1], L.lasers[idx][2]
+                for y in range(y0, y1 + 1):
+                    beams[(R(y), c)] = idx
+            hits = [i for i, cell in enumerate(cells) if cell in beams]
+            if hits:
+                start = 0
+                for i in hits:
+                    i0, i1 = max(start, i - 2), min(len(cells) - 1, i + 2)
+                    # Cross straight over the beam; stop one cell past it if the way turns right after.
+                    if i1 == i + 2 and (cells[i + 2][0] - cells[i + 1][0], cells[i + 2][1] - cells[i + 1][1]) != (cells[i + 1][0] - cells[i][0], cells[i + 1][1] - cells[i][1]):
+                        i1 = i + 1
+                    sub, _, _ = grid_path(rows, (cells[start][1], cells[start][0]), (cells[i0][1], cells[i0][0])) if i0 > start else ([cells[start]], 0, None)
+                    for (r, c) in sub[1:]:
+                        steps.append({'p': [X(c), 0.5, round(r + (Z(0) - R(0)), 3)]})
+                    zr = lambda r: round(r + (Z(0) - R(0)), 3)
+                    steps.append({'laser': beams[cells[i]], 'near': [X(cells[i0][1]), 0.5, zr(cells[i0][0])], 'at': [X(cells[i][1]), 0.5, zr(cells[i][0])], 'far': [X(cells[i1][1]), 0.5, zr(cells[i1][0])]})
+                    start = i1
+                sub, _, _ = grid_path(rows, (cells[start][1], cells[start][0]), (cells[-1][1], cells[-1][0]))
+                pts = sub
             for (r, c) in pts[1:]:
                 steps.append({'p': [X(c), 0.5, round(r + (Z(0) - R(0)), 3)]})
             # Land on the exact (possibly half-cell) end point.
@@ -707,7 +801,7 @@ def resolve_route(L, rows, X, Z, R):
             L.route_len += abs(b[0] - a[0]) + 8
         elif k == 'laser':
             idx, a, b = leg[1], leg[2], leg[3]
-            steps.append({'laser': idx, 'far': [X(b[0]), 0.5, Z(b[1])]})
+            steps.append({'laser': idx, 'near': [X(a[0]), 0.5, Z(a[1])], 'far': [X(b[0]), 0.5, Z(b[1])]})
             L.route_len += 4
         elif k == 'arm':
             idx, a, b = leg[1], leg[2], leg[3]
@@ -743,6 +837,28 @@ def write_world(path, title, script, levels):
         L = build(spec)
         meta = dict(id=spec['id'], name=spec['name'], sub=spec['sub'])
         s, route = emit(L, const, meta)
+        # The route must never turn on a crumbling tile: turn those tiles back into floor and emit again.
+        while True:
+            ys = [y for (_, y) in L.cells]
+            H = max(ys) + 2
+            ox, oz = -(W // 2), -(H // 2)
+            bad = set()
+            for st in route:
+                if 'p' in st and 'v' not in st:
+                    c, y = int(round(st['p'][0] - ox)), int(round(H - 1 - (st['p'][2] - oz)))
+                    if L.get(c, y) == 'K':
+                        bad.add((c, y))
+            if not bad:
+                break
+            todo = list(bad)
+            while todo:
+                c, y = todo.pop()
+                if L.get(c, y) != 'K':
+                    continue
+                L.put(c, y, '.')
+                L.crumble.remove((c, y))
+                todo += [(c + 1, y), (c - 1, y), (c, y + 1), (c, y - 1)]
+            s, route = emit(L, const, meta)
         if 'rampX' not in s:
             pass
         src += s

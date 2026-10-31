@@ -34,22 +34,41 @@ const SHOTS = process.argv[3];
   async function go(T, cruise = 3.2, tol = 0.6, maxS = 25, live = null) {
     const t0 = await gameTime();
     const d0 = await downKey();
+    const f0 = await page.evaluate(() => window.gravityShift.stats.falls);
+    const s0 = await page.evaluate(() => { const p = window.gravityShift.ball.position; return [p.x, p.y, p.z]; });
     let n = 0;
+    let stuck = 0;
     while ((await gameTime()) - t0 < maxS && n++ < 4000) {
       if (live) T = await live();
-      const r = await page.evaluate((T) => {
+      const r = await page.evaluate(([T, s0]) => {
         const gm = window.gravityShift; const v = gm.ball.body.linvel(); const p = gm.ball.position; const f = gm.frame;
         const d = (a, b) => a[0] * b.x + a[1] * b.y + a[2] * b.z;
         const e = [T[0] - p.x, T[1] - p.y, T[2] - p.z]; const V = [v.x, v.y, v.z];
-        return { ef: d(e, f.forward), er: d(e, f.right), vf: d(V, f.forward), vr: d(V, f.right), state: gm.state, down: [f.down.x, f.down.y, f.down.z].map(Math.round).join(',') };
-      }, T);
+        const L = [T[0] - s0[0], T[1] - s0[1], T[2] - s0[2]]; const P = [p.x - s0[0], p.y - s0[1], p.z - s0[2]];
+        return { ef: d(e, f.forward), er: d(e, f.right), vf: d(V, f.forward), vr: d(V, f.right), lf: d(L, f.forward), lr: d(L, f.right), pf: d(P, f.forward), pr: d(P, f.right), falls: gm.stats.falls, state: gm.state, down: [f.down.x, f.down.y, f.down.z].map(Math.round).join(',') };
+      }, [T, s0]);
       if (r.state !== 'playing') return 'state';
+      if (r.falls > f0) return 'fell';
       if (r.down !== d0) return 'frame';
       const dist = Math.hypot(r.ef, r.er);
       if (dist < tol && !live) return 'ok';
-      const sp = live ? Math.min(cruise, dist * 2) : Math.max(1.2, Math.min(cruise, dist * 1.5));
-      const tf = Math.max(-16, Math.min(16, ((r.ef / (dist || 1)) * sp - r.vf) * 7));
-      const tr = Math.max(-16, Math.min(16, ((r.er / (dist || 1)) * sp - r.vr) * 7));
+      const sp = live ? Math.min(cruise, dist * 3) : Math.max(1.2, Math.min(cruise, dist * 1.5));
+      let wf = (r.ef / (dist || 1)) * sp, wr = (r.er / (dist || 1)) * sp;
+      // Hold the straight line from where this leg started (resists conveyors and ice drift).
+      const ll = Math.hypot(r.lf, r.lr);
+      if (!live && ll > 1.5 && dist > 1) {
+        const nf = -r.lr / ll, nr = r.lf / ll;
+        const cross = r.pf * nf + r.pr * nr;
+        wf -= nf * cross * 2.5; wr -= nr * cross * 2.5;
+      }
+      // Wedged on a wall corner: line up with the target along the short axis first.
+      stuck = Math.hypot(r.vf, r.vr) < 0.15 && dist > 1 ? stuck + 1 : Math.max(0, stuck - 1);
+      if (stuck > 20 && !live) {
+        if (Math.abs(r.er) > Math.abs(r.ef)) { wf = r.ef * 3; wr = 0; } else { wr = r.er * 3; wf = 0; }
+        if (stuck > 45) stuck = 0;
+      }
+      const tf = Math.max(-16, Math.min(16, (wf - r.vf) * 7));
+      const tr = Math.max(-16, Math.min(16, (wr - r.vr) * 7));
       await tilt(40 - tf, tr);
       await page.waitForTimeout(40);
       if (live && live.done && (await live.done())) return 'ok';
@@ -57,6 +76,16 @@ const SHOTS = process.argv[3];
     return 'timeout';
   }
   const still = () => tilt(40, 0);
+  // Brake to a stop where we are (so we don't roll into a laser or an arm while waiting).
+  async function settle() {
+    for (let k = 0; k < 60; k++) {
+      const v = await page.evaluate(() => { const gm = window.gravityShift; const v = gm.ball.body.linvel(); const f = gm.frame; return [v.x * f.forward.x + v.y * f.forward.y + v.z * f.forward.z, v.x * f.right.x + v.y * f.right.y + v.z * f.right.z]; });
+      if (Math.hypot(v[0], v[1]) < 0.2) break;
+      await tilt(40 + Math.max(-16, Math.min(16, v[0] * 7)), Math.max(-16, Math.min(16, -v[1] * 7)));
+      await page.waitForTimeout(40);
+    }
+    await still();
+  }
 
   const steps = routes[ID];
   let i = 0;
@@ -91,13 +120,15 @@ const SHOTS = process.argv[3];
     if (s.platform !== undefined) {
       const pos = () => page.evaluate((k) => { const t = window.gravityShift.levels['movers'][k].body.translation(); return [t.x, 0.5, t.z]; }, s.platform);
       await go(s.near);
-      await still();
+      await settle();
       // Wait for the platform to come to this side, ride it to the far side, then step off.
       const near = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-      for (let k = 0; k < 200 && near(await pos(), s.near) > 2.2; k++) await page.waitForTimeout(50);
+      // Let it leave first if it is already here, then catch it as it arrives.
+      for (let k = 0; k < 200 && near(await pos(), s.near) < 3.2; k++) await page.waitForTimeout(50);
+      for (let k = 0; k < 300 && near(await pos(), s.near) > 2.8; k++) await page.waitForTimeout(30);
       const ride = async () => pos();
-      ride.done = async () => near(await pos(), s.far) < 2.3;
-      const r = await go(null, 2.5, 0.3, 20, ride);
+      ride.done = async () => near(await pos(), s.far) < 2.8;
+      const r = await go(null, 4, 0.3, 20, ride);
       if (r !== 'ok') { status = r; break; }
       const r2 = await go(s.far, 2.5);
       if (r2 !== 'ok') { status = r2; break; }
@@ -105,21 +136,25 @@ const SHOTS = process.argv[3];
       continue;
     }
     if (s.laser !== undefined) {
-      await still();
+      // Wait close to the beam (1.3 m short of it) so one off-phase is enough to cross.
+      if (s.near) { const m = s.at ?? [0, 1, 2].map((k) => (s.near[k] + s.far[k]) / 2); const L = Math.hypot(m[0] - s.near[0], m[2] - s.near[2]); await go(m.map((v, k) => v - ((m[k] - s.near[k]) / L) * 1.3 * (k === 1 ? 0 : 1)), 2.0, 0.3); }
+      await settle();
       const on = () => page.evaluate((k) => window.gravityShift.features['lasers'][k].on, s.laser);
       for (let k = 0; k < 200 && !(await on()); k++) await page.waitForTimeout(30);
       for (let k = 0; k < 200 && (await on()); k++) await page.waitForTimeout(30);
-      const r = await go(s.far, 4);
+      const r = await go(s.far, 4, 0.3);
       if (r !== 'ok') { status = r; break; }
       i++;
       continue;
     }
     if (s.arm !== undefined) {
       await go(s.near);
-      await still();
+      await settle();
       // Go just after the bar lines up with the corridor.
       const ang = () => page.evaluate((k) => { const q = window.gravityShift.features['rotators'][k].body.rotation(); return 2 * Math.atan2(q.y, q.w); }, s.arm);
-      for (let k = 0; k < 300; k++) { const a = await ang(); if (Math.abs(Math.sin(a)) < 0.2) break; await page.waitForTimeout(30); }
+      // Go the moment the bar swings out of our lane (|sin| drops below the lane threshold).
+      let prev = Math.abs(Math.sin(await ang()));
+      for (let k = 0; k < 400; k++) { await page.waitForTimeout(20); const c = Math.abs(Math.sin(await ang())); if (c < 0.75 && prev >= 0.75) break; prev = c; }
       const r = await go(s.far, 3.6);
       if (r !== 'ok') { status = r; break; }
       i++;
@@ -129,6 +164,7 @@ const SHOTS = process.argv[3];
     if (r === 'frame') { skipToAfterShift(); await page.waitForTimeout(1500); continue; }
     if (r === 'timeout') { console.log('  timeout at step', i, JSON.stringify(s), JSON.stringify(await st())); status = 'timeout'; break; }
     if (r === 'state') break;
+    if (r === 'fell') { console.log('  fell during step', i, JSON.stringify(s), 'prev', JSON.stringify(steps[i - 1])); status = 'fell'; break; }
     i++;
   }
   await still();

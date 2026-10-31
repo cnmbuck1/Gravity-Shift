@@ -276,6 +276,12 @@ export class GameManager {
         dt,
         (step) => {
           this.levels.stepMovers(step);
+          // Ride platforms carry the sphere with them (friction alone lets it roll off the back).
+          const carry = this.frame.down.y < -0.5 ? this.levels.platformCarry(this.ball.position, BALL_RADIUS) : null;
+          if (carry) {
+            const t = this.ball.body.translation();
+            this.ball.body.setTranslation({ x: t.x + carry.x, y: t.y + carry.y, z: t.z + carry.z }, true);
+          }
           this.features.step(step);
           // Gravity wells scale gravity while the ball is inside them.
           const scale = this.features.gravityScale(this.ball.position);

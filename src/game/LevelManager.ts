@@ -15,6 +15,9 @@ interface MoverRuntime {
   def: MoverDef;
   body: RAPIER.RigidBody;
   mesh: THREE.Mesh;
+  /** Where the mover is headed this step, and how far that is from last step (ride platforms carry the ball). */
+  target?: THREE.Vector3;
+  delta?: THREE.Vector3;
 }
 
 export interface CheckpointRuntime {
@@ -120,10 +123,29 @@ export class LevelManager {
     for (const m of this.movers) {
       const t = ((this.moverTime / m.def.period + (m.def.phase ?? 0)) % 1 + 1) % 1;
       // Smooth ping-pong: ease at both ends so the block visibly pauses before reversing.
-      const k = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
+      let k = 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
+      if (m.def.kind === 'platform') {
+        // Ride platforms wait at each end for a fifth of the cycle so the sphere can roll on and off.
+        const u = t < 0.2 ? 0 : t < 0.5 ? (t - 0.2) / 0.3 : t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+        k = 0.5 - 0.5 * Math.cos(u * Math.PI);
+      }
       const p = v3(m.def.from).lerp(v3(m.def.to), k);
+      m.delta = m.target ? p.clone().sub(m.target) : new THREE.Vector3();
+      m.target = p;
       m.body.setNextKinematicTranslation({ x: p.x, y: p.y, z: p.z });
     }
+  }
+
+  /** How far the ride platform under a ball at `p` moves this step (null when not on one), so the ball travels with it. */
+  platformCarry(p: THREE.Vector3, radius: number): THREE.Vector3 | null {
+    for (const m of this.movers) {
+      if (m.def.kind !== 'platform' || !m.target || !m.delta) continue;
+      const half = m.def.size.map((v) => v / 2);
+      const top = m.target.y - m.delta.y + half[1];
+      const c = m.target.clone().sub(m.delta);
+      if (Math.abs(p.x - c.x) < half[0] + 0.1 && Math.abs(p.z - c.z) < half[2] + 0.1 && p.y > top && p.y < top + radius + 0.3) return m.delta;
+    }
+    return null;
   }
 
   isOutOfBounds(p: THREE.Vector3): boolean {

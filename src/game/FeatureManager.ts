@@ -20,8 +20,8 @@ export interface SurfaceMod {
 
 const NORMAL: SurfaceMod = { accel: 1, rr: 1, speed: 1, push: null };
 /** Seconds a crumbling tile shakes before it drops. */
-const CRUMBLE_DELAY = 0.55;
-const JUMP_SPEED = 8.5;
+const CRUMBLE_DELAY = 0.75;
+const JUMP_SPEED = 6;
 
 interface CrumbleRt { def: CrumbleDef; collider: RAPIER.Collider; mesh: THREE.Mesh; timer: number; gone: boolean; drop: number }
 interface LaserRt { def: LaserDef; beam: THREE.Mesh; a: THREE.Vector3; b: THREE.Vector3; on: boolean }
@@ -146,7 +146,7 @@ export class FeatureManager {
       if (c.timer >= 0 || c.gone) continue;
       const [x, y, z] = c.def.position;
       const [w, d] = c.def.size;
-      if (Math.abs(p.x - x) < w / 2 + 0.1 && Math.abs(p.z - z) < d / 2 + 0.1 && p.y > y && p.y < y + BALL_RADIUS + 0.4) c.timer = 0;
+      if (Math.abs(p.x - x) < w / 2 + 0.1 && Math.abs(p.z - z) < d / 2 + 0.1 && p.y > y - BALL_RADIUS - 0.2 && p.y < y + BALL_RADIUS + 0.4) c.timer = 0;
     }
     let mod = this.boostTimer > 0 ? { ...NORMAL, speed: 1.45 } : NORMAL;
     if (!grounded) return mod;
@@ -175,7 +175,7 @@ export class FeatureManager {
             const out = { x: v.x, y: JUMP_SPEED, z: v.z };
             if (dir) {
               const along = v.x * dir.x + v.z * dir.z;
-              const add = Math.max(0, 5.5 - along);
+              const add = Math.max(0, 5 - along);
               out.x += dir.x * add;
               out.z += dir.z * add;
             }

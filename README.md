@@ -2,7 +2,7 @@
 
 _Tilt Your World. Defy Gravity._ A futuristic 3D physics puzzle game for iPhone: roll a metallic sphere by tilting your phone, and shift gravity 90° to turn walls and ceilings into floors.
 
-**Status:** v0.6: the game is renamed Gravitor (the title logo uses the Cnmbuck Orb as the O; the Orb ball is still won by finishing the campaign). v0.5: ten levels (Orbital Labyrinth is now level 7), Cnmbuck Orb mark on the title screen (the Orb ball itself is won by finishing all ten levels). v0.4 added the five-level progression, level select and How to Play. Previously v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** v0.7: 100 levels in 10 worlds, each world built around one new idea (crumbling floors, moving platforms, boost/conveyor/ice/sticky pads, glass-ceiling flips, switches, doors and lasers, jump pads and low gravity, automatic shifts, sweeping arms and turning discs). All levels are unlocked while the world order is being decided (Settings → Unlock all levels). v0.6: the game is renamed Gravitor (the title logo uses the Cnmbuck Orb as the O; the Orb ball is still won by finishing the campaign). v0.5: ten levels (Orbital Labyrinth is now level 7), Cnmbuck Orb mark on the title screen (the Orb ball itself is won by finishing all ten levels). v0.4 added the five-level progression, level select and How to Play. Previously v0.3: refined Orbital Labyrinth benchmark (about 80% tilt labyrinth, 20% gravity shifting): new camera, compact HUD, redesigned maze, REFINED physics profile, sound and haptics, course preview. See [docs/PLAN.md](docs/PLAN.md).
 
 Stack: Three.js · TypeScript · Vite · Rapier · Capacitor (iOS).
 
@@ -43,22 +43,22 @@ After code changes run `npm run ios:sync` again, then Run in Xcode.
 
 ## What to try
 
-**Levels** (unlock in order; Main menu → LEVELS shows stars and best times; PLAY resumes at your next unfinished level):
+**Worlds** (Main menu → LEVELS shows a card per world, then its ten levels with stars and best times):
 
-| # | Level | Teaches |
-|---|---|---|
-| 1 | First Roll | Tilt to roll: wide corridors, four gentle turns, no hazards |
-| 2 | Corners | Three-wide corridors, many turns, a dead end, first checkpoint |
-| 3 | Mind the Gap | Holes in the floor, a narrow two-wide passage |
-| 4 | Moving Parts | Red energy strips, two sliding pistons, ramp and raised bridge |
-| 5 | Switchback | Longer runs, a two-wide stretch, a 2 m raised bridge, three pistons, two checkpoints |
-| 6 | Wall Walk | First required gravity shift: onto a wall, over a chasm, and back down |
-| 7 | Orbital Labyrinth | Everything so far, plus the skywalk and gravity-wall shortcuts |
-| 8 | Crossfire | Two-wide corridors, faster pistons, an energy slalom, a 1.4 m bridge |
-| 9 | Twin Walls | Two required wall crossings (right wall, then left wall), pistons between |
-| 10 | Event Horizon | Finale: holes, slalom, thin bridge, fast pistons and a long wall crossing |
+| World | Idea |
+|---|---|
+| 1 Launch Deck | Tilt, corners, holes and mazes |
+| 2 Piston Works | Pistons, energy strips and bridges |
+| 3 Wall Walk | Gravity walls: shift left and right |
+| 4 Crumble Belt | Crumbling floors and moving platforms |
+| 5 Flux Rails | Boost pads, conveyors, ice and sticky ground |
+| 6 Skyward | Flip gravity onto glass ceilings |
+| 7 Circuit | Switches, doors and blinking lasers |
+| 8 Low Orbit | Jump pads, low gravity and automatic shifts |
+| 9 Spin Cycle | Sweeping arms and turning discs |
+| 10 Event Horizon | Everything at once |
 
-Levels 5, 6 and 8–10 live in `src/levels/campaignAdvanced.ts`.
+Each world runs: levels 1–2 introduce the idea, 3–4 practise it, 5 is a breather, 6–8 combine it with earlier ideas, 9 is the challenge and 10 the finale. The world list is in `src/levels/worlds.ts`. Hand-made levels live in `src/levels/campaign*.ts` and `orbitalLabyrinth.ts`; the rest are generated (see Level generator below).
 
 **How to Play** on the main menu explains tilt, calibration, hazards, checkpoints, gravity zones and touch controls.
 
@@ -72,6 +72,12 @@ Levels 5, 6 and 8–10 live in `src/levels/campaignAdvanced.ts`.
 - **Test Deck:** a flat platform with no goal for judging tilt feel. Turn on **Settings → Debug readout** to see tilt angles, sensor rate and FPS.
 - Hold the phone however is comfortable, then tap **◎** to make that the neutral pose.
 - Tune **Sensitivity**, **Dead zone** and **Smoothing** in Settings; they apply instantly.
+
+## Level generator
+
+Most levels are generated from short specs in `tools/levelgen/` (`worlds_1_3.py`, `worlds_4_10.py`). Each level is a stack of corridors, mazes and connectors with features along them. Edit a spec and run `python3 worlds_4_10.py` in that folder to rewrite `src/levels/generated/worldN.ts`. Don't edit the generated files by hand.
+
+The generator also writes a route for each level to `routes.json`. `node autopilot.cjs <level-id>` plays that route in headless Chromium (with `npx vite preview --port 4173` running) and prints PASS or FAIL, which proves every level can be finished.
 
 ## Scripts
 
