@@ -1,6 +1,7 @@
 import type { GameManager, LevelRecord, RunStats } from '../core/GameManager';
 import type { SettingsManager } from '../settings/SettingsManager';
 import { orbAvailable, ORB_LEVELS } from '../settings/SettingsManager';
+import type { Monetization } from '../monetization/Monetization';
 import type { LevelDef } from '../levels/LevelTypes';
 import type { WorldDef } from '../levels/worldTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
@@ -30,7 +31,7 @@ export class UIManager {
   private openWorld = -1;
 
   /** Campaign levels (all worlds, in order) unlock one after another; `extras` (test courses) are always available. */
-  constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private worlds: WorldDef[], private extras: LevelDef[]) {
+  constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private worlds: WorldDef[], private extras: LevelDef[], private money: Monetization) {
     this.campaign = worlds.flatMap((w) => w.levels);
     this.levels = [...this.campaign, ...extras];
     this.root = root;
@@ -146,6 +147,7 @@ export class UIManager {
           <button class="btn primary" data-action="next" data-bind-show="has-next">NEXT LEVEL</button>
           <button class="btn" data-action="restart">RETRY</button>
           <button class="btn" data-action="menu">MAIN MENU</button>
+          <button class="btn link-btn" data-action="remove-ads" data-bind-show="can-buy">REMOVE ADS · UNLOCK THE ORB</button>
         </div>
       </section>
 
@@ -178,6 +180,11 @@ export class UIManager {
             <span class="seg" data-setting="ball"><button data-value="chrome">CHROME</button><button data-value="orb" class="orb-choice">CNMBUCK ORB</button></span>
           </div>
           <div class="note" data-bind="orb-note"></div>
+          <div class="store" data-bind-show="store">
+            <button class="btn" data-action="remove-ads" data-bind-show="can-buy"><b>REMOVE ADS</b><small data-bind="ads-price">One-time purchase · also unlocks the Cnmbuck Orb</small></button>
+            <div class="note" data-bind="ads-note"></div>
+            <button class="btn" data-action="restore">RESTORE PURCHASES</button>
+          </div>
           <div class="row">Physics
             <span class="seg" data-setting="physics"><button data-value="refined">REFINED</button><button data-value="classic">CLASSIC</button></span>
           </div>
@@ -286,6 +293,7 @@ export class UIManager {
     this.bind('orb-note', orbWon
       ? 'The Cnmbuck Orb: Cnmbuck Studios\' signature ball, in every Cnmbuck game.'
       : `🔒 Cnmbuck Orb: finish ${ORB_LEVELS} levels to win Cnmbuck Studios' signature ball.`);
+    this.syncStore();
     this.debugEl.style.display = this.settings.get().showDebug ? 'block' : 'none';
     this.hud.classList.toggle('touch-mode', this.settings.get().controlMode === 'touch');
   }
@@ -405,7 +413,14 @@ export class UIManager {
         this.show('howto');
         break;
       case 'next':
-        void this.startLevel(this.current + 1);
+        // A due ad shows here, between the result and the next level, never during play.
+        void this.money.maybeShowAd().then(() => this.startLevel(this.current + 1));
+        break;
+      case 'remove-ads':
+        void this.money.buyRemoveAds().then((ok) => ok && this.toast('✓ Ads removed · the Cnmbuck Orb is yours', 3000));
+        break;
+      case 'restore':
+        void this.money.restore().then((ok) => this.toast(ok ? '✓ Remove Ads restored' : 'No purchases to restore', 2200));
         break;
     }
   }
@@ -493,8 +508,19 @@ export class UIManager {
       .join('');
   }
 
+  /** Store buttons exist only in the iPhone app; Remove Ads hides once bought. */
+  private syncStore(): void {
+    const show = (key: string, on: boolean) => this.root.querySelectorAll<HTMLElement>(`[data-bind-show="${key}"]`).forEach((el) => (el.style.display = on ? '' : 'none'));
+    show('store', this.money.native);
+    show('can-buy', this.money.native && !this.money.adFree);
+    if (this.money.price) this.bind('ads-price', `${this.money.price} · one-time · also unlocks the Cnmbuck Orb`);
+    this.bind('ads-note', this.money.adFree ? '✓ Ads removed. Thank you for supporting Cnmbuck Studios.' : '');
+  }
+
   private showComplete(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void {
     const hasNext = this.current + 1 < this.campaign.length;
+    if (this.current < this.campaign.length) this.money.levelFinished(this.worldOf(this.current));
+    this.syncStore();
     this.root.querySelectorAll<HTMLElement>('[data-bind-show="has-next"]').forEach((el) => (el.style.display = hasNext ? '' : 'none'));
     this.bind('stars', '★'.repeat(stars) + '☆'.repeat(3 - stars));
     this.bind('r-time', `${stats.time.toFixed(2)}s`);

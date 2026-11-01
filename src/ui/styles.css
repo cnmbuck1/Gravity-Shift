@@ -230,3 +230,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hi-check::after { content: ''; width: 24px; height: 24px; border-radius: 50%; border: 3px solid #3dffc8; }
 .hi-grav { background: rgba(162, 75, 255, 0.25); border-color: rgba(162, 75, 255, 0.7); color: #e2ccff; }
 
+
+/* Store (iPhone app only). */
+.store { display: flex; flex-direction: column; gap: 8px; }
+.link-btn { background: none; border-color: transparent; font-size: 11px; color: var(--muted); }

@@ -27,6 +27,8 @@ export interface Settings {
   orbWon: boolean;
   /** Testing: every world and level is playable without unlocking. */
   unlockAll: boolean;
+  /** Remove Ads was bought (also unlocks the Cnmbuck Orb). */
+  adFree: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -44,14 +46,15 @@ export const DEFAULT_SETTINGS: Settings = {
   ball: 'chrome',
   orbWon: false,
   unlockAll: true,
+  adFree: false,
 };
 
 /** Levels to finish (any of them) to win the Cnmbuck Orb. */
 export const ORB_LEVELS = 50;
 
-/** The Orb can be used once won, and always while testing with every level unlocked. */
+/** The Orb can be used once won (50 levels), with Remove Ads, and always while testing with every level unlocked. */
 export function orbAvailable(s: Readonly<Settings>): boolean {
-  return s.orbWon || s.unlockAll;
+  return s.orbWon || s.adFree || s.unlockAll;
 }
 
 type Listener = (s: Readonly<Settings>) => void;

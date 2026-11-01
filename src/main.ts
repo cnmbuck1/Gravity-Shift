@@ -3,6 +3,7 @@ import { GameManager } from './core/GameManager';
 import { SaveManager } from './settings/SaveManager';
 import { SettingsManager } from './settings/SettingsManager';
 import { UIManager } from './ui/UIManager';
+import { Monetization } from './monetization/Monetization';
 import { SHIFT_PROOF } from './levels/shiftProof';
 import { TEST_DECK } from './levels/testDeck';
 import { ORBITAL_LABYRINTH } from './levels/orbitalLabyrinth';
@@ -19,7 +20,10 @@ async function boot(): Promise<void> {
   // The menu shows the final maze idling in the background.
   game.loadLevel(WORLDS[2].levels[9] ?? ORBITAL_LABYRINTH);
   game.toMenu();
-  const uiManager = new UIManager(ui, game, settings, WORLDS, extras);
+  const money = new Monetization(settings);
+  const uiManager = new UIManager(ui, game, settings, WORLDS, extras, money);
+  // Store and ads start in the background (iPhone app only); the game never waits on them.
+  void money.init().then(() => settings.update({}));
   game.start();
 
   // Prevent iOS rubber-band scrolling and double-tap zoom during play.
