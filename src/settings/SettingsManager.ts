@@ -55,6 +55,13 @@ export class SettingsManager {
   constructor(private save: SaveManager) {
     // Fill in settings added since the save was written.
     this.settings = { ...DEFAULT_SETTINGS, ...save.load('settings', { ...DEFAULT_SETTINGS }) };
+    // While the worlds are being playtested, open every level once on each device, even if an
+    // older save had the switch off. Turning it off afterwards still sticks.
+    if (!save.load('unlockAllTesting', false)) {
+      this.settings.unlockAll = true;
+      this.save.save('settings', this.settings);
+      this.save.save('unlockAllTesting', true);
+    }
   }
 
   get(): Readonly<Settings> {
