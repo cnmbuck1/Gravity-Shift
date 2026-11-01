@@ -1,5 +1,6 @@
 import type { GameManager, LevelRecord, RunStats } from '../core/GameManager';
 import type { SettingsManager } from '../settings/SettingsManager';
+import { orbAvailable, ORB_LEVELS } from '../settings/SettingsManager';
 import type { LevelDef } from '../levels/LevelTypes';
 import type { WorldDef } from '../levels/worldTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
@@ -247,8 +248,8 @@ export class UIManager {
         e.preventDefault();
         const key = seg.dataset.setting!;
         const value = b.dataset.value!;
-        if (key === 'ball' && value === 'orb' && !this.settings.get().orbWon) {
-          this.toast('Finish the campaign to win the Cnmbuck Orb', 2200);
+        if (key === 'ball' && value === 'orb' && !orbAvailable(this.settings.get())) {
+          this.toast(`Finish ${ORB_LEVELS} levels to win the Cnmbuck Orb`, 2200);
           return;
         }
         if (key === 'controlMode' && value === 'tilt' && this.game.input.permission !== 'granted') {
@@ -280,11 +281,11 @@ export class UIManager {
       smoothing: (v) => `${Math.round(v * 1000)} ms`,
     };
     panel.querySelectorAll<HTMLOutputElement>('output').forEach((o) => (o.textContent = fmt[o.dataset.out!](s[o.dataset.out!] as number)));
-    const orbWon = this.settings.get().orbWon;
+    const orbWon = orbAvailable(this.settings.get());
     panel.querySelector('.orb-choice')?.classList.toggle('locked', !orbWon);
     this.bind('orb-note', orbWon
       ? 'The Cnmbuck Orb: Cnmbuck Studios\' signature ball, in every Cnmbuck game.'
-      : '🔒 Cnmbuck Orb: finish the campaign to win Cnmbuck Studios\' signature ball.');
+      : `🔒 Cnmbuck Orb: finish ${ORB_LEVELS} levels to win Cnmbuck Studios' signature ball.`);
     this.debugEl.style.display = this.settings.get().showDebug ? 'block' : 'none';
     this.hud.classList.toggle('touch-mode', this.settings.get().controlMode === 'touch');
   }
@@ -501,8 +502,8 @@ export class UIManager {
     this.bind('r-shifts', String(stats.shifts));
     this.bind('r-best', `${record.bestTime?.toFixed(2)}s${newBest ? ' · NEW!' : ''}`);
     window.setTimeout(() => this.show('complete'), 900);
-    // Finishing the whole campaign wins the Cnmbuck Orb: put it straight on and say so, once
-    if (!this.settings.get().orbWon && this.campaign.every((l) => this.game.recordFor(l.id).bestTime !== null)) {
+    // Finishing ORB_LEVELS levels wins the Cnmbuck Orb: put it straight on and say so, once
+    if (!this.settings.get().orbWon && this.campaign.filter((l) => this.game.recordFor(l.id).bestTime !== null).length >= ORB_LEVELS) {
       this.settings.update({ orbWon: true, ball: 'orb' });
       window.setTimeout(() => this.toast('🏆 You won the Cnmbuck Orb! Change ball in Settings', 3600), 1200);
     }

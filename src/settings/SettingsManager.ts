@@ -23,7 +23,7 @@ export interface Settings {
   /** Show the course flyover before the first attempt at a level. */
   preview: boolean;
   ball: BallSkin;
-  /** The campaign is finished and the Cnmbuck Orb has been awarded (the announcement shows once). */
+  /** 50 levels are finished and the Cnmbuck Orb has been awarded (the announcement shows once). */
   orbWon: boolean;
   /** Testing: every world and level is playable without unlocking. */
   unlockAll: boolean;
@@ -45,6 +45,14 @@ export const DEFAULT_SETTINGS: Settings = {
   orbWon: false,
   unlockAll: true,
 };
+
+/** Levels to finish (any of them) to win the Cnmbuck Orb. */
+export const ORB_LEVELS = 50;
+
+/** The Orb can be used once won, and always while testing with every level unlocked. */
+export function orbAvailable(s: Readonly<Settings>): boolean {
+  return s.orbWon || s.unlockAll;
+}
 
 type Listener = (s: Readonly<Settings>) => void;
 

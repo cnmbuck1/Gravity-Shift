@@ -9,6 +9,7 @@ import { LevelManager, v3 } from '../game/LevelManager';
 import { FeatureManager } from '../game/FeatureManager';
 import type { GravityFrameDef, LevelDef, ShiftZoneDef } from '../levels/LevelTypes';
 import type { SettingsManager, Settings } from '../settings/SettingsManager';
+import { orbAvailable } from '../settings/SettingsManager';
 import { PROFILES } from '../game/PhysicsTuning';
 import { AudioManager } from '../feedback/AudioManager';
 import { HapticsManager } from '../feedback/HapticsManager';
@@ -248,7 +249,7 @@ export class GameManager {
     this.input.tilt.smoothing = s.smoothing;
     const tuning = PROFILES[s.physics] ?? PROFILES.refined;
     this.ball.applyTuning(tuning);
-    this.ball.setSkin(s.orbWon ? s.ball : 'chrome');
+    this.ball.setSkin(orbAvailable(s) ? s.ball : 'chrome');
     this.input.tilt.shape.maxTiltDeg = tuning.maxTiltDeg;
     this.input.tilt.shape.curve = tuning.tiltCurve;
     this.view.setQuality(s.graphics);
