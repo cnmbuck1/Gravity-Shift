@@ -185,6 +185,8 @@ export class UIManager {
             <button class="btn" data-action="remove-ads" data-bind-show="can-buy"><b>REMOVE ADS</b><small data-bind="ads-price">One-time purchase · also unlocks the Cnmbuck Orb</small></button>
             <div class="note" data-bind="ads-note"></div>
             <button class="btn" data-action="restore">RESTORE PURCHASES</button>
+            <button class="btn btn-small" data-action="test-ad" data-bind-show="store-debug">SHOW A TEST AD NOW</button>
+            <div class="note" data-bind="store-debug" data-bind-show="store-debug"></div>
           </div>
           <div class="row">Physics
             <span class="seg" data-setting="physics"><button data-value="refined">REFINED</button><button data-value="classic">CLASSIC</button></span>
@@ -366,6 +368,7 @@ export class UIManager {
       case 'settings':
         this.settingsReturn = this.game.state === 'menu' ? 'menu' : 'game';
         this.game.pause();
+        this.syncStore();
         this.show('settings');
         break;
       case 'close-settings':
@@ -425,7 +428,14 @@ export class UIManager {
         void this.money.maybeShowAd().then(() => this.startLevel(this.current + 1));
         break;
       case 'remove-ads':
-        void this.money.buyRemoveAds().then((ok) => ok && this.toast('✓ Ads removed · the Cnmbuck Orb is yours', 3000));
+        void this.money.buyRemoveAds().then(({ owned, error }) => {
+          if (owned) this.toast('✓ Ads removed · the Cnmbuck Orb is yours', 3000);
+          else if (error) this.toast(error, 3200);
+          this.syncStore();
+        });
+        break;
+      case 'test-ad':
+        void this.money.testAd().then((msg) => { this.toast(msg, 3200); this.syncStore(); });
         break;
       case 'restore':
         void this.money.restore().then((ok) => this.toast(ok ? '✓ Remove Ads restored' : 'No purchases to restore', 2200));
@@ -523,6 +533,9 @@ export class UIManager {
     show('can-buy', this.money.native && !this.money.adFree);
     if (this.money.price) this.bind('ads-price', `${this.money.price} · one-time · also unlocks the Cnmbuck Orb`);
     this.bind('ads-note', this.money.adFree ? '✓ Ads removed. Thank you for supporting Cnmbuck Studios.' : '');
+    // With Debug readout on, Settings shows why ads/store are or aren't working, plus a test-ad button.
+    show('store-debug', this.money.native && this.settings.get().showDebug);
+    this.bind('store-debug', this.money.status());
   }
 
   private showComplete(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void {

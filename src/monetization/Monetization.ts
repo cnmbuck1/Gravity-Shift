@@ -37,6 +37,10 @@ export class Monetization {
   private finishedSinceAd = 0;
   /** Localised price for the Remove Ads button, once the store answers. */
   price: string | null = null;
+  /** Whether the App Store returned the Remove Ads product (false: not set up in App Store Connect). */
+  productFound = false;
+  /** Last store/ads problem, shown in Settings when Debug readout is on. */
+  lastError = '';
 
   constructor(private settings: SettingsManager) {}
 
@@ -50,9 +54,12 @@ export class Monetization {
       this.store = (await import('@capgo/native-purchases')).NativePurchases;
       await this.refreshEntitlement();
       const { products } = await this.store.getProducts({ productIdentifiers: [REMOVE_ADS_ID] });
+      this.productFound = products.length > 0;
       this.price = products[0]?.priceString ?? null;
+      if (!this.productFound) this.lastError = `App Store returned no product ${REMOVE_ADS_ID}`;
     } catch (e) {
       console.warn('Store unavailable', e);
+      this.lastError = `Store: ${errorText(e)}`;
     }
     if (this.adFree) return;
     try {
@@ -61,6 +68,7 @@ export class Monetization {
       void this.prepare();
     } catch (e) {
       console.warn('Ads unavailable', e);
+      this.lastError = `Ads: ${errorText(e)}`;
     }
   }
 
@@ -70,8 +78,9 @@ export class Monetization {
       // npa: non-personalised ads only, so the app needs no tracking prompt.
       await this.admob.prepareInterstitial({ adId: AD_UNIT_ID || TEST_AD_UNIT_ID, isTesting: !AD_UNIT_ID, npa: true });
       this.adReady = true;
-    } catch {
+    } catch (e) {
       this.adReady = false;
+      this.lastError = `Ad load: ${errorText(e)}`;
     }
   }
 
@@ -103,17 +112,55 @@ export class Monetization {
     void this.prepare();
   }
 
-  /** Buy Remove Ads. Returns true when the player now owns it. */
-  async buyRemoveAds(): Promise<boolean> {
-    if (!this.store) return false;
+  /**
+   * Buy Remove Ads. Resolves with `owned` when the player now owns it, or with an `error` the
+   * player should see (a cancelled purchase has neither).
+   */
+  async buyRemoveAds(): Promise<{ owned: boolean; error?: string }> {
+    if (!this.store) return { owned: false, error: 'The App Store isn\'t available right now.' };
     try {
       const { PURCHASE_TYPE } = await import('@capgo/native-purchases');
       const t = await this.store.purchaseProduct({ productIdentifier: REMOVE_ADS_ID, productType: PURCHASE_TYPE.INAPP, quantity: 1 });
       if (t?.productIdentifier === REMOVE_ADS_ID) this.grant();
+      return { owned: this.adFree };
     } catch (e) {
+      const msg = errorText(e);
       console.warn('Purchase failed or cancelled', e);
+      if (/cancel/i.test(msg)) return { owned: this.adFree };
+      this.lastError = `Purchase: ${msg}`;
+      const notSetUp = /cannot find product|product not found/i.test(msg) || !this.productFound;
+      return { owned: false, error: notSetUp ? 'Remove Ads isn\'t available from the App Store yet.' : `Purchase failed: ${msg}` };
     }
-    return this.adFree;
+  }
+
+  /** Testing aid: show an interstitial now, ignoring the pacing rules. Returns what happened. */
+  async testAd(): Promise<string> {
+    if (!this.native) return 'Ads only run in the iPhone app.';
+    if (this.adFree) return 'Ads are off: Remove Ads is owned.';
+    if (!this.admob) return `Ads SDK not started. ${this.lastError}`.trim();
+    if (!this.adReady) {
+      await this.prepare();
+      if (!this.adReady) return `No ad loaded. ${this.lastError}`.trim();
+    }
+    this.adReady = false;
+    try {
+      await this.admob.showInterstitial();
+      void this.prepare();
+      return 'Test ad shown.';
+    } catch (e) {
+      void this.prepare();
+      return `Ad failed to show: ${errorText(e)}`;
+    }
+  }
+
+  /** One line for the debug readout: why the next ad will or won't show. */
+  status(): string {
+    if (!this.native) return 'web build: no ads or store';
+    const wait = Math.max(0, NO_ADS_FIRST_MS - (Date.now() - this.sessionStart));
+    const gap = Math.max(0, MIN_GAP_MS - (Date.now() - this.lastAd));
+    const store = this.store ? (this.productFound ? `store ok ${this.price ?? ''}` : 'store: product missing') : 'store: not started';
+    const ads = this.adFree ? 'ads off (owned)' : `ads ${this.admob ? (this.adReady ? 'loaded' : 'loading') : 'not started'}, ${this.finishedSinceAd}/${EVERY_N_LEVELS} levels after World 1, wait ${Math.ceil(Math.max(wait, gap) / 1000)}s`;
+    return `${store} · ${ads}${this.lastError ? ' · ' + this.lastError : ''}`;
   }
 
   /** Restore Purchases (required by Apple). Returns true when Remove Ads is owned. */
@@ -138,4 +185,10 @@ export class Monetization {
     if (!this.settings.get().adFree) this.settings.update({ adFree: true });
     this.adReady = false;
   }
+}
+
+function errorText(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'object' && e && 'message' in e) return String((e as { message: unknown }).message);
+  return String(e);
 }
