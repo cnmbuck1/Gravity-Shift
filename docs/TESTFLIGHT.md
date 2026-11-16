@@ -57,3 +57,12 @@ macOS runners use GitHub Actions minutes at 10× the Linux rate on private repos
 - **Screenshots**: 6.9" iPhone (1320 × 2868 or 1290 × 2796). One size is enough; Apple scales it for smaller phones.
 - **Age rating** questionnaire (expect 4+), category Games → Puzzle (secondary: Action), description, keywords, and promotional text.
 - Bump `MARKETING_VERSION` (target → General → Version) for each App Store release after 1.0.
+
+## Troubleshooting the GitHub upload
+
+- **`exportArchive Error Downloading App Information`**: the build and signing worked, but App Store Connect refused the API key's request for the app. Check, in this order:
+  1. App Store Connect home page and Business: no banner asking the Account Holder to accept a new or updated agreement (the Free Apps or Paid Apps agreement must be active).
+  2. The API key's role is **Admin** (Users and Access → Integrations). A Developer-role key can sign but cannot upload.
+  3. The app record's bundle ID is exactly `com.cnmbuckstudios.gravitor`.
+  4. The four secrets have no extra spaces, and `APPLE_TEAM_ID` is the team that owns the app.
+- When an upload fails, the run prints Xcode's distribution log under "Show why the upload failed" and attaches it as the `distribution-logs` artifact.
