@@ -41,6 +41,10 @@ In the native app there's no motion prompt; access is granted automatically.
 
 After code changes run `npm run ios:sync` again, then Run in Xcode.
 
+### TestFlight and the App Store
+
+See [docs/TESTFLIGHT.md](docs/TESTFLIGHT.md): the one-time Apple setup, uploading a build (from Xcode on a Mac, or from GitHub Actions with no Mac), and what still has to change before App Store review.
+
 ## What to try
 
 **Worlds** (Main menu → LEVELS shows a card per world, then its ten levels with stars and best times):
@@ -89,3 +93,4 @@ The generator also writes a route for each level to `routes.json`. `node autopil
 | `npm test` | Unit tests (tilt math, gravity frames) |
 | `npm run ios:sync` | Build and copy into the Xcode project |
 | `npm run ios:open` | Open the Xcode project |
+| `npm run ios:assets` | Redraw the app icon and launch image from the Cnmbuck Orb (needs Playwright) |
