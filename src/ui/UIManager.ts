@@ -244,6 +244,7 @@ export class UIManager {
     const panel = this.screens.settings;
     panel.querySelectorAll<HTMLInputElement>('input[type=range]').forEach((input) => {
       input.addEventListener('input', () => this.settings.update({ [input.dataset.setting!]: Number(input.value) }));
+      dragRange(input);
     });
     panel.querySelectorAll<HTMLInputElement>('input[type=checkbox]').forEach((input) => {
       input.addEventListener('change', () => this.settings.update({ [input.dataset.setting!]: input.checked }));
@@ -589,4 +590,34 @@ export class UIManager {
         `input ${v[0].toFixed(2)}, ${v[1].toFixed(2)}  speed ${g.ball.speed.toFixed(1)}  ${g.ball.grounded ? 'grounded' : 'air'}`;
     }
   };
+}
+
+/**
+ * Pointer-driven slider: touch anywhere on the track and drag to set the value. iOS web views only let
+ * you drag a native range by its small thumb (and not at all when touchmove is cancelled), so the
+ * sliders follow the finger directly instead. Fires the usual `input` event.
+ */
+function dragRange(input: HTMLInputElement): void {
+  const setFrom = (clientX: number) => {
+    const r = input.getBoundingClientRect();
+    const min = Number(input.min || 0), max = Number(input.max || 100), step = Number(input.step || 1);
+    const thumb = 14; // half the thumb width: the ends of the track map to min and max
+    const t = Math.min(1, Math.max(0, (clientX - r.left - thumb) / Math.max(1, r.width - thumb * 2)));
+    const v = Math.min(max, Math.max(min, Math.round((min + t * (max - min)) / step) * step));
+    const text = String(Number(v.toFixed(6)));
+    if (input.value === text) return;
+    input.value = text;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  input.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    input.setPointerCapture(e.pointerId);
+    setFrom(e.clientX);
+  });
+  input.addEventListener('pointermove', (e) => {
+    if (input.hasPointerCapture(e.pointerId)) setFrom(e.clientX);
+  });
+  const end = (e: PointerEvent) => { if (input.hasPointerCapture(e.pointerId)) input.releasePointerCapture(e.pointerId); };
+  input.addEventListener('pointerup', end);
+  input.addEventListener('pointercancel', end);
 }
