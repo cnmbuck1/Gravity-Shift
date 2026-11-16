@@ -244,51 +244,64 @@ export const WINDMILL: LevelDef = {
   id: 'w9-windmill',
   name: 'Windmill',
   subtitle: 'Faster arms',
-  spawn: [-9.5, 0.6, 7.0],
+  spawn: [-9.5, 0.6, 11.0],
   frame: FLOOR,
-  allowShifts: false,
+  allowShifts: true,
+  shiftZones: [
+    { min: [-11.5, 0, -2.5], max: [-8.5, 2, 0.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
+    { min: [-11.5, 2.4, -9.5], max: [-8.5, 4.0, -6.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+  ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -11],
+    origin: [-12, -14],
     rows: [
       '#########################', // 0
       '###############  ########', // 1
       '#.......     ..  ..GGGGG#', // 2
       '#.......     ......GGGGG#', // 3
       '#.......     ......GGGGG#', // 4
-      '#...#####################', // 5
-      '#...#####################', // 6
-      '#...#####################', // 7
-      '#....................CC.#', // 8
-      '#....................CC.#', // 9
-      '#....................CC.#', // 10
-      '#....................CC.#', // 11
-      '#....................CC.#', // 12
-      '#####################...#', // 13
-      '#####################...#', // 14
-      '#####################...#', // 15
-      '#SSSS...................#', // 16
-      '#SSSS...................#', // 17
-      '#SSSS...................#', // 18
-      '#SSSS...................#', // 19
-      '#SSSS...................#', // 20
-      '#########################', // 21
+      '#PPP#####################', // 5
+      '#PPP#####################', // 6
+      '#PPP#####################', // 7
+      '#   #####################', // 8
+      '#   #####################', // 9
+      '#   #####################', // 10
+      '#   #####################', // 11
+      '#PPP#####################', // 12
+      '#PPP#####################', // 13
+      '#PPP#####################', // 14
+      '#....................CC.#', // 15
+      '#....................CC.#', // 16
+      '#....................CC.#', // 17
+      '#....................CC.#', // 18
+      '#....................CC.#', // 19
+      '#####################...#', // 20
+      '#####################...#', // 21
+      '#####################...#', // 22
+      '#SSSS...................#', // 23
+      '#SSSS...................#', // 24
+      '#SSSS...................#', // 25
+      '#SSSS...................#', // 26
+      '#SSSS...................#', // 27
+      '#########################', // 28
     ],
   },
-  platforms: [],
-  movers: [],
-  checkpoints: [{ position: [9.5, 0, -1.0], frame: FLOOR }],
-  rotators: [
-    { kind: 'arm', centre: [1.0, 0, 7.0], size: 3.4, speed: 1.3, phase: 0 },
-    { kind: 'arm', centre: [0.0, 0, -1.0], size: 3.4, speed: 1.3, phase: 0 },
-    { kind: 'disc', centre: [-2.0, 0, -8.0], size: 2.45, speed: 0.8, phase: 0 },
+  platforms: [
+    { position: [-10.0, 4.2, -4.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
-  goal: { position: [9.0, 0, -8.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  movers: [],
+  checkpoints: [{ position: [9.5, 0, 3.0], frame: FLOOR }],
+  rotators: [
+    { kind: 'arm', centre: [1.0, 0, 11.0], size: 3.4, speed: 1.3, phase: 0 },
+    { kind: 'arm', centre: [0.0, 0, 3.0], size: 3.4, speed: 1.3, phase: 0 },
+    { kind: 'disc', centre: [-2.0, 0, -11.0], size: 2.45, speed: 0.8, phase: 0 },
+  ],
+  goal: { position: [9.0, 0, -11.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 45, two: 75 },
+  par: { three: 55, two: 90 },
   fallMargin: 6,
 };
 
@@ -370,14 +383,18 @@ export const CENTRIFUGE: LevelDef = {
   id: 'w9-centrifuge',
   name: 'Centrifuge',
   subtitle: 'Fast discs over long drops',
-  spawn: [-9.5, 0.6, 17.0],
+  spawn: [-9.5, 0.6, 21.0],
   frame: FLOOR,
-  allowShifts: false,
+  allowShifts: true,
+  shiftZones: [
+    { min: [8.5, 0, 16.5], max: [11.5, 2, 19.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [1, 0, 0] },
+    { min: [8.5, 2.4, 9.5], max: [11.5, 4.0, 12.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+  ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -20],
+    origin: [-12, -23],
     rows: [
       '#########################', // 0
       '#..................GGGGG#', // 1
@@ -412,28 +429,37 @@ export const CENTRIFUGE: LevelDef = {
       '#....................CC.#', // 30
       '#....................CC.#', // 31
       '#....................CC.#', // 32
-      '#####################...#', // 33
-      '#####################...#', // 34
-      '#####################...#', // 35
-      '#SSSS......     ........#', // 36
-      '#SSSS......     ........#', // 37
-      '#SSSS......     ........#', // 38
-      '#########################', // 39
+      '#####################PPP#', // 33
+      '#####################PPP#', // 34
+      '#####################PPP#', // 35
+      '#####################   #', // 36
+      '#####################   #', // 37
+      '#####################   #', // 38
+      '#####################   #', // 39
+      '#####################PPP#', // 40
+      '#####################PPP#', // 41
+      '#####################PPP#', // 42
+      '#SSSS......     ........#', // 43
+      '#SSSS......     ........#', // 44
+      '#SSSS......     ........#', // 45
+      '#########################', // 46
     ],
   },
-  platforms: [],
-  movers: [],
-  checkpoints: [{ position: [9.5, 0, 10.0], frame: FLOOR }],
-  rotators: [
-    { kind: 'disc', centre: [1.0, 0, 17.0], size: 2.45, speed: 0.9, phase: 0 },
-    { kind: 'arm', centre: [0.0, 0, 10.0], size: 3.4, speed: 1.4, phase: 0 },
-    { kind: 'disc', centre: [-1.0, 0, 3.0], size: 2.45, speed: 1.0, phase: 0 },
-    { kind: 'arm', centre: [-1.0, 0, -17.0], size: 3.4, speed: 1.4, phase: 0 },
+  platforms: [
+    { position: [10.0, 4.2, 14.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
-  goal: { position: [9.0, 0, -17.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  movers: [],
+  checkpoints: [{ position: [9.5, 0, 7.0], frame: FLOOR }],
+  rotators: [
+    { kind: 'disc', centre: [1.0, 0, 21.0], size: 2.45, speed: 0.9, phase: 0 },
+    { kind: 'arm', centre: [0.0, 0, 7.0], size: 3.4, speed: 1.4, phase: 0 },
+    { kind: 'disc', centre: [-1.0, 0, 0.0], size: 2.45, speed: 1.0, phase: 0 },
+    { kind: 'arm', centre: [-1.0, 0, -20.0], size: 3.4, speed: 1.4, phase: 0 },
+  ],
+  goal: { position: [9.0, 0, -20.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 75, two: 120 },
+  par: { three: 85, two: 135 },
   fallMargin: 6,
 };
 

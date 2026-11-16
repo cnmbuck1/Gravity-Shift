@@ -424,57 +424,70 @@ export const FERRY_LINES: LevelDef = {
   id: 'w4-ferry-lines',
   name: 'Ferry Lines',
   subtitle: 'Platforms back to back',
-  spawn: [-9.5, 0.6, 6.0],
+  spawn: [-9.5, 0.6, 10.0],
   frame: FLOOR,
-  allowShifts: false,
+  allowShifts: true,
+  shiftZones: [
+    { min: [-11.5, 0, -1.5], max: [-8.5, 2, 1.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
+    { min: [-11.5, 2.4, -8.5], max: [-8.5, 4.0, -5.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+  ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -9],
+    origin: [-12, -12],
     rows: [
       '#########################', // 0
       '#.........     ....GGGGG#', // 1
       '#.........     ....GGGGG#', // 2
       '#.........     ....GGGGG#', // 3
-      '#...#####################', // 4
-      '#...#####################', // 5
-      '#...#####################', // 6
-      '#.......     ..KKK...CC.#', // 7
-      '#.......     ..KKK...CC.#', // 8
-      '#.......     ..KKK...CC.#', // 9
-      '#####################...#', // 10
-      '####################  ..#', // 11
-      '####################  ..#', // 12
-      '#####################...#', // 13
-      '#SSSS......     ........#', // 14
-      '#SSSS......     ........#', // 15
-      '#SSSS......     ........#', // 16
-      '#########################', // 17
+      '#PPP#####################', // 4
+      '#PPP#####################', // 5
+      '#PPP#####################', // 6
+      '#   #####################', // 7
+      '#   #####################', // 8
+      '#   #####################', // 9
+      '#   #####################', // 10
+      '#PPP#####################', // 11
+      '#PPP#####################', // 12
+      '#PPP#####################', // 13
+      '#.......     ..KKK...CC.#', // 14
+      '#.......     ..KKK...CC.#', // 15
+      '#.......     ..KKK...CC.#', // 16
+      '#####################...#', // 17
+      '####################  ..#', // 18
+      '####################  ..#', // 19
+      '#####################...#', // 20
+      '#SSSS......     ........#', // 21
+      '#SSSS......     ........#', // 22
+      '#SSSS......     ........#', // 23
+      '#########################', // 24
     ],
   },
-  platforms: [],
+  platforms: [
+    { position: [-10.0, 4.2, -3.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+  ],
   movers: [
-    { kind: 'platform', from: [-0.35, -0.2, 6.0], to: [2.35, -0.2, 6.0], size: [2.2, 0.4, 2.8], period: 5.5, phase: 0 },
-    { kind: 'platform', from: [-0.65, -0.2, -1.0], to: [-3.35, -0.2, -1.0], size: [2.2, 0.4, 2.8], period: 5.0, phase: 0.3 },
-    { kind: 'platform', from: [-1.35, -0.2, -7.0], to: [1.35, -0.2, -7.0], size: [2.2, 0.4, 2.8], period: 5.0, phase: 0 },
+    { kind: 'platform', from: [-0.35, -0.2, 10.0], to: [2.35, -0.2, 10.0], size: [2.2, 0.4, 2.8], period: 5.5, phase: 0 },
+    { kind: 'platform', from: [-0.65, -0.2, 3.0], to: [-3.35, -0.2, 3.0], size: [2.2, 0.4, 2.8], period: 5.0, phase: 0.3 },
+    { kind: 'platform', from: [-1.35, -0.2, -10.0], to: [1.35, -0.2, -10.0], size: [2.2, 0.4, 2.8], period: 5.0, phase: 0 },
   ],
-  checkpoints: [{ position: [9.5, 0, -1.0], frame: FLOOR }],
+  checkpoints: [{ position: [9.5, 0, 3.0], frame: FLOOR }],
   crumble: [
-    { position: [3, 0, 0], size: [1, 1] },
-    { position: [3, 0, -1], size: [1, 1] },
-    { position: [3, 0, -2], size: [1, 1] },
-    { position: [4, 0, 0], size: [1, 1] },
-    { position: [4, 0, -1], size: [1, 1] },
-    { position: [4, 0, -2], size: [1, 1] },
-    { position: [5, 0, 0], size: [1, 1] },
-    { position: [5, 0, -1], size: [1, 1] },
-    { position: [5, 0, -2], size: [1, 1] },
+    { position: [3, 0, 4], size: [1, 1] },
+    { position: [3, 0, 3], size: [1, 1] },
+    { position: [3, 0, 2], size: [1, 1] },
+    { position: [4, 0, 4], size: [1, 1] },
+    { position: [4, 0, 3], size: [1, 1] },
+    { position: [4, 0, 2], size: [1, 1] },
+    { position: [5, 0, 4], size: [1, 1] },
+    { position: [5, 0, 3], size: [1, 1] },
+    { position: [5, 0, 2], size: [1, 1] },
   ],
-  goal: { position: [9.0, 0, -7.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  goal: { position: [9.0, 0, -10.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 60, two: 100 },
+  par: { three: 70, two: 115 },
   fallMargin: 6,
 };
 
@@ -719,14 +732,18 @@ export const CRUMBLE_BELT: LevelDef = {
   id: 'w4-crumble-belt',
   name: 'Crumble Belt',
   subtitle: 'World 4 finale',
-  spawn: [-9.5, 0.6, 21.0],
+  spawn: [-9.5, 0.6, 24.0],
   frame: FLOOR,
-  allowShifts: false,
+  allowShifts: true,
+  shiftZones: [
+    { min: [-11.5, 0, 4.5], max: [-8.5, 2, 7.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
+    { min: [-11.5, 2.4, -2.5], max: [-8.5, 4.0, 0.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+  ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -23],
+    origin: [-12, -27],
     rows: [
       '#########################', // 0
       '#GGGGG....     .........#', // 1
@@ -753,143 +770,152 @@ export const CRUMBLE_BELT: LevelDef = {
       '#.......     ..KKK......#', // 22
       '#.......     ..KKK......#', // 23
       '#.......     ..KKK......#', // 24
-      '#...#####################', // 25
-      '#...#####################', // 26
-      '#...#####################', // 27
-      '#....KKK.KKK............#', // 28
-      '#....KKK.KKK............#', // 29
-      '#....KKK.KKK............#', // 30
-      '#...#########...#####...#', // 31
-      '#....KKK#...#...#.......#', // 32
-      '#....KKK#...#...#.......#', // 33
-      '#....KKK#...#...#.......#', // 34
-      '#####...#...#...#########', // 35
-      '#....KKK.KKK.....KKK....#', // 36
-      '#....KKK.KKK.....KKK....#', // 37
-      '#....KKK.KKK.....KKK.CCC#', // 38
-      '#####################...#', // 39
-      '####################  ..#', // 40
-      '####################  ..#', // 41
-      '################  ###...#', // 42
-      '#SSSS.....KKKK..  ......#', // 43
-      '#SSSS.....KKKK..........#', // 44
-      '#SSSS.....KKKK..........#', // 45
-      '#########################', // 46
+      '#PPP#####################', // 25
+      '#PPP#####################', // 26
+      '#PPP#####################', // 27
+      '#   #####################', // 28
+      '#   #####################', // 29
+      '#   #####################', // 30
+      '#   #####################', // 31
+      '#PPP#####################', // 32
+      '#PPP#####################', // 33
+      '#PPP#####################', // 34
+      '#....KKK.KKK............#', // 35
+      '#....KKK.KKK............#', // 36
+      '#....KKK.KKK............#', // 37
+      '#...#########...#####...#', // 38
+      '#....KKK#...#...#.......#', // 39
+      '#....KKK#...#...#.......#', // 40
+      '#....KKK#...#...#.......#', // 41
+      '#####...#...#...#########', // 42
+      '#....KKK.KKK.....KKK....#', // 43
+      '#....KKK.KKK.....KKK....#', // 44
+      '#....KKK.KKK.....KKK.CCC#', // 45
+      '#####################...#', // 46
+      '####################  ..#', // 47
+      '####################  ..#', // 48
+      '################  ###...#', // 49
+      '#SSSS.....KKKK..  ......#', // 50
+      '#SSSS.....KKKK..........#', // 51
+      '#SSSS.....KKKK..........#', // 52
+      '#########################', // 53
     ],
   },
-  platforms: [],
-  movers: [
-    { kind: 'platform', from: [-3.35, -0.2, 0.0], to: [-0.65, -0.2, 0.0], size: [2.2, 0.4, 2.8], period: 5.0, phase: 0 },
-    { from: [8.95, 0.45, -3], to: [11.05, 0.45, -3], size: [0.9, 0.9, 1.3], period: 3.0, phase: 0 },
-    { kind: 'platform', from: [1.35, -0.2, -21.0], to: [-1.35, -0.2, -21.0], size: [2.2, 0.4, 2.8], period: 4.8, phase: 0 },
+  platforms: [
+    { position: [-10.0, 4.2, 2.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
-  checkpoints: [{ position: [10.0, 0, 15], frame: FLOOR }, { position: [9.5, 0, -6.0], frame: FLOOR }],
+  movers: [
+    { kind: 'platform', from: [-3.35, -0.2, -4.0], to: [-0.65, -0.2, -4.0], size: [2.2, 0.4, 2.8], period: 5.0, phase: 0 },
+    { from: [8.95, 0.45, -7], to: [11.05, 0.45, -7], size: [0.9, 0.9, 1.3], period: 3.0, phase: 0 },
+    { kind: 'platform', from: [1.35, -0.2, -25.0], to: [-1.35, -0.2, -25.0], size: [2.2, 0.4, 2.8], period: 4.8, phase: 0 },
+  ],
+  checkpoints: [{ position: [10.0, 0, 18], frame: FLOOR }, { position: [9.5, 0, -10.0], frame: FLOOR }],
   crumble: [
-    { position: [-2, 0, 22], size: [1, 1] },
-    { position: [-2, 0, 21], size: [1, 1] },
-    { position: [-2, 0, 20], size: [1, 1] },
-    { position: [-1, 0, 22], size: [1, 1] },
-    { position: [-1, 0, 21], size: [1, 1] },
-    { position: [-1, 0, 20], size: [1, 1] },
-    { position: [0, 0, 22], size: [1, 1] },
-    { position: [0, 0, 21], size: [1, 1] },
-    { position: [0, 0, 20], size: [1, 1] },
-    { position: [1, 0, 22], size: [1, 1] },
-    { position: [1, 0, 21], size: [1, 1] },
-    { position: [1, 0, 20], size: [1, 1] },
-    { position: [-7, 0, 11], size: [1, 1] },
-    { position: [-7, 0, 10], size: [1, 1] },
-    { position: [-7, 0, 9], size: [1, 1] },
-    { position: [-6, 0, 11], size: [1, 1] },
-    { position: [-6, 0, 10], size: [1, 1] },
-    { position: [-6, 0, 9], size: [1, 1] },
-    { position: [-5, 0, 11], size: [1, 1] },
-    { position: [-5, 0, 10], size: [1, 1] },
-    { position: [-5, 0, 9], size: [1, 1] },
-    { position: [-3, 0, 7], size: [1, 1] },
-    { position: [-3, 0, 6], size: [1, 1] },
-    { position: [-3, 0, 5], size: [1, 1] },
-    { position: [-2, 0, 7], size: [1, 1] },
-    { position: [-2, 0, 6], size: [1, 1] },
-    { position: [-2, 0, 5], size: [1, 1] },
-    { position: [-1, 0, 7], size: [1, 1] },
-    { position: [-1, 0, 6], size: [1, 1] },
-    { position: [-1, 0, 5], size: [1, 1] },
-    { position: [-7, 0, 7], size: [1, 1] },
-    { position: [-7, 0, 6], size: [1, 1] },
-    { position: [-7, 0, 5], size: [1, 1] },
-    { position: [-6, 0, 7], size: [1, 1] },
-    { position: [-6, 0, 6], size: [1, 1] },
-    { position: [-6, 0, 5], size: [1, 1] },
-    { position: [-5, 0, 7], size: [1, 1] },
-    { position: [-5, 0, 6], size: [1, 1] },
-    { position: [-5, 0, 5], size: [1, 1] },
-    { position: [5, 0, 15], size: [1, 1] },
-    { position: [5, 0, 14], size: [1, 1] },
-    { position: [5, 0, 13], size: [1, 1] },
-    { position: [6, 0, 15], size: [1, 1] },
-    { position: [6, 0, 14], size: [1, 1] },
-    { position: [6, 0, 13], size: [1, 1] },
-    { position: [7, 0, 15], size: [1, 1] },
-    { position: [7, 0, 14], size: [1, 1] },
-    { position: [7, 0, 13], size: [1, 1] },
-    { position: [-3, 0, 15], size: [1, 1] },
-    { position: [-3, 0, 14], size: [1, 1] },
-    { position: [-3, 0, 13], size: [1, 1] },
-    { position: [-2, 0, 15], size: [1, 1] },
-    { position: [-2, 0, 14], size: [1, 1] },
-    { position: [-2, 0, 13], size: [1, 1] },
-    { position: [-1, 0, 15], size: [1, 1] },
-    { position: [-1, 0, 14], size: [1, 1] },
-    { position: [-1, 0, 13], size: [1, 1] },
-    { position: [-7, 0, 15], size: [1, 1] },
+    { position: [-2, 0, 25], size: [1, 1] },
+    { position: [-2, 0, 24], size: [1, 1] },
+    { position: [-2, 0, 23], size: [1, 1] },
+    { position: [-1, 0, 25], size: [1, 1] },
+    { position: [-1, 0, 24], size: [1, 1] },
+    { position: [-1, 0, 23], size: [1, 1] },
+    { position: [0, 0, 25], size: [1, 1] },
+    { position: [0, 0, 24], size: [1, 1] },
+    { position: [0, 0, 23], size: [1, 1] },
+    { position: [1, 0, 25], size: [1, 1] },
+    { position: [1, 0, 24], size: [1, 1] },
+    { position: [1, 0, 23], size: [1, 1] },
     { position: [-7, 0, 14], size: [1, 1] },
     { position: [-7, 0, 13], size: [1, 1] },
-    { position: [-6, 0, 15], size: [1, 1] },
+    { position: [-7, 0, 12], size: [1, 1] },
     { position: [-6, 0, 14], size: [1, 1] },
     { position: [-6, 0, 13], size: [1, 1] },
-    { position: [-5, 0, 15], size: [1, 1] },
+    { position: [-6, 0, 12], size: [1, 1] },
     { position: [-5, 0, 14], size: [1, 1] },
     { position: [-5, 0, 13], size: [1, 1] },
-    { position: [3, 0, 1], size: [1, 1] },
-    { position: [3, 0, 0], size: [1, 1] },
-    { position: [3, 0, -1], size: [1, 1] },
-    { position: [4, 0, 1], size: [1, 1] },
-    { position: [4, 0, 0], size: [1, 1] },
-    { position: [4, 0, -1], size: [1, 1] },
-    { position: [5, 0, 1], size: [1, 1] },
-    { position: [5, 0, 0], size: [1, 1] },
-    { position: [5, 0, -1], size: [1, 1] },
-    { position: [2, 0, -5], size: [1, 1] },
-    { position: [2, 0, -6], size: [1, 1] },
-    { position: [2, 0, -7], size: [1, 1] },
+    { position: [-5, 0, 12], size: [1, 1] },
+    { position: [-3, 0, 10], size: [1, 1] },
+    { position: [-3, 0, 9], size: [1, 1] },
+    { position: [-3, 0, 8], size: [1, 1] },
+    { position: [-2, 0, 10], size: [1, 1] },
+    { position: [-2, 0, 9], size: [1, 1] },
+    { position: [-2, 0, 8], size: [1, 1] },
+    { position: [-1, 0, 10], size: [1, 1] },
+    { position: [-1, 0, 9], size: [1, 1] },
+    { position: [-1, 0, 8], size: [1, 1] },
+    { position: [-7, 0, 10], size: [1, 1] },
+    { position: [-7, 0, 9], size: [1, 1] },
+    { position: [-7, 0, 8], size: [1, 1] },
+    { position: [-6, 0, 10], size: [1, 1] },
+    { position: [-6, 0, 9], size: [1, 1] },
+    { position: [-6, 0, 8], size: [1, 1] },
+    { position: [-5, 0, 10], size: [1, 1] },
+    { position: [-5, 0, 9], size: [1, 1] },
+    { position: [-5, 0, 8], size: [1, 1] },
+    { position: [5, 0, 18], size: [1, 1] },
+    { position: [5, 0, 17], size: [1, 1] },
+    { position: [5, 0, 16], size: [1, 1] },
+    { position: [6, 0, 18], size: [1, 1] },
+    { position: [6, 0, 17], size: [1, 1] },
+    { position: [6, 0, 16], size: [1, 1] },
+    { position: [7, 0, 18], size: [1, 1] },
+    { position: [7, 0, 17], size: [1, 1] },
+    { position: [7, 0, 16], size: [1, 1] },
+    { position: [-3, 0, 18], size: [1, 1] },
+    { position: [-3, 0, 17], size: [1, 1] },
+    { position: [-3, 0, 16], size: [1, 1] },
+    { position: [-2, 0, 18], size: [1, 1] },
+    { position: [-2, 0, 17], size: [1, 1] },
+    { position: [-2, 0, 16], size: [1, 1] },
+    { position: [-1, 0, 18], size: [1, 1] },
+    { position: [-1, 0, 17], size: [1, 1] },
+    { position: [-1, 0, 16], size: [1, 1] },
+    { position: [-7, 0, 18], size: [1, 1] },
+    { position: [-7, 0, 17], size: [1, 1] },
+    { position: [-7, 0, 16], size: [1, 1] },
+    { position: [-6, 0, 18], size: [1, 1] },
+    { position: [-6, 0, 17], size: [1, 1] },
+    { position: [-6, 0, 16], size: [1, 1] },
+    { position: [-5, 0, 18], size: [1, 1] },
+    { position: [-5, 0, 17], size: [1, 1] },
+    { position: [-5, 0, 16], size: [1, 1] },
+    { position: [3, 0, -3], size: [1, 1] },
+    { position: [3, 0, -4], size: [1, 1] },
     { position: [3, 0, -5], size: [1, 1] },
-    { position: [3, 0, -6], size: [1, 1] },
-    { position: [3, 0, -7], size: [1, 1] },
+    { position: [4, 0, -3], size: [1, 1] },
+    { position: [4, 0, -4], size: [1, 1] },
     { position: [4, 0, -5], size: [1, 1] },
-    { position: [4, 0, -6], size: [1, 1] },
-    { position: [4, 0, -7], size: [1, 1] },
-    { position: [-5, 0, -5], size: [1, 1] },
-    { position: [-5, 0, -6], size: [1, 1] },
-    { position: [-5, 0, -7], size: [1, 1] },
-    { position: [-4, 0, -5], size: [1, 1] },
-    { position: [-4, 0, -6], size: [1, 1] },
-    { position: [-4, 0, -7], size: [1, 1] },
-    { position: [-3, 0, -5], size: [1, 1] },
-    { position: [-3, 0, -6], size: [1, 1] },
-    { position: [-3, 0, -7], size: [1, 1] },
-    { position: [-5, 0, -16], size: [1, 1] },
-    { position: [-5, 0, -17], size: [1, 1] },
-    { position: [-4, 0, -16], size: [1, 1] },
-    { position: [-4, 0, -17], size: [1, 1] },
-    { position: [10, 0, -13], size: [1, 1] },
-    { position: [10, 0, -14], size: [1, 1] },
-    { position: [11, 0, -13], size: [1, 1] },
-    { position: [11, 0, -14], size: [1, 1] },
+    { position: [5, 0, -3], size: [1, 1] },
+    { position: [5, 0, -4], size: [1, 1] },
+    { position: [5, 0, -5], size: [1, 1] },
+    { position: [2, 0, -9], size: [1, 1] },
+    { position: [2, 0, -10], size: [1, 1] },
+    { position: [2, 0, -11], size: [1, 1] },
+    { position: [3, 0, -9], size: [1, 1] },
+    { position: [3, 0, -10], size: [1, 1] },
+    { position: [3, 0, -11], size: [1, 1] },
+    { position: [4, 0, -9], size: [1, 1] },
+    { position: [4, 0, -10], size: [1, 1] },
+    { position: [4, 0, -11], size: [1, 1] },
+    { position: [-5, 0, -9], size: [1, 1] },
+    { position: [-5, 0, -10], size: [1, 1] },
+    { position: [-5, 0, -11], size: [1, 1] },
+    { position: [-4, 0, -9], size: [1, 1] },
+    { position: [-4, 0, -10], size: [1, 1] },
+    { position: [-4, 0, -11], size: [1, 1] },
+    { position: [-3, 0, -9], size: [1, 1] },
+    { position: [-3, 0, -10], size: [1, 1] },
+    { position: [-3, 0, -11], size: [1, 1] },
+    { position: [-5, 0, -20], size: [1, 1] },
+    { position: [-5, 0, -21], size: [1, 1] },
+    { position: [-4, 0, -20], size: [1, 1] },
+    { position: [-4, 0, -21], size: [1, 1] },
+    { position: [10, 0, -17], size: [1, 1] },
+    { position: [10, 0, -18], size: [1, 1] },
+    { position: [11, 0, -17], size: [1, 1] },
+    { position: [11, 0, -18], size: [1, 1] },
   ],
-  goal: { position: [-9.0, 0, -21.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  goal: { position: [-9.0, 0, -25.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 110, two: 175 },
+  par: { three: 120, two: 195 },
   fallMargin: 6,
 };

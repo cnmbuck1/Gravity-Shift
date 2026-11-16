@@ -707,7 +707,7 @@ def emit(L, const, meta):
                 c, y0, y1 = d
                 ds.append(f"    {{ position: [{X(c)}, 0.5, {(Z(y0) + Z(y1)) / 2}], size: [0.9, 1, {y1 - y0 + 1}] }},\n")
         extra.append('  doors: [\n' + ''.join(ds) + '  ],')
-        extra.append('  switches: [\n' + ''.join(f"    {{ position: [{X(sx)}, 0.05, {Z(sy)}], doors: [{d}] }},\n" for sx, sy, d in L.switches) + '  ],')
+        extra.append('  switches: [\n' + ''.join(f"    {{ position: [{X(sx)}, 0.05, {Z(sy)}], doors: [{d}], time: {door_time(L, rows, R, sx, sy, d)} }},\n" for sx, sy, d in L.switches) + '  ],')
     if L.wells:
         extra.append('  wells: [\n' + ''.join(f"    {{ min: [{X(a) - 0.5}, -1, {Z(y1) - 0.5}], max: [{X(b) + 0.5}, 6, {Z(y0) + 0.5}], scale: {s} }},\n" for a, b, y0, y1, s in L.wells) + '  ],')
     if L.rotators:
@@ -752,6 +752,41 @@ export const {const}: LevelDef = {{
 }};
 """
     return src, route
+
+
+DOOR_PACE = 2.4      # m/s a player is expected to hold from a switch to its door
+DOOR_SPARE = 2.0     # seconds of slack on top
+
+
+def door_time(L, rows, R, sx, sy, d):
+    """Seconds a switch keeps its door open: the walk from the switch to the door at a brisk pace, plus a little
+    slack (Chris, 2026-11-16: doors should only stay open a few seconds)."""
+    door = L.doors[d]
+    if door[0] == 'maze':
+        _, ca, cb, y = door
+        target = ((ca + cb) / 2, y - 1)
+    else:
+        c, y0, y1 = door
+        target = (c, (y0 + y1) / 2)
+    _, n, cells = grid_path(rows, (sx, R(sy)), (target[0], R(target[1])))
+    on_path = set(cells)
+    wait = 0.0
+    # Blinking lasers and sliding pistons on the way back can each hold the player up for about one cycle.
+    for (c, y0, y1, period, _, _) in L.lasers:
+        if any((R(y), c) in on_path for y in range(y0, y1 + 1)):
+            wait += period
+    for m in L.movers:
+        if m[0] == 'pistonZ':
+            _, c, y0, y1, period, _ = m
+            hit = any((R(y), c) in on_path for y in range(y0, y1 + 1))
+        elif m[0] == 'pistonX':
+            _, y, c0, c1, period, _ = m
+            hit = any((R(y), c) in on_path for c in range(c0, c1 + 1))
+        else:
+            hit = False
+        if hit:
+            wait += period
+    return max(4, int(math.ceil(n / DOOR_PACE + wait + DOOR_SPARE)))
 
 
 def grid_path(rows, a, b):

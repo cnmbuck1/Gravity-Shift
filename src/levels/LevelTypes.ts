@@ -140,10 +140,15 @@ export interface LaserDef {
   phase?: number;
 }
 
-/** A floor switch that opens one or more doors (wall blocks that sink into the floor) for good. */
+/**
+ * A floor switch that opens one or more doors (wall blocks that sink into the floor) for a few
+ * seconds. When the time runs out the doors rise again and the switch can be pressed again.
+ */
 export interface SwitchDef {
   position: V3;
   doors: number[];
+  /** Seconds the doors stay open (default DOOR_OPEN_SECONDS in FeatureManager). */
+  time?: number;
 }
 
 export interface DoorDef {

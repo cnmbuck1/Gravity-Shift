@@ -95,7 +95,9 @@ export class GameManager {
     const camera = new CameraController(view.camera, physics);
     const levels = new LevelManager(physics, view.scene);
     const features = new FeatureManager(physics, view.scene);
-    return new GameManager(physics, view, input, ball, camera, levels, features, settings, save);
+    const game = new GameManager(physics, view, input, ball, camera, levels, features, settings, save);
+    features.doorTick = () => game.audio.tick();
+    return game;
   }
 
   get level(): LevelDef | null {
@@ -283,7 +285,7 @@ export class GameManager {
             const t = this.ball.body.translation();
             this.ball.body.setTranslation({ x: t.x + carry.x, y: t.y + carry.y, z: t.z + carry.z }, true);
           }
-          this.features.step(step);
+          this.features.step(step, this.ball.position);
           // Gravity wells scale gravity while the ball is inside them.
           const scale = this.features.gravityScale(this.ball.position);
           if (scale !== this.gravityScale) {
