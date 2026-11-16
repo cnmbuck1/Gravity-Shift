@@ -311,7 +311,7 @@ export class UIManager {
       onShiftRejected: (reason) => this.toast(reason),
       onFall: () => this.toast('FELL INTO THE VOID'),
       onCheckpoint: () => this.toast('CHECKPOINT'),
-      onSwitch: () => this.toast('SWITCH · DOOR OPEN'),
+      onSwitch: () => this.toast(`SWITCH · DOOR OPEN FOR ${Math.round(this.game.features.doorTimeLeft())} SECONDS`),
       onZoneEnter: (zone) => this.toast(zone.hint, 2400),
       onPreviewEnd: () => {
         this.hud.classList.remove('flyover');

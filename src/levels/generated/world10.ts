@@ -77,7 +77,7 @@ export const HORIZON_LINE: LevelDef = {
     { position: [-3, 0.5, -3.0], size: [0.9, 1, 3] },
   ],
   switches: [
-    { position: [0.5, 0.05, -6], doors: [0] },
+    { position: [0.5, 0.05, -6], doors: [0], time: 5 },
   ],
   goal: { position: [9.0, 0, -9.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
@@ -245,7 +245,7 @@ export const DARK_MATTER: LevelDef = {
     { position: [-10.0, 0.5, -9], size: [3, 1, 0.9] },
   ],
   switches: [
-    { position: [10.0, 0.05, -7.0], doors: [0] },
+    { position: [10.0, 0.05, -7.0], doors: [0], time: 12 },
   ],
   rotators: [
     { kind: 'arm', centre: [-1.0, 0, -14.0], size: 3.4, speed: 1.1, phase: 0 },
@@ -478,7 +478,7 @@ export const SINGULARITY: LevelDef = {
     { position: [1, 0.5, -8.0], size: [0.9, 1, 3] },
   ],
   switches: [
-    { position: [-2.5, 0.05, -11], doors: [0] },
+    { position: [-2.5, 0.05, -11], doors: [0], time: 5 },
   ],
   rotators: [
     { kind: 'arm', centre: [1.0, 0, 13.0], size: 3.4, speed: 1.2, phase: 0 },
@@ -873,7 +873,7 @@ export const EVENT_HORIZON_X: LevelDef = {
     { position: [-10.0, 0.5, 1], size: [3, 1, 0.9] },
   ],
   switches: [
-    { position: [6.0, 0.05, 11.0], doors: [0] },
+    { position: [6.0, 0.05, 11.0], doors: [0], time: 17 },
   ],
   rotators: [
     { kind: 'arm', centre: [0.0, 0, -17.0], size: 3.4, speed: 1.5, phase: 0 },
@@ -1068,8 +1068,8 @@ export const HORIZON: LevelDef = {
     { position: [0, 0.5, -35.0], size: [0.9, 1, 3] },
   ],
   switches: [
-    { position: [10.0, 0.05, 20.0], doors: [0] },
-    { position: [-3.5, 0.05, -38], doors: [1] },
+    { position: [10.0, 0.05, 20.0], doors: [0], time: 13 },
+    { position: [-3.5, 0.05, -38], doors: [1], time: 6 },
   ],
   rotators: [
     { kind: 'arm', centre: [0.0, 0, -5.0], size: 3.4, speed: 1.5, phase: 0 },

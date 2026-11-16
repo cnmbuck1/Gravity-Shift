@@ -103,6 +103,11 @@ export class AudioManager {
     this.tone(110, 0.25, 0.7, 'sawtooth', 0.5, 220);
   }
 
+  /** A short tick while an open door is about to shut. */
+  tick(): void {
+    this.tone(1320, 0.12, 0.06, 'square', 0.3);
+  }
+
   fall(): void {
     this.tone(520, 0.2, 0.7, 'triangle', 0.4, 90);
   }
