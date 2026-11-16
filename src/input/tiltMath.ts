@@ -74,11 +74,45 @@ export function buildNeutralBasis(neutralGravity: Vec3): NeutralBasis {
 }
 
 /**
- * Returns tilt angles in degrees relative to the neutral basis:
+ * Returns tilt angles in degrees relative to the neutral pose:
  *  x > 0 : right edge lowered (ball should roll right)
  *  y > 0 : top edge lowered / tipped away from the player (ball should roll forward)
+ *
+ * The two angles are the phone's own roll (about its long axis) and pitch (about its short axis),
+ * each measured from the calibrated pose. They are independent: rolling the phone never reads as
+ * pitch and vice versa, and side-to-side response is the same however steeply the phone is held.
+ * (Projecting gravity onto a basis around the neutral vector, as earlier builds did, made
+ * left/right weaker and pulled the ball toward the player when held at a typical 40° grip, worst
+ * when tilting right while tipping the phone back.)
+ * Near vertical (held more than ~65° from flat) roll is ill-defined, so the basis projection is used.
  */
 export function relativeTiltDegrees(g: Vec3, basis: NeutralBasis): Vec2 {
+  const n = basis.neutral;
+  if (Math.hypot(n[0], n[2]) < NEAR_VERTICAL) return projectedTiltDegrees(g, basis);
+  const x = wrapDeg(roll(g) - roll(n));
+  const y = pitch(g) - pitch(n);
+  return [clamp(x, -90, 90), clamp(y, -90, 90)];
+}
+
+/** Below this, |cos(pitch)| of the neutral pose means the phone is held close to vertical. */
+const NEAR_VERTICAL = 0.42;
+
+/** Rotation about the phone's long (y) axis: + when the right edge is lowered. */
+function roll(g: Vec3): number {
+  return Math.atan2(g[0], -g[2]) / DEG;
+}
+
+/** Rotation about the phone's short (x) axis: + when the top edge is lowered. */
+function pitch(g: Vec3): number {
+  return Math.atan2(g[1], Math.hypot(g[0], g[2])) / DEG;
+}
+
+function wrapDeg(a: number): number {
+  return ((((a + 180) % 360) + 360) % 360) - 180;
+}
+
+/** Tilt as gravity projected onto the neutral basis (used near vertical). */
+export function projectedTiltDegrees(g: Vec3, basis: NeutralBasis): Vec2 {
   const gx = clamp(dot(g, basis.right), -1, 1);
   const gy = clamp(dot(g, basis.forward), -1, 1);
   return [Math.asin(gx) / DEG, Math.asin(gy) / DEG];

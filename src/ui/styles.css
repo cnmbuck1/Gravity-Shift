@@ -67,6 +67,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .btn small { font-weight: 500; letter-spacing: 0.08em; color: var(--muted); font-size: 11px; }
 .btn:active { transform: scale(0.97); }
+.btn.btn-small { padding: 10px 14px; font-size: 12px; color: var(--muted); }
 .btn.primary { border-color: var(--cyan); box-shadow: 0 0 22px rgba(46, 230, 255, 0.25), inset 0 0 18px rgba(46, 230, 255, 0.12); }
 
 /* ---------- HUD ---------- */

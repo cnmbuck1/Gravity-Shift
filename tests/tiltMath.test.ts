@@ -30,6 +30,27 @@ describe('tilt math', () => {
     expect(relativeTiltDegrees(gravityFromOrientation(40, 8), basis)[0]).toBeGreaterThan(5);
   });
 
+  it('roll and pitch are independent and symmetric at a 40 degree hold', () => {
+    const basis = buildNeutralBasis(gravityFromOrientation(40, 0));
+    for (const tip of [-15, 0, 15]) {
+      // Tipping back or forward never changes how much left/right you get...
+      const r = relativeTiltDegrees(gravityFromOrientation(40 + tip, 15), basis);
+      const l = relativeTiltDegrees(gravityFromOrientation(40 + tip, -15), basis);
+      expect(r[0]).toBeCloseTo(15, 3);
+      expect(l[0]).toBeCloseTo(-15, 3);
+      // ...and rolling left/right never reads as forward/back.
+      expect(r[1]).toBeCloseTo(-tip, 3);
+      expect(l[1]).toBeCloseTo(-tip, 3);
+    }
+  });
+
+  it('side-to-side response does not depend on how steeply the phone is held', () => {
+    for (const hold of [0, 25, 40, 55]) {
+      const basis = buildNeutralBasis(gravityFromOrientation(hold, 0));
+      expect(relativeTiltDegrees(gravityFromOrientation(hold, 20), basis)[0]).toBeCloseTo(20, 3);
+    }
+  });
+
   it('dead zone suppresses tiny tilts and output is continuous at its edge', () => {
     expect(shapeTilt([1, 0.5], shape)).toEqual([0, 0]);
     const justOut = shapeTilt([1.6, 0], shape);

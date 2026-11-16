@@ -1,6 +1,6 @@
 import type { GameManager, LevelRecord, RunStats } from '../core/GameManager';
 import type { SettingsManager } from '../settings/SettingsManager';
-import { orbAvailable, ORB_LEVELS } from '../settings/SettingsManager';
+import { DEFAULT_SETTINGS, orbAvailable, ORB_LEVELS } from '../settings/SettingsManager';
 import type { Monetization } from '../monetization/Monetization';
 import type { LevelDef } from '../levels/LevelTypes';
 import type { WorldDef } from '../levels/worldTypes';
@@ -168,6 +168,7 @@ export class UIManager {
           <label class="row col">Smoothing <output data-out="smoothing"></output>
             <input type="range" min="0" max="0.15" step="0.005" data-setting="smoothing" />
           </label>
+          <button class="btn btn-small" data-action="reset-tilt">RESET TILT TO DEFAULTS</button>
           <button class="btn" data-action="calibrate">CALIBRATE NOW</button>
           <div class="row">Graphics
             <span class="seg" data-setting="graphics"><button data-value="high">HIGH</button><button data-value="low">LOW</button></span>
@@ -390,6 +391,12 @@ export class UIManager {
       case 'calibrate':
         void this.calibrate();
         break;
+      case 'reset-tilt': {
+        const { tiltSensitivity, deadZoneDeg, smoothing } = DEFAULT_SETTINGS;
+        this.settings.update({ tiltSensitivity, deadZoneDeg, smoothing });
+        this.toast('Tilt settings reset', 1400);
+        break;
+      }
       case 'menu':
         this.game.toMenu();
         this.refreshMenu();
