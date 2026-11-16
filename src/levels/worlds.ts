@@ -20,8 +20,9 @@ import * as W10 from './generated/world10';
  */
 export const WORLDS: WorldDef[] = [
   world('w1', 'Launch Deck', 'Tilt, corners, holes and mazes', THEMES.launch, [
-    FIRST_ROLL, W1.WIDE_TURNS, CORNERS, W1.FIRST_MAZE, MIND_THE_GAP,
-    W1.HOLE_PUNCH, W1.BRANCHES, W1.NARROW_WAYS, W1.LABYRINTH, W1.LAUNCH_FINALE,
+    // Mind the Gap was 1-5; moved to 1-9 after Chris's playtest (2026-11-16), the four after it each move up one.
+    FIRST_ROLL, W1.WIDE_TURNS, CORNERS, W1.FIRST_MAZE, W1.HOLE_PUNCH,
+    W1.BRANCHES, W1.NARROW_WAYS, W1.LABYRINTH, MIND_THE_GAP, W1.LAUNCH_FINALE,
   ]),
   world('w2', 'Piston Works', 'Pistons, energy strips and bridges', THEMES.piston, [
     MOVING_PARTS, W2.PISTON_ALLEY, W2.HOT_FLOOR, W2.OVERPASS, W2.COFFEE_BREAK,

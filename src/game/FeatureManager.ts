@@ -22,15 +22,25 @@ const NORMAL: SurfaceMod = { accel: 1, rr: 1, speed: 1, push: null };
 /** Seconds a crumbling tile shakes before it drops. */
 const CRUMBLE_DELAY = 0.75;
 const JUMP_SPEED = 6;
+/** Seconds a switch keeps its doors open when the level doesn't say. */
+export const DOOR_OPEN_SECONDS = 5;
+/** The last seconds of a switch's timer: the switch blinks fast and ticks to warn the door is about to shut. */
+const DOOR_WARN_SECONDS = 1.5;
+/** How fast a door sinks and rises (fraction of its height per second). */
+const DOOR_SPEED = 2.2;
 /** Pull (m/s²) toward a hole when the sphere hangs over its edge, so holes catch it instead of letting it skim past. */
 const HOLE_PULL = 10;
 /** How far (m) the sphere must hang over a hole's edge before the pull starts. */
 const HOLE_GRACE = 0.22;
 
+/** Segments in a switch's countdown ring. */
+const RING_SEGMENTS = 48;
+
 interface CrumbleRt { def: CrumbleDef; collider: RAPIER.Collider; mesh: THREE.Mesh; timer: number; gone: boolean; drop: number }
 interface LaserRt { def: LaserDef; beam: THREE.Mesh; a: THREE.Vector3; b: THREE.Vector3; on: boolean }
 interface DoorRt { def: DoorDef; collider: RAPIER.Collider; mesh: THREE.Mesh; open: boolean; sink: number }
-interface SwitchRt { def: SwitchDef; mesh: THREE.Mesh; pressed: boolean }
+/** `left` counts down the seconds the switch's doors have left (0 when not pressed). */
+interface SwitchRt { def: SwitchDef; mesh: THREE.Mesh; pressed: boolean; left: number; occupied: boolean }
 interface RotatorRt { def: RotatorDef; body: RAPIER.RigidBody; mesh: THREE.Object3D }
 
 /**
@@ -151,14 +161,23 @@ export class FeatureManager {
       d.sink = 0;
       d.collider.setEnabled(true);
       d.mesh.position.fromArray(d.def.position);
+      d.mesh.visible = true;
     }
-    for (const s of this.switches) s.pressed = false;
+    for (const s of this.switches) {
+      s.pressed = false;
+      s.left = 0;
+      s.occupied = false;
+    }
     this.time = 0;
   }
 
-  /** Before each physics step: time-driven obstacles. */
-  step(dt: number): void {
+  /** Called with the remaining whole seconds while an open door is about to shut (for a tick sound). */
+  doorTick: ((secondsLeft: number) => void) | null = null;
+
+  /** Before each physics step: time-driven obstacles. `ball` is the sphere's centre. */
+  step(dt: number, ball?: THREE.Vector3): void {
     this.time += dt;
+    this.stepDoors(dt, ball);
     for (const r of this.rotators) {
       const a = (r.def.phase ?? 0) + this.time * r.def.speed;
       const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), a);
@@ -252,14 +271,59 @@ export class FeatureManager {
     return false;
   }
 
+  /**
+   * Switch timers: when one runs out its doors rise again and the switch re-arms. A door never
+   * shuts on the sphere: it waits until the sphere has rolled clear.
+   */
+  private stepDoors(dt: number, ball?: THREE.Vector3): void {
+    for (const s of this.switches) {
+      if (!s.pressed) continue;
+      const before = s.left;
+      s.left = Math.max(0, s.left - dt);
+      if (s.left > 0) {
+        if (s.left < DOOR_WARN_SECONDS && Math.ceil(s.left * 2) !== Math.ceil(before * 2)) this.doorTick?.(s.left);
+        continue;
+      }
+      const doors = s.def.doors.map((i) => this.doors[i]).filter(Boolean);
+      if (ball && doors.some((d) => this.touchesDoor(d, ball))) continue;
+      // Another pressed switch may still be holding one of these doors open.
+      for (const d of doors) {
+        const held = this.switches.some((o) => o !== s && o.pressed && o.left > 0 && o.def.doors.includes(this.doors.indexOf(d)));
+        if (held) continue;
+        d.open = false;
+        d.collider.setEnabled(true);
+      }
+      s.pressed = false;
+    }
+  }
+
+  private touchesDoor(d: DoorRt, p: THREE.Vector3): boolean {
+    const [x, y, z] = d.def.position;
+    const [w, h, l] = d.def.size;
+    const m = BALL_RADIUS + 0.15;
+    return Math.abs(p.x - x) < w / 2 + m && Math.abs(p.y - y) < h / 2 + m && Math.abs(p.z - z) < l / 2 + m;
+  }
+
+  /** Seconds left on the most recently pressed switch that is still running (0 when every door is shut). */
+  doorTimeLeft(): number {
+    let t = 0;
+    for (const s of this.switches) if (s.pressed) t = Math.max(t, s.left);
+    return t;
+  }
+
   /** Presses any switch the ball rolls over. Returns true if a switch was pressed this call. */
   checkSwitches(p: THREE.Vector3): boolean {
     let pressed = false;
     for (const s of this.switches) {
-      if (s.pressed) continue;
       const d = Math.hypot(p.x - s.def.position[0], p.z - s.def.position[2]);
-      if (d < 0.85 && Math.abs(p.y - s.def.position[1]) < 1.2) {
+      const on = d < 0.85 && Math.abs(p.y - s.def.position[1]) < 1.2;
+      // A switch fires as the sphere rolls onto it: sitting on it after the time runs out doesn't press it again.
+      const arriving = on && !s.occupied;
+      s.occupied = on;
+      if (s.pressed) continue;
+      if (arriving) {
         s.pressed = true;
+        s.left = s.def.time ?? DOOR_OPEN_SECONDS;
         pressed = true;
         for (const i of s.def.doors) {
           const door = this.doors[i];
@@ -298,14 +362,31 @@ export class FeatureManager {
       l.beam.scale.set(l.on ? 1 + Math.sin(time * 40) * 0.15 : 0.5, 1, l.on ? 1 + Math.sin(time * 40) * 0.15 : 0.5);
     }
     for (const d of this.doors) {
-      if (!d.open || d.sink >= 1) continue;
-      d.sink = Math.min(1, d.sink + dt * 1.6);
-      d.mesh.position.set(d.def.position[0], d.def.position[1] - d.def.size[1] * d.sink, d.def.position[2]);
+      const target = d.open ? 1 : 0;
+      if (d.sink === target) {
+        d.mesh.visible = d.sink < 1;
+        continue;
+      }
+      d.sink = d.open ? Math.min(1, d.sink + dt * DOOR_SPEED) : Math.max(0, d.sink - dt * DOOR_SPEED);
+      // Sink a little past the floor and then hide: a door top resting exactly at floor height
+      // z-fights with the floor and flickers (the "flashing" open door from the playtest).
+      d.mesh.position.set(d.def.position[0], d.def.position[1] - (d.def.size[1] + 0.08) * d.sink, d.def.position[2]);
+      d.mesh.visible = d.sink < 1;
     }
     for (const s of this.switches) {
       const m = s.mesh.material as THREE.MeshStandardMaterial;
-      m.emissiveIntensity = s.pressed ? 0.6 : 1.6 + Math.sin(time * 5) * 0.6;
+      if (!s.pressed) m.emissiveIntensity = 1.6 + Math.sin(time * 5) * 0.6;
+      else if (s.left < DOOR_WARN_SECONDS) m.emissiveIntensity = Math.sin(time * 22) > 0 ? 2.2 : 0.3;
+      else m.emissiveIntensity = 0.9;
       s.mesh.position.y = s.def.position[1] + (s.pressed ? -0.02 : 0.05);
+      // The ring around the switch drains as the doors' time runs out.
+      const ring = s.mesh.children[0] as THREE.Mesh | undefined;
+      if (ring) {
+        const total = s.def.time ?? DOOR_OPEN_SECONDS;
+        const k = s.pressed ? s.left / total : 0;
+        ring.visible = k > 0;
+        (ring.geometry as THREE.RingGeometry).setDrawRange(0, Math.ceil(k * RING_SEGMENTS) * 6);
+      }
     }
     for (const p of this.pads) if (p.mat?.map) {
       const dir = p.def.dir;
@@ -433,9 +514,17 @@ export class FeatureManager {
     const mat = new THREE.MeshStandardMaterial({ color: '#4a3f0a', emissive: '#ffe14d', emissiveIntensity: 1.6, metalness: 0.6, roughness: 0.4 });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.fromArray(def.position);
+    // Countdown ring: a bright arc around the switch that shrinks while its doors are open.
+    const ringGeo = new THREE.RingGeometry(0.78, 0.92, RING_SEGMENTS, 1, Math.PI / 2, Math.PI * 2);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: '#ffe14d', transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.y = 0.07;
+    ring.visible = false;
+    mesh.add(ring);
     this.group.add(mesh);
-    this.disposables.push(geo, mat);
-    this.switches.push({ def, mesh, pressed: false });
+    this.disposables.push(geo, mat, ringGeo, ringMat);
+    this.switches.push({ def, mesh, pressed: false, left: 0, occupied: false });
   }
 
   private addRotator(def: RotatorDef): void {
