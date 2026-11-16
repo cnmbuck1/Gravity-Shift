@@ -1,8 +1,10 @@
 // Renders the iOS app icon and launch image (see draw.ts) into ios/App/App/Assets.xcassets.
-// Usage from the repo root: node tools/ios-assets/render.mjs  (needs Playwright's Chromium)
+// Usage from the repo root (needs Playwright's Chromium):
+//   node tools/ios-assets/render.mjs [--icon grid|maze|shift|tilt]   write the app icon + launch image
+//   node tools/ios-assets/render.mjs --preview <dir>                  write every icon concept to <dir>
 import { createServer } from 'vite';
 import { createRequire } from 'node:module';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -11,20 +13,31 @@ import { dirname, resolve } from 'node:path';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const xc = resolve(root, 'ios/App/App/Assets.xcassets');
+const arg = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : undefined; };
+const previewDir = arg('--preview');
+const query = new URLSearchParams();
+if (arg('--icon')) query.set('icon', arg('--icon'));
+if (previewDir) query.set('preview', '1');
 const server = await createServer({ root, configFile: false, logLevel: 'error', server: { port: 5199 } });
 await server.listen();
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage();
-  await page.goto('http://localhost:5199/tools/ios-assets/render.html');
+  await page.goto(`http://localhost:5199/tools/ios-assets/render.html?${query}`);
   await page.waitForFunction(() => window.assets);
   const assets = await page.evaluate(() => window.assets);
   const png = ({ size, data }) => encodePng(size, Buffer.from(data, 'base64'));
-  writeFileSync(resolve(xc, 'AppIcon.appiconset/AppIcon-512@2x.png'), png(assets.icon));
-  for (const f of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
-    writeFileSync(resolve(xc, 'Splash.imageset', f), png(assets.splash));
+  if (previewDir) {
+    mkdirSync(previewDir, { recursive: true });
+    for (const [name, img] of Object.entries(assets.previews)) writeFileSync(resolve(previewDir, `icon-${name}.png`), png(img));
+    console.log(`Wrote ${Object.keys(assets.previews).length} icon concepts to ${previewDir}`);
+  } else {
+    writeFileSync(resolve(xc, 'AppIcon.appiconset/AppIcon-512@2x.png'), png(assets.icon));
+    for (const f of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
+      writeFileSync(resolve(xc, 'Splash.imageset', f), png(assets.splash));
+    }
+    console.log('Wrote AppIcon and Splash images');
   }
-  console.log('Wrote AppIcon and Splash images');
 } finally {
   await browser.close();
   await server.close();

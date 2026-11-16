@@ -9,7 +9,7 @@ What is already set up in the repo:
 | Version / build | 1.0 (build 1). CI uploads use build 100 + the run number, so they never collide |
 | Devices | iPhone only, portrait. iPads can still run it in iPhone mode, and no iPad screenshots are needed |
 | Minimum iOS | 15.0 |
-| App icon | Cnmbuck Orb on the Gravitor grid floor, 1024 px, no transparency (`npm run ios:assets` redraws it) |
+| App icon | "Neon maze": the Cnmbuck Orb in a glowing labyrinth with an orange goal ring, 1024 px, no transparency (`npm run ios:assets` redraws it; concepts in `tools/ios-assets/icons.ts`) |
 | Launch screen | Dark background with the GRAVITOR wordmark, the Orb as the O |
 | Motion permission text | `NSMotionUsageDescription` in `ios/App/App/Info.plist` |
 | Export compliance | `ITSAppUsesNonExemptEncryption = NO` (the game only uses HTTPS), so uploads skip the encryption question |

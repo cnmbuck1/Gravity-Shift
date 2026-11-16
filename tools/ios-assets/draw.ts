@@ -1,36 +1,19 @@
 // Draws the iOS app icon and launch image from the Cnmbuck Orb brand kit.
 // Run `node tools/ios-assets/render.mjs` to regenerate the PNGs in the Xcode asset catalog.
 import { drawOrbIcon } from '../../src/brand/cnmbuck-orb';
+import { ICONS, type IconName } from './icons';
 
 const BG_TOP = '#0a1430';
 const BG_BOTTOM = '#05070d';
 
-/** Dark space backdrop with a faint perspective grid floor (the maze the Orb rolls on). */
-function backdrop(g: CanvasRenderingContext2D, w: number, h: number, horizon: number, gridAlpha: number) {
-  const sky = g.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, BG_TOP); sky.addColorStop(1, BG_BOTTOM);
-  g.fillStyle = sky; g.fillRect(0, 0, w, h);
-  g.save();
-  g.beginPath(); g.rect(0, horizon, w, h - horizon); g.clip();
-  const fade = g.createLinearGradient(0, horizon, 0, h);
-  fade.addColorStop(0, 'rgba(0,216,255,0)'); fade.addColorStop(1, `rgba(0,216,255,${gridAlpha})`);
-  g.strokeStyle = fade; g.lineWidth = Math.max(2, w / 400);
-  const cx = w / 2;
-  for (let i = -12; i <= 12; i++) { g.beginPath(); g.moveTo(cx + i * w * 0.02, horizon); g.lineTo(cx + i * w * 0.28, h); g.stroke(); }
-  for (let k = 1; k < 12; k++) { const y = horizon + (h - horizon) * Math.pow(k / 11, 2.2); g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
-  g.restore();
-}
+/** The icon concept used for the app (see icons.ts; render.mjs --icon overrides it). */
+const params = new URLSearchParams(location.search);
+const chosen = (params.get('icon') ?? 'maze') as IconName;
 
-function icon(size: number) {
+function icon(size: number, name: IconName = chosen) {
   const c = document.createElement('canvas'); c.width = c.height = size;
   const g = c.getContext('2d', { alpha: false })!;
-  backdrop(g, size, size, size * 0.62, 0.55);
-  // Soft pool of light on the floor under the Orb.
-  const pool = g.createRadialGradient(size / 2, size * 0.8, 0, size / 2, size * 0.8, size * 0.42);
-  pool.addColorStop(0, 'rgba(0,200,255,0.35)'); pool.addColorStop(1, 'rgba(0,200,255,0)');
-  g.fillStyle = pool; g.fillRect(0, 0, size, size);
-  const orb = size * 0.8;
-  drawOrbIcon(g, orb, (size - orb) / 2, size * 0.47 - orb / 2);
+  ICONS[name](g, size);
   return c;
 }
 
@@ -77,4 +60,7 @@ function rgb(c: HTMLCanvasElement) {
   return { size: c.width, data: btoa(s) };
 }
 
-(window as unknown as { assets: unknown }).assets = { icon: rgb(icon(1024)), splash: rgb(splash(2732)) };
+const preview = params.has('preview');
+(window as unknown as { assets: unknown }).assets = preview
+  ? { previews: Object.fromEntries((Object.keys(ICONS) as IconName[]).map((n) => [n, rgb(icon(1024, n))])) }
+  : { icon: rgb(icon(1024)), splash: rgb(splash(2732)) };
