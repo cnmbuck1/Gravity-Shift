@@ -26,13 +26,22 @@ async function boot(): Promise<void> {
   void money.init().then(() => settings.update({}));
   game.start();
 
-  // Prevent iOS rubber-band scrolling and double-tap zoom during play.
-  document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+  // Prevent iOS rubber-band scrolling and double-tap zoom during play, but let sliders drag and
+  // menu panels (Settings, How to Play, level lists) scroll: in the iPhone app's web view a blanket
+  // preventDefault on touchmove freezes both.
+  document.addEventListener('touchmove', (e) => {
+    const t = e.target as Element | null;
+    if (t?.closest?.(SCROLL_OR_DRAG)) return;
+    e.preventDefault();
+  }, { passive: false });
   document.addEventListener('dblclick', (e) => e.preventDefault());
 
   // Exposed for automated smoke tests and on-device debugging via Safari Web Inspector.
   Object.assign(window as unknown as Record<string, unknown>, { gravityShift: game, gravitorUI: uiManager, gravitorWorlds: WORLDS });
 }
+
+/** Elements whose own touch dragging must keep working (see the touchmove guard in boot). */
+const SCROLL_OR_DRAG = 'input[type=range], .panel';
 
 boot().catch((err) => {
   document.body.innerHTML = `<pre style="color:#f66;padding:20px;white-space:pre-wrap">Failed to start: ${String(err?.stack ?? err)}</pre>`;

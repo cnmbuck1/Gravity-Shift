@@ -156,6 +156,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .panel-screen { display: grid; place-items: center; background: rgba(3, 5, 10, 0.55); padding: 20px; }
 .panel {
   width: min(360px, 100%); max-height: calc(100% - var(--safe-top) - var(--safe-bottom)); overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;
   display: flex; flex-direction: column; gap: 12px; padding: 22px;
   background: rgba(10, 16, 28, 0.88); border: 1px solid var(--line); border-radius: 20px;
   box-shadow: 0 0 40px rgba(46, 230, 255, 0.12);
@@ -165,7 +166,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .settings .row.col { flex-wrap: wrap; }
 .settings .row.col input { width: 100%; }
 .settings output { margin-left: auto; color: var(--cyan); font-variant-numeric: tabular-nums; }
-.settings input[type='range'] { accent-color: var(--cyan); height: 28px; }
+.settings input[type='range'] { accent-color: var(--cyan); height: 36px; touch-action: none; cursor: pointer; }
 .settings input[type='checkbox'] { width: 22px; height: 22px; accent-color: var(--cyan); }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button { background: transparent; border: 0; padding: 8px 12px; font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
