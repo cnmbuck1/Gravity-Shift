@@ -17,13 +17,13 @@ W1 = [
         R(cw=3), C(len=2), M(mw=3, ny=3, checkpoint=True), C(len=2), R(cw=3, feats=[('holes', {})])])),
     ('NARROW_WAYS', dict(id='w1-narrow-ways', name='Narrow Ways', sub='Two-wide corridors', seed=15, segments=[
         R(cw=2), C(len=2, w=2), M(mw=2, ny=3, checkpoint=True), C(len=2, w=2), R(cw=3, feats=[('holes', {}), ('holes', {})])])),
-    # 2026-11-16 playtest ("more levels need vertical shifts"): first ceiling flip, between the two mazes.
-    ('LABYRINTH', dict(id='w1-labyrinth', name='Labyrinth', sub='Two mazes and a flip onto the ceiling', seed=16, segments=[
-        R(cw=3), C(len=2), M(mw=3, ny=3, feats=[('deadholes', {'n': 2})]), C(len=9, feat='flip'), M(mw=2, ny=3, checkpoint=True), C(len=2, w=2), R(cw=3)])),
+    # 2026-11-16 playtest ("more levels need vertical shifts"; Chris chose walls and flips both): first wall and first flip.
+    ('LABYRINTH', dict(id='w1-labyrinth', name='Labyrinth', sub='Along the wall, two mazes and a flip', seed=16, segments=[
+        R(cw=3), C(len=9, feat='wall'), M(mw=3, ny=3, feats=[('deadholes', {'n': 2})]), C(len=9, feat='flip'), M(mw=2, ny=3, checkpoint=True), C(len=2, w=2), R(cw=3)])),
     # 2026-11-16 playtest ("1-10 could be harder with more hazards"): more holes, more dead ends that drop away,
-    # a ceiling flip over a chasm and a narrow hole-lined finish.
+    # a wall, a ceiling flip and a narrow hole-lined finish.
     ('LAUNCH_FINALE', dict(id='w1-launch-finale', name='Launch Deck', sub='World 1 finale: everything so far', seed=17, segments=[
-        R(cw=3, feats=[('holes', {}), ('holes', {})]), C(len=2), M(mw=3, ny=3, checkpoint=True, feats=[('deadholes', {'n': 3})]), C(len=4, feat='holes'),
+        R(cw=3, feats=[('holes', {}), ('holes', {})]), C(len=9, feat='wall'), M(mw=3, ny=3, checkpoint=True, feats=[('deadholes', {'n': 3})]), C(len=4, feat='holes'),
         R(cw=3, checkpoint=True, feats=[('holes', {}), ('holes', {}), ('holes', {}), ('holes', {})]), C(len=10, feat='flip'),
         R(cw=3, checkpoint=True, feats=[('holes', {}), ('holes', {}), ('holes', {})]), C(len=2, w=2), M(mw=2, ny=4, feats=[('deadholes', {'n': 2})]), C(len=4, w=2, feat='holes'),
         R(cw=3, feats=[('holes', {}), ('holes', {}), ('holes', {})])])),
@@ -43,7 +43,7 @@ W2 = [
         R(cw=3, feats=[('piston', {'period': 3.4}), ('holes', {}), ('piston', {'period': 3.4, 'phase': 0.5})]), C(len=4, feat='strips'),
         R(cw=3, feats=[('bridge', {'deck': 4, 'width': 2.2})])])),
     ('SWITCHBACK2', dict(id='w2-switchback', name='Switchback', sub='Back and forth past pistons and strips', seed=28, layout=2, segments=[
-        R(cw=3, feats=[('piston', {}), ('holes', {}), ('piston', {'phase': 0.4})]), C(len=3, feat='pistonX'),
+        R(cw=3, feats=[('piston', {}), ('holes', {}), ('piston', {'phase': 0.4})]), C(len=10, feat='wall', wpistons=1),
         R(cw=3, checkpoint=True, feats=[('strips', {}), ('piston', {'period': 2.8}), ('strips', {}), ('holes', {})]), C(len=10, feat='flip'),
         M(mw=2, ny=3, feats=[('pistons', {'n': 2})]), C(len=3, w=2), R(cw=3, feats=[('bridge', {'deck': 5, 'width': 1.6})])])),
     ('GEARS', dict(id='w2-gears', name='Gears', sub='Pistons guard the maze doors', seed=25, layout=2, segments=[
@@ -64,7 +64,7 @@ W2 = [
     ('PISTON_WORKS', dict(id='w2-piston-works', name='Piston Works', sub='World 2 finale', seed=27, layout=2, segments=[
         R(cw=3, feats=[('piston', {}), ('strips', {}), ('piston', {'phase': 0.5})]), C(len=3, feat='pistonX'),
         M(mw=3, ny=3, checkpoint=True, feats=[('pistons', {'n': 3}), ('deadholes', {'n': 2})]), C(len=10, feat='flip'),
-        R(cw=3, feats=[('bridge', {'deck': 6, 'width': 1.5})]), C(len=3, feat='pistonX', period=2.6),
+        R(cw=3, feats=[('bridge', {'deck': 6, 'width': 1.5})]), C(len=10, feat='wall', wpistons=1),
         R(cw=3, checkpoint=True, feats=[('piston', {'period': 2.6}), ('piston', {'period': 2.6, 'phase': 0.5}), ('strips', {}), ('holes', {})]), C(len=3, w=2),
         M(mw=2, ny=4, feats=[('pistons', {'n': 2, 'period': 2.8}), ('deadholes', {'n': 2})]), C(len=3, w=2),
         R(cw=3, feats=[('holes', {}), ('piston', {'period': 2.4}), ('strips', {}), ('piston', {'period': 2.2, 'phase': 0.5})])])),

@@ -257,18 +257,20 @@ export const DOUBLE_LOCK: LevelDef = {
   id: 'w7-double-lock',
   name: 'Double Lock',
   subtitle: 'Two doors, two switches',
-  spawn: [-9.5, 0.6, 9.0],
+  spawn: [-9.5, 0.6, 13.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [-11.5, 0, -1.5], max: [-8.5, 2, 1.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
-    { min: [-11.5, 2.4, -8.5], max: [-8.5, 4.0, -5.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [8.5, 0, 8.5], max: [11.5, 2, 11.5], allow: ['right'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ▶ ONTO THE WALL' },
+    { min: [10.0, 0.2, 1.5], max: [11.6, 7.5, 4.5], allow: ['left'], whenDown: [1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ◀ TO DROP IN' },
+    { min: [-11.5, 0, -4.5], max: [-8.5, 2, -1.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
+    { min: [-11.5, 2.4, -11.5], max: [-8.5, 4.0, -8.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -12],
+    origin: [-12, -15],
     rows: [
       '#########################', // 0
       '#..................GGGGG#', // 1
@@ -287,39 +289,48 @@ export const DOUBLE_LOCK: LevelDef = {
       '#....................CC.#', // 14
       '#....................CC.#', // 15
       '#....................CC.#', // 16
-      '#####################...#', // 17
-      '##########..#########...#', // 18
-      '##########..#########...#', // 19
-      '#SSSS...................#', // 20
-      '#SSSS...................#', // 21
-      '#SSSS...................#', // 22
-      '#########################', // 23
+      '#####################PPP|', // 17
+      '#####################PPP|', // 18
+      '#####################PPP|', // 19
+      '#####################   |', // 20
+      '#####################   |', // 21
+      '#####################   |', // 22
+      '#####################   |', // 23
+      '#####################PPP|', // 24
+      '##########..#########PPP|', // 25
+      '##########..#########PPP|', // 26
+      '#SSSS...................#', // 27
+      '#SSSS...................#', // 28
+      '#SSSS...................#', // 29
+      '#########################', // 30
     ],
   },
   platforms: [
-    { position: [-10.0, 4.2, -3.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+    { position: [12, 3, 6.5], size: [1, 8, 10.0], role: 'gravity' },
+    { position: [11.48, 3.2, 3.0], size: [0.04, 6.2, 3], role: 'gravity' },
+    { position: [-10.0, 4.2, -6.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
   movers: [
-    { from: [-4, 0.45, 1.95], to: [-4, 0.45, 4.05], size: [1.3, 0.9, 0.9], period: 3.2, phase: 0 },
+    { from: [-4, 0.45, -1.05], to: [-4, 0.45, 1.05], size: [1.3, 0.9, 0.9], period: 3.2, phase: 0 },
   ],
-  checkpoints: [{ position: [9.5, 0, 3.0], frame: FLOOR }],
+  checkpoints: [{ position: [9.5, 0, 0.0], frame: FLOOR }],
   lasers: [
-    { from: [5, 0.45, 7.5], to: [5, 0.45, 10.5], period: 2.6, on: 0.42, phase: 0 },
-    { from: [-2, 0.45, -11.5], to: [-2, 0.45, -8.5], period: 2.4, on: 0.42, phase: 0 },
-    { from: [3, 0.45, -11.5], to: [3, 0.45, -8.5], period: 2.4, on: 0.42, phase: 0.4 },
+    { from: [5, 0.45, 11.5], to: [5, 0.45, 14.5], period: 2.6, on: 0.42, phase: 0 },
+    { from: [-2, 0.45, -14.5], to: [-2, 0.45, -11.5], period: 2.4, on: 0.42, phase: 0 },
+    { from: [3, 0.45, -14.5], to: [3, 0.45, -11.5], period: 2.4, on: 0.42, phase: 0.4 },
   ],
   doors: [
-    { position: [2, 0.5, 9.0], size: [0.9, 1, 3] },
-    { position: [-1, 0.5, 3.0], size: [0.9, 1, 3] },
+    { position: [2, 0.5, 13.0], size: [0.9, 1, 3] },
+    { position: [-1, 0.5, 0.0], size: [0.9, 1, 3] },
   ],
   switches: [
-    { position: [-1.5, 0.05, 6], doors: [0], time: 6 },
-    { position: [2.5, 0.05, 0], doors: [1], time: 5 },
+    { position: [-1.5, 0.05, 10], doors: [0], time: 6 },
+    { position: [2.5, 0.05, -3], doors: [1], time: 5 },
   ],
-  goal: { position: [9.0, 0, -10.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  goal: { position: [9.0, 0, -13.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 70, two: 110 },
+  par: { three: 80, two: 130 },
   fallMargin: 6,
 };
 
@@ -470,18 +481,20 @@ export const OVERLOAD: LevelDef = {
   id: 'w7-overload',
   name: 'Overload',
   subtitle: 'Every gate at once',
-  spawn: [-9.5, 0.6, 22.0],
+  spawn: [-9.5, 0.6, 25.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [-11.5, 0, 2.5], max: [-8.5, 2, 5.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
-    { min: [-11.5, 2.4, -4.5], max: [-8.5, 4.0, -1.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [8.5, 0, 20.5], max: [11.5, 2, 23.5], allow: ['right'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ▶ ONTO THE WALL' },
+    { min: [10.0, 0.2, 13.5], max: [11.6, 7.5, 16.5], allow: ['left'], whenDown: [1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ◀ TO DROP IN' },
+    { min: [-11.5, 0, -0.5], max: [-8.5, 2, 2.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
+    { min: [-11.5, 2.4, -7.5], max: [-8.5, 4.0, -4.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -24],
+    origin: [-12, -27],
     rows: [
       '#########################', // 0
       '#..................GGGGG#', // 1
@@ -524,45 +537,55 @@ export const OVERLOAD: LevelDef = {
       '#...............#.......#', // 38
       '#...............#.......#', // 39
       '#...............#....CCC#', // 40
-      '#####################..X#', // 41
-      '#####################...#', // 42
-      '#############..######X..#', // 43
-      '#############..######...#', // 44
-      '#SSSS...................#', // 45
-      '#SSSS...................#', // 46
-      '#SSSS...................#', // 47
-      '#########################', // 48
+      '#####################PPP|', // 41
+      '#####################PPP|', // 42
+      '#####################PPP|', // 43
+      '#####################   |', // 44
+      '#####################   |', // 45
+      '#####################   |', // 46
+      '#####################   |', // 47
+      '#####################PPP|', // 48
+      '#############..######PPP|', // 49
+      '#############..######PPP|', // 50
+      '#SSSS...................#', // 51
+      '#SSSS...................#', // 52
+      '#SSSS...................#', // 53
+      '#########################', // 54
     ],
   },
   platforms: [
-    { position: [-10.0, 4.2, 0.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+    { position: [12, 3, 15.5], size: [1, 8, 4.0], role: 'gravity' },
+    { position: [12, 4.8, 18.5], size: [1, 4.4, 2.0], role: 'gravity' },
+    { position: [12, 3, 21.5], size: [1, 8, 4.0], role: 'gravity' },
+    { position: [11.48, 3.2, 15.0], size: [0.04, 6.2, 3], role: 'gravity' },
+    { position: [-10.0, 4.2, -2.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
   movers: [],
-  checkpoints: [{ position: [10.0, 0, 16], frame: FLOOR }, { position: [-9.5, 0, -6.0], frame: FLOOR }],
+  checkpoints: [{ position: [10.0, 0, 13], frame: FLOOR }, { position: [-9.5, 0, -9.0], frame: FLOOR }],
   lasers: [
-    { from: [-2, 0.45, 20.5], to: [-2, 0.45, 23.5], period: 2.2, on: 0.42, phase: 0 },
-    { from: [0, 0.45, 13.5], to: [0, 0.45, 16.5], period: 2.8, on: 0.4, phase: 0.3 },
-    { from: [-8, 0.45, 9.5], to: [-8, 0.45, 12.5], period: 3.2, on: 0.4, phase: 0.6 },
-    { from: [5, 0.45, -7.5], to: [5, 0.45, -4.5], period: 2.2, on: 0.45, phase: 0 },
-    { from: [3, 0.45, -12.5], to: [3, 0.45, -10.5], period: 2.4, on: 0.4, phase: 0.0 },
-    { from: [6, 0.45, -18.5], to: [6, 0.45, -16.5], period: 2.8, on: 0.4, phase: 0.3 },
-    { from: [-2, 0.45, -23.5], to: [-2, 0.45, -20.5], period: 2.0, on: 0.42, phase: 0 },
-    { from: [3, 0.45, -23.5], to: [3, 0.45, -20.5], period: 2.0, on: 0.42, phase: 0.5 },
+    { from: [-2, 0.45, 23.5], to: [-2, 0.45, 26.5], period: 2.2, on: 0.42, phase: 0 },
+    { from: [0, 0.45, 10.5], to: [0, 0.45, 13.5], period: 2.8, on: 0.4, phase: 0.3 },
+    { from: [-8, 0.45, 6.5], to: [-8, 0.45, 9.5], period: 3.2, on: 0.4, phase: 0.6 },
+    { from: [5, 0.45, -10.5], to: [5, 0.45, -7.5], period: 2.2, on: 0.45, phase: 0 },
+    { from: [3, 0.45, -15.5], to: [3, 0.45, -13.5], period: 2.4, on: 0.4, phase: 0.0 },
+    { from: [6, 0.45, -21.5], to: [6, 0.45, -19.5], period: 2.8, on: 0.4, phase: 0.3 },
+    { from: [-2, 0.45, -26.5], to: [-2, 0.45, -23.5], period: 2.0, on: 0.42, phase: 0 },
+    { from: [3, 0.45, -26.5], to: [3, 0.45, -23.5], period: 2.0, on: 0.42, phase: 0.5 },
   ],
   doors: [
-    { position: [5, 0.5, 22.0], size: [0.9, 1, 3] },
-    { position: [-10.0, 0.5, 5], size: [3, 1, 0.9] },
-    { position: [1, 0.5, -6.0], size: [0.9, 1, 3] },
+    { position: [5, 0.5, 25.0], size: [0.9, 1, 3] },
+    { position: [-10.0, 0.5, 2], size: [3, 1, 0.9] },
+    { position: [1, 0.5, -9.0], size: [0.9, 1, 3] },
   ],
   switches: [
-    { position: [1.5, 0.05, 19], doors: [0], time: 5 },
-    { position: [10.0, 0.05, 11.0], doors: [1], time: 13 },
-    { position: [-2.5, 0.05, -9], doors: [2], time: 5 },
+    { position: [1.5, 0.05, 22], doors: [0], time: 5 },
+    { position: [10.0, 0.05, 8.0], doors: [1], time: 13 },
+    { position: [-2.5, 0.05, -12], doors: [2], time: 5 },
   ],
-  goal: { position: [9.0, 0, -22.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  goal: { position: [9.0, 0, -25.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 145, two: 235 },
+  par: { three: 155, two: 250 },
   fallMargin: 6,
 };
 

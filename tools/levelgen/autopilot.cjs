@@ -177,6 +177,8 @@ const SHOTS = process.argv[3];
       for (let n = 0; n < 300; n++) { await page.waitForTimeout(20); const c = Math.abs((await k()) - lane); if (c > 0.32 && prev <= 0.32) break; prev = c; }
       const r = await go(s.far, 4, 0.4);
       if (r !== 'ok') { status = r; break; }
+      // Brake once clear, so the run-on doesn't carry the sphere onto whatever lies just past the piston.
+      await settle();
       i++;
       continue;
     }

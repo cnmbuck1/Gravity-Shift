@@ -244,18 +244,20 @@ export const WINDMILL: LevelDef = {
   id: 'w9-windmill',
   name: 'Windmill',
   subtitle: 'Faster arms',
-  spawn: [-9.5, 0.6, 11.0],
+  spawn: [-9.5, 0.6, 14.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [-11.5, 0, -2.5], max: [-8.5, 2, 0.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
-    { min: [-11.5, 2.4, -9.5], max: [-8.5, 4.0, -6.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [8.5, 0, 8.5], max: [11.5, 2, 11.5], allow: ['right'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ▶ ONTO THE WALL' },
+    { min: [10.0, 0.2, 1.5], max: [11.6, 7.5, 4.5], allow: ['left'], whenDown: [1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ◀ TO DROP IN' },
+    { min: [-11.5, 0, -6.5], max: [-8.5, 2, -3.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
+    { min: [-11.5, 2.4, -13.5], max: [-8.5, 4.0, -10.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -14],
+    origin: [-12, -18],
     rows: [
       '#########################', // 0
       '###############  ########', // 1
@@ -277,31 +279,40 @@ export const WINDMILL: LevelDef = {
       '#....................CC.#', // 17
       '#....................CC.#', // 18
       '#....................CC.#', // 19
-      '#####################...#', // 20
-      '#####################...#', // 21
-      '#####################...#', // 22
-      '#SSSS...................#', // 23
-      '#SSSS...................#', // 24
-      '#SSSS...................#', // 25
-      '#SSSS...................#', // 26
-      '#SSSS...................#', // 27
-      '#########################', // 28
+      '#####################PPP|', // 20
+      '#####################PPP|', // 21
+      '#####################PPP|', // 22
+      '#####################   |', // 23
+      '#####################   |', // 24
+      '#####################   |', // 25
+      '#####################   |', // 26
+      '#####################PPP|', // 27
+      '#####################PPP|', // 28
+      '#####################PPP|', // 29
+      '#SSSS...................#', // 30
+      '#SSSS...................#', // 31
+      '#SSSS...................#', // 32
+      '#SSSS...................#', // 33
+      '#SSSS...................#', // 34
+      '#########################', // 35
     ],
   },
   platforms: [
-    { position: [-10.0, 4.2, -4.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+    { position: [12, 3, 6.5], size: [1, 8, 10.0], role: 'gravity' },
+    { position: [11.48, 3.2, 3.0], size: [0.04, 6.2, 3], role: 'gravity' },
+    { position: [-10.0, 4.2, -8.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
   movers: [],
-  checkpoints: [{ position: [9.5, 0, 3.0], frame: FLOOR }],
+  checkpoints: [{ position: [9.5, 0, -1.0], frame: FLOOR }],
   rotators: [
-    { kind: 'arm', centre: [1.0, 0, 11.0], size: 3.4, speed: 1.3, phase: 0 },
-    { kind: 'arm', centre: [0.0, 0, 3.0], size: 3.4, speed: 1.3, phase: 0 },
-    { kind: 'disc', centre: [-2.0, 0, -11.0], size: 2.45, speed: 0.8, phase: 0 },
+    { kind: 'arm', centre: [1.0, 0, 14.0], size: 3.4, speed: 1.3, phase: 0 },
+    { kind: 'arm', centre: [0.0, 0, -1.0], size: 3.4, speed: 1.3, phase: 0 },
+    { kind: 'disc', centre: [-2.0, 0, -15.0], size: 2.45, speed: 0.8, phase: 0 },
   ],
-  goal: { position: [9.0, 0, -11.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  goal: { position: [9.0, 0, -15.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 55, two: 90 },
+  par: { three: 65, two: 105 },
   fallMargin: 6,
 };
 
@@ -383,18 +394,20 @@ export const CENTRIFUGE: LevelDef = {
   id: 'w9-centrifuge',
   name: 'Centrifuge',
   subtitle: 'Fast discs over long drops',
-  spawn: [-9.5, 0.6, 21.0],
+  spawn: [-9.5, 0.6, 24.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [8.5, 0, 16.5], max: [11.5, 2, 19.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [1, 0, 0] },
-    { min: [8.5, 2.4, 9.5], max: [11.5, 4.0, 12.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [8.5, 0, 19.5], max: [11.5, 2, 22.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [1, 0, 0] },
+    { min: [8.5, 2.4, 12.5], max: [11.5, 4.0, 15.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [-11.5, 0, 4.5], max: [-8.5, 2, 7.5], allow: ['left'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ◀ ONTO THE WALL' },
+    { min: [-11.6, 0.2, -2.5], max: [-10.0, 7.5, 0.5], allow: ['right'], whenDown: [-1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ▶ TO DROP IN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -23],
+    origin: [-12, -27],
     rows: [
       '#########################', // 0
       '#..................GGGGG#', // 1
@@ -421,45 +434,56 @@ export const CENTRIFUGE: LevelDef = {
       '#........     ..X.......#', // 22
       '#........     ..........#', // 23
       '#........     ..........#', // 24
-      '#...#####################', // 25
-      '#...#####################', // 26
-      '#...#####################', // 27
-      '#....................CC.#', // 28
-      '#....................CC.#', // 29
-      '#....................CC.#', // 30
-      '#....................CC.#', // 31
-      '#....................CC.#', // 32
-      '#####################PPP#', // 33
-      '#####################PPP#', // 34
-      '#####################PPP#', // 35
-      '#####################   #', // 36
-      '#####################   #', // 37
-      '#####################   #', // 38
-      '#####################   #', // 39
+      '|PPP#####################', // 25
+      '|PPP#####################', // 26
+      '|PPP#####################', // 27
+      '|   #####################', // 28
+      '|   #####################', // 29
+      '|   #####################', // 30
+      '|   #####################', // 31
+      '|PPP#####################', // 32
+      '|PPP#####################', // 33
+      '|PPP#####################', // 34
+      '#....................CC.#', // 35
+      '#....................CC.#', // 36
+      '#....................CC.#', // 37
+      '#....................CC.#', // 38
+      '#....................CC.#', // 39
       '#####################PPP#', // 40
       '#####################PPP#', // 41
       '#####################PPP#', // 42
-      '#SSSS......     ........#', // 43
-      '#SSSS......     ........#', // 44
-      '#SSSS......     ........#', // 45
-      '#########################', // 46
+      '#####################   #', // 43
+      '#####################   #', // 44
+      '#####################   #', // 45
+      '#####################   #', // 46
+      '#####################PPP#', // 47
+      '#####################PPP#', // 48
+      '#####################PPP#', // 49
+      '#SSSS......     ........#', // 50
+      '#SSSS......     ........#', // 51
+      '#SSSS......     ........#', // 52
+      '#########################', // 53
     ],
   },
   platforms: [
-    { position: [10.0, 4.2, 14.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+    { position: [10.0, 4.2, 17.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+    { position: [-12, 3, -0.5], size: [1, 8, 4.0], role: 'gravity' },
+    { position: [-12, 1.2000000000000002, 2.5], size: [1, 4.4, 2.0], role: 'gravity' },
+    { position: [-12, 3, 5.5], size: [1, 8, 4.0], role: 'gravity' },
+    { position: [-11.48, 3.2, -1.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [],
-  checkpoints: [{ position: [9.5, 0, 7.0], frame: FLOOR }],
+  checkpoints: [{ position: [9.5, 0, 10.0], frame: FLOOR }],
   rotators: [
-    { kind: 'disc', centre: [1.0, 0, 21.0], size: 2.45, speed: 0.9, phase: 0 },
-    { kind: 'arm', centre: [0.0, 0, 7.0], size: 3.4, speed: 1.4, phase: 0 },
-    { kind: 'disc', centre: [-1.0, 0, 0.0], size: 2.45, speed: 1.0, phase: 0 },
-    { kind: 'arm', centre: [-1.0, 0, -20.0], size: 3.4, speed: 1.4, phase: 0 },
+    { kind: 'disc', centre: [1.0, 0, 24.0], size: 2.45, speed: 0.9, phase: 0 },
+    { kind: 'arm', centre: [0.0, 0, 10.0], size: 3.4, speed: 1.4, phase: 0 },
+    { kind: 'disc', centre: [-1.0, 0, -4.0], size: 2.45, speed: 1.0, phase: 0 },
+    { kind: 'arm', centre: [-1.0, 0, -24.0], size: 3.4, speed: 1.4, phase: 0 },
   ],
-  goal: { position: [9.0, 0, -20.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  goal: { position: [9.0, 0, -24.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 85, two: 135 },
+  par: { three: 95, two: 150 },
   fallMargin: 6,
 };
 

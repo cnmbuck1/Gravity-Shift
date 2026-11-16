@@ -236,19 +236,21 @@ export const NARROW_WAYS: LevelDef = {
 export const LABYRINTH: LevelDef = {
   id: 'w1-labyrinth',
   name: 'Labyrinth',
-  subtitle: 'Two mazes and a flip onto the ceiling',
-  spawn: [-9.5, 0.6, 17.0],
+  subtitle: 'Along the wall, two mazes and a flip',
+  spawn: [-9.5, 0.6, 21.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [-11.5, 0, -0.5], max: [-8.5, 2, 2.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
-    { min: [-11.5, 2.4, -6.5], max: [-8.5, 4.0, -3.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [8.5, 0, 16.5], max: [11.5, 2, 19.5], allow: ['right'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ▶ ONTO THE WALL' },
+    { min: [10.0, 0.2, 10.5], max: [11.6, 7.5, 13.5], allow: ['left'], whenDown: [1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ◀ TO DROP IN' },
+    { min: [-11.5, 0, -3.5], max: [-8.5, 2, -0.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
+    { min: [-11.5, 2.4, -9.5], max: [-8.5, 4.0, -6.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -20],
+    origin: [-12, -23],
     rows: [
       '#########################', // 0
       '#GGGGG..................#', // 1
@@ -284,23 +286,32 @@ export const LABYRINTH: LevelDef = {
       '#   ........#.......#...#', // 31
       '#   ........#.......#...#', // 32
       '#   ........#.......#...#', // 33
-      '#####################...#', // 34
-      '#####################...#', // 35
-      '#SSSS...................#', // 36
-      '#SSSS...................#', // 37
-      '#SSSS...................#', // 38
-      '#########################', // 39
+      '#####################PPP|', // 34
+      '#####################PPP|', // 35
+      '#####################PPP|', // 36
+      '#####################   |', // 37
+      '#####################   |', // 38
+      '#####################   |', // 39
+      '#####################PPP|', // 40
+      '#####################PPP|', // 41
+      '#####################PPP|', // 42
+      '#SSSS...................#', // 43
+      '#SSSS...................#', // 44
+      '#SSSS...................#', // 45
+      '#########################', // 46
     ],
   },
   platforms: [
-    { position: [-10.0, 4.2, -2.0], size: [3.0, 0.4, 9], role: 'gravity', glass: true },
+    { position: [12, 3, 15.0], size: [1, 8, 9.0], role: 'gravity' },
+    { position: [11.48, 3.2, 12.0], size: [0.04, 6.2, 3], role: 'gravity' },
+    { position: [-10.0, 4.2, -5.0], size: [3.0, 0.4, 9], role: 'gravity', glass: true },
   ],
   movers: [],
-  checkpoints: [{ position: [-10.5, 0, -7], frame: FLOOR }],
-  goal: { position: [-9.0, 0, -18.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  checkpoints: [{ position: [-10.5, 0, -10], frame: FLOOR }],
+  goal: { position: [-9.0, 0, -21.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 70, two: 110 },
+  par: { three: 80, two: 125 },
   fallMargin: 6,
 };
 
@@ -308,18 +319,20 @@ export const LAUNCH_FINALE: LevelDef = {
   id: 'w1-launch-finale',
   name: 'Launch Deck',
   subtitle: 'World 1 finale: everything so far',
-  spawn: [-9.5, 0.6, 27.0],
+  spawn: [-9.5, 0.6, 30.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [8.5, 0, 2.5], max: [11.5, 2, 5.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [1, 0, 0] },
-    { min: [8.5, 2.4, -4.5], max: [11.5, 4.0, -1.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [8.5, 0, 25.5], max: [11.5, 2, 28.5], allow: ['right'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ▶ ONTO THE WALL' },
+    { min: [10.0, 0.2, 19.5], max: [11.6, 7.5, 22.5], allow: ['left'], whenDown: [1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ◀ TO DROP IN' },
+    { min: [8.5, 0, -1.5], max: [11.5, 2, 1.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [1, 0, 0] },
+    { min: [8.5, 2.4, -8.5], max: [11.5, 4.0, -5.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -29],
+    origin: [-12, -33],
     rows: [
       '#########################', // 0
       '##########  ####  #######', // 1
@@ -374,22 +387,31 @@ export const LAUNCH_FINALE: LevelDef = {
       '#...................#...#', // 50
       '#...................#...#', // 51
       '#...................#CCC#', // 52
-      '#####################...#', // 53
-      '##########  ##  #####...#', // 54
-      '#SSSS.....  ..  ........#', // 55
-      '#SSSS...................#', // 56
-      '#SSSS...................#', // 57
-      '#########################', // 58
+      '#####################PPP|', // 53
+      '#####################PPP|', // 54
+      '#####################PPP|', // 55
+      '#####################   |', // 56
+      '#####################   |', // 57
+      '#####################   |', // 58
+      '#####################PPP|', // 59
+      '#####################PPP|', // 60
+      '##########  ##  #####PPP|', // 61
+      '#SSSS.....  ..  ........#', // 62
+      '#SSSS...................#', // 63
+      '#SSSS...................#', // 64
+      '#########################', // 65
     ],
   },
   platforms: [
-    { position: [10.0, 4.2, 0.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+    { position: [12, 3, 24.0], size: [1, 8, 9.0], role: 'gravity' },
+    { position: [11.48, 3.2, 21.0], size: [0.04, 6.2, 3], role: 'gravity' },
+    { position: [10.0, 4.2, -3.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
   movers: [],
-  checkpoints: [{ position: [10.0, 0, 23], frame: FLOOR }, { position: [-9.5, 0, 7.0], frame: FLOOR }, { position: [9.5, 0, -6.0], frame: FLOOR }],
-  goal: { position: [-9.0, 0, -26.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  checkpoints: [{ position: [10.0, 0, 19], frame: FLOOR }, { position: [-9.5, 0, 3.0], frame: FLOOR }, { position: [9.5, 0, -10.0], frame: FLOOR }],
+  goal: { position: [-9.0, 0, -30.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 105, two: 165 },
+  par: { three: 115, two: 180 },
   fallMargin: 6,
 };

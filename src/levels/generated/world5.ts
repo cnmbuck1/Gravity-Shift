@@ -330,18 +330,20 @@ export const FAST_LANE: LevelDef = {
   id: 'w5-fast-lane',
   name: 'Fast Lane',
   subtitle: 'Boost, then brake on sticky ground',
-  spawn: [-9.5, 0.6, 15.0],
+  spawn: [-9.5, 0.6, 18.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [-11.5, 0, 3.5], max: [-8.5, 2, 6.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
-    { min: [-11.5, 2.4, -3.5], max: [-8.5, 4.0, -0.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [8.5, 0, 13.5], max: [11.5, 2, 16.5], allow: ['right'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ▶ ONTO THE WALL' },
+    { min: [10.0, 0.2, 6.5], max: [11.6, 7.5, 9.5], allow: ['left'], whenDown: [1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ◀ TO DROP IN' },
+    { min: [-11.5, 0, 0.5], max: [-8.5, 2, 3.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [-1, 0, 0] },
+    { min: [-11.5, 2.4, -6.5], max: [-8.5, 4.0, -3.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -17],
+    origin: [-12, -20],
     rows: [
       '#########################', // 0
       '#########  ##############', // 1
@@ -370,32 +372,40 @@ export const FAST_LANE: LevelDef = {
       '#....................CC.#', // 24
       '#....................CC.#', // 25
       '#.......  ...........CC.#', // 26
-      '########  ###########...#', // 27
-      '####################  ..#', // 28
-      '####################  ..#', // 29
-      '#####################...#', // 30
-      '#SSSS...................#', // 31
-      '#SSSS...................#', // 32
-      '#SSSS...................#', // 33
-      '#########################', // 34
+      '########  ###########PPP|', // 27
+      '#####################PPP|', // 28
+      '#####################PPP|', // 29
+      '#####################   |', // 30
+      '#####################   |', // 31
+      '#####################   |', // 32
+      '#####################   |', // 33
+      '#####################PPP|', // 34
+      '#####################PPP|', // 35
+      '#####################PPP|', // 36
+      '#SSSS...................#', // 37
+      '#SSSS...................#', // 38
+      '#SSSS...................#', // 39
+      '#########################', // 40
     ],
   },
   platforms: [
-    { position: [-10.0, 4.2, 1.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+    { position: [12, 3, 11.5], size: [1, 8, 10.0], role: 'gravity' },
+    { position: [11.48, 3.2, 8.0], size: [0.04, 6.2, 3], role: 'gravity' },
+    { position: [-10.0, 4.2, -1.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
   movers: [],
-  checkpoints: [{ position: [9.5, 0, 8.0], frame: FLOOR }],
+  checkpoints: [{ position: [9.5, 0, 5.0], frame: FLOOR }],
   pads: [
-    { kind: 'boost', min: [-2.5, 13.5], max: [0.5, 16.5], y: 0, dir: [1, 0] },
-    { kind: 'sticky', min: [1.5, 13.5], max: [5.5, 16.5], y: 0, dir: [1, 0] },
-    { kind: 'conveyor', min: [-0.5, 6.5], max: [4.5, 9.5], y: 0, dir: [1, 0] },
-    { kind: 'ice', min: [-11.5, -10.5], max: [11.5, -3.5], y: 0 },
-    { kind: 'boost', min: [0.5, -15.5], max: [3.5, -12.5], y: 0, dir: [-1, 0] },
+    { kind: 'boost', min: [-2.5, 16.5], max: [0.5, 19.5], y: 0, dir: [1, 0] },
+    { kind: 'sticky', min: [1.5, 16.5], max: [5.5, 19.5], y: 0, dir: [1, 0] },
+    { kind: 'conveyor', min: [-0.5, 3.5], max: [4.5, 6.5], y: 0, dir: [1, 0] },
+    { kind: 'ice', min: [-11.5, -13.5], max: [11.5, -6.5], y: 0 },
+    { kind: 'boost', min: [0.5, -18.5], max: [3.5, -15.5], y: 0, dir: [-1, 0] },
   ],
-  goal: { position: [-9.0, 0, -14.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  goal: { position: [-9.0, 0, -17.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 65, two: 100 },
+  par: { three: 75, two: 115 },
   fallMargin: 6,
 };
 
@@ -468,18 +478,20 @@ export const FLUX_RAILS: LevelDef = {
   id: 'w5-flux-rails',
   name: 'Flux Rails',
   subtitle: 'World 5 finale',
-  spawn: [-9.5, 0.6, 25.0],
+  spawn: [-9.5, 0.6, 28.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [8.5, 0, -0.5], max: [11.5, 2, 2.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [1, 0, 0] },
-    { min: [8.5, 2.4, -7.5], max: [11.5, 4.0, -4.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
+    { min: [-11.5, 0, 16.5], max: [-8.5, 2, 19.5], allow: ['left'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ◀ ONTO THE WALL' },
+    { min: [-11.6, 0.2, 9.5], max: [-10.0, 7.5, 12.5], allow: ['right'], whenDown: [-1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ▶ TO DROP IN' },
+    { min: [8.5, 0, -4.5], max: [11.5, 2, -1.5], allow: ['flip'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ ONTO THE CEILING', lean: [1, 0, 0] },
+    { min: [8.5, 2.4, -11.5], max: [11.5, 4.0, -8.5], allow: ['flip'], whenDown: [0, 1, 0], hint: 'GRAVITY ZONE · FLIP ⇅ TO DROP DOWN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -27],
+    origin: [-12, -31],
     rows: [
       '#########################', // 0
       '#########  ##  ##########', // 1
@@ -522,40 +534,51 @@ export const FLUX_RAILS: LevelDef = {
       '#...#...................#', // 38
       '#...#...................#', // 39
       '#...#...................#', // 40
-      '#...#####################', // 41
-      '#...#####################', // 42
-      '#...#####################', // 43
-      '#....................CC.#', // 44
-      '#....................CC.#', // 45
-      '#......  ............CC.#', // 46
-      '#######  ############...#', // 47
-      '####################  ..#', // 48
-      '####################  ..#', // 49
-      '##############  #####...#', // 50
-      '#SSSS.........  ........#', // 51
-      '#SSSS...................#', // 52
-      '#SSSS...................#', // 53
-      '#########################', // 54
+      '|PPP#####################', // 41
+      '|PPP#####################', // 42
+      '|PPP#####################', // 43
+      '|   #####################', // 44
+      '|   #####################', // 45
+      '|   #####################', // 46
+      '|   #####################', // 47
+      '|PPP#####################', // 48
+      '|PPP#####################', // 49
+      '|PPP#####################', // 50
+      '#....................CC.#', // 51
+      '#....................CC.#', // 52
+      '#......  ............CC.#', // 53
+      '#######  ############...#', // 54
+      '####################  ..#', // 55
+      '####################  ..#', // 56
+      '##############  #####...#', // 57
+      '#SSSS.........  ........#', // 58
+      '#SSSS...................#', // 59
+      '#SSSS...................#', // 60
+      '#########################', // 61
     ],
   },
   platforms: [
-    { position: [10.0, 4.2, -2.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
+    { position: [-12, 3, 11.5], size: [1, 8, 4.0], role: 'gravity' },
+    { position: [-12, 4.8, 14.5], size: [1, 4.4, 2.0], role: 'gravity' },
+    { position: [-12, 3, 17.5], size: [1, 8, 4.0], role: 'gravity' },
+    { position: [-11.48, 3.2, 11.0], size: [0.04, 6.2, 3], role: 'gravity' },
+    { position: [10.0, 4.2, -6.5], size: [3.0, 0.4, 10], role: 'gravity', glass: true },
   ],
   movers: [],
-  checkpoints: [{ position: [9.5, 0, 18.0], frame: FLOOR }, { position: [9.5, 0, -9.0], frame: FLOOR }],
+  checkpoints: [{ position: [9.5, 0, 21.0], frame: FLOOR }, { position: [9.5, 0, -13.0], frame: FLOOR }],
   pads: [
-    { kind: 'boost', min: [-2.5, 23.5], max: [0.5, 26.5], y: 0, dir: [1, 0] },
-    { kind: 'ice', min: [1.5, 24.5], max: [5.5, 26.5], y: 0 },
-    { kind: 'conveyor', min: [0.5, 16.5], max: [4.5, 19.5], y: 0, dir: [1, 0] },
-    { kind: 'conveyor', min: [-5.5, 16.5], max: [-1.5, 18.5], y: 0, dir: [0, 1] },
-    { kind: 'ice', min: [-11.5, 2.5], max: [11.5, 13.5], y: 0 },
-    { kind: 'sticky', min: [1.5, -10.5], max: [4.5, -7.5], y: 0, dir: [-1, 0] },
-    { kind: 'boost', min: [-5.5, -10.5], max: [-2.5, -7.5], y: 0, dir: [-1, 0] },
-    { kind: 'ice', min: [-3.5, -24.5], max: [3.5, -22.5], y: 0 },
+    { kind: 'boost', min: [-2.5, 26.5], max: [0.5, 29.5], y: 0, dir: [1, 0] },
+    { kind: 'ice', min: [1.5, 27.5], max: [5.5, 29.5], y: 0 },
+    { kind: 'conveyor', min: [0.5, 19.5], max: [4.5, 22.5], y: 0, dir: [1, 0] },
+    { kind: 'conveyor', min: [-5.5, 19.5], max: [-1.5, 21.5], y: 0, dir: [0, 1] },
+    { kind: 'ice', min: [-11.5, -1.5], max: [11.5, 9.5], y: 0 },
+    { kind: 'sticky', min: [1.5, -14.5], max: [4.5, -11.5], y: 0, dir: [-1, 0] },
+    { kind: 'boost', min: [-5.5, -14.5], max: [-2.5, -11.5], y: 0, dir: [-1, 0] },
+    { kind: 'ice', min: [-3.5, -28.5], max: [3.5, -26.5], y: 0 },
   ],
-  goal: { position: [-9.0, 0, -24.0], up: [0, 1, 0], facing: [0, 0, 1] },
+  goal: { position: [-9.0, 0, -28.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 100, two: 160 },
+  par: { three: 110, two: 175 },
   fallMargin: 6,
 };
