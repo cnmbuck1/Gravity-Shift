@@ -8,7 +8,7 @@ const BG_BOTTOM = '#05070d';
 
 /** The icon concept used for the app (see icons.ts; render.mjs --icon overrides it). */
 const params = new URLSearchParams(location.search);
-const chosen = (params.get('icon') ?? 'grid') as IconName;
+const chosen = (params.get('icon') ?? 'maze') as IconName;
 
 function icon(size: number, name: IconName = chosen) {
   const c = document.createElement('canvas'); c.width = c.height = size;

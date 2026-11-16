@@ -121,8 +121,8 @@ const tilt: Draw = (g, s) => {
 export const ICONS = { grid, maze, shift, tilt } as const;
 export type IconName = keyof typeof ICONS;
 export const ICON_LABELS: Record<IconName, string> = {
-  grid: 'A  Orb over the grid',
-  maze: 'B  Neon maze',
+  grid: 'A  Orb over the grid (first TestFlight build)',
+  maze: 'B  Neon maze (chosen 2026-11-16)',
   shift: 'C  Gravity shift',
   tilt: 'D  Tilt and roll',
 };
