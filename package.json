@@ -11,7 +11,8 @@
     "preview": "vite preview --host",
     "test": "vitest run",
     "ios:sync": "npm run build && npx cap sync ios",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "ios:assets": "node tools/ios-assets/render.mjs"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.3.0",
