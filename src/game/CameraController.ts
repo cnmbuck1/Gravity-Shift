@@ -22,7 +22,9 @@ const CEILING_DIST = 0.85;
 const DEFAULT_CAMERA: CameraDef = { pitchDeg: 40, distance: 10.5, lookAhead: 2.5 };
 const SHIFT_DURATION = 0.75;
 /** How far (m) the camera sinks after a falling ball before letting it vanish below. */
-const FALL_FOLLOW = 5;
+export const FALL_FOLLOW = 5;
+/** On multi-level boards the camera follows a drop further, down to the floor below (see LevelDef.tiers). */
+export const FALL_FOLLOW_TIERS = 8;
 
 /**
  * Elevated follow camera locked to the gravity frame (no free rotation). Screen-up is
@@ -44,6 +46,8 @@ export class CameraController {
   private cfg: CameraDef = DEFAULT_CAMERA;
   private ray: RAPIER.Ray;
   frozen = false;
+  /** Metres the camera follows a fall below the last surface touched. */
+  fallFollow = FALL_FOLLOW;
   /** Ball position the last time it touched a surface; falls are followed relative to it. */
   private groundRef = new THREE.Vector3();
   /** Radians the view is rolled toward world up while on a wall (smoothed), see WALL_LIFT. */
@@ -156,7 +160,7 @@ export class CameraController {
       const t = target.clone();
       const drop = t.clone().sub(this.groundRef).dot(frame.down);
       const falling = drop > 0.6 && this.t >= 1;
-      if (drop > FALL_FOLLOW) t.addScaledVector(frame.down, FALL_FOLLOW - drop);
+      if (drop > this.fallFollow) t.addScaledVector(frame.down, this.fallFollow - drop);
       // Follow fast, but slower while rotating or falling so the move reads as one smooth motion.
       const k = this.t < 1 ? 4 : falling ? 3 : 6;
       this.focus.lerp(t, 1 - Math.exp(-dt * k));

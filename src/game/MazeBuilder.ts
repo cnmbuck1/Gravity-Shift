@@ -8,8 +8,11 @@ import { COLORS, hazardStripeTexture, mazeFloorMaterial, mazeWallMaterial, trimM
 
 const FLOOR_THICKNESS = 0.6;
 const TRIM = 0.06;
-const FLOOR_CHARS = '.SCGPX';
+const FLOOR_CHARS = '.SCGPXL';
+/** Hole cells: red-edged chasms (and bridge gaps). Drop holes ('D') get their own teal edge. */
 const NO_FLOOR = ' B';
+/** Colour of drop holes, landing pads and the light shaft under a drop (safe: it leads somewhere). */
+export const DROP_COLOR = '#3dffc8';
 
 export interface MazeBuildResult {
   objects: THREE.Object3D[];
@@ -20,6 +23,13 @@ export interface MazeBuildResult {
   hazardMaterial: THREE.MeshStandardMaterial;
   edgeMaterial: THREE.MeshStandardMaterial;
   bounds: THREE.Box3;
+  /** Handles of every collider this maze made (multi-level boards let the camera see through a floor above the ball). */
+  colliders: number[];
+}
+
+export interface MazeBuildOptions {
+  /** Metres to the floor below; drop holes get a faint light shaft this deep (multi-level boards). */
+  dropDepth?: number;
 }
 
 /**
@@ -27,7 +37,7 @@ export interface MazeBuildResult {
  * boxes of a kind are merged into one mesh, so a whole labyrinth is a handful of draw calls
  * and a few dozen colliders.
  */
-export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.RigidBody, theme?: WorldTheme): MazeBuildResult {
+export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.RigidBody, theme?: WorldTheme, opts: MazeBuildOptions = {}): MazeBuildResult {
   const { cell, floorY, wallHeight, rows } = def;
   const at = (r: number, c: number): string => rows[r]?.[c] ?? ' ';
   // A wall face is visible (and gets a glowing border) where it borders a pathway or a hole.
@@ -52,19 +62,23 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
   const redTrims: THREE.BufferGeometry[] = [];
   const purpleTiles: THREE.BufferGeometry[] = [];
   const baseGlows: THREE.BufferGeometry[] = [];
-  const padTiles: Record<string, THREE.BufferGeometry[]> = { S: [], C: [], G: [] };
+  const padTiles: Record<string, THREE.BufferGeometry[]> = { S: [], C: [], G: [], L: [] };
+  const dropTrims: THREE.BufferGeometry[] = [];
+  const dropShafts: THREE.BufferGeometry[] = [];
+  const colliders: number[] = [];
   const hazardTiles: THREE.BufferGeometry[] = [];
   const hazards: THREE.Box3[] = [];
   const bounds = new THREE.Box3();
 
   const addCollider = (centre: THREE.Vector3, size: THREE.Vector3) => {
-    physics.world.createCollider(
+    const col = physics.world.createCollider(
       R.ColliderDesc.cuboid(size.x / 2, size.y / 2, size.z / 2)
         .setTranslation(centre.x, centre.y, centre.z)
         .setFriction(0.9)
         .setRestitution(0.2),
       body,
     );
+    colliders.push(col.handle);
   };
 
   const box = (centre: THREE.Vector3, size: THREE.Vector3) => {
@@ -130,6 +144,11 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
         if (open(r, c2 + 1)) cyanTrims.push(box(new THREE.Vector3(x + h, y, z), new THREE.Vector3(TRIM, TRIM, cell + TRIM)));
         continue;
       }
+      if (ch === 'D' && opts.dropDepth) {
+        // A faint column of light under each drop cell shows where the ball comes down.
+        const depth = opts.dropDepth - 0.4;
+        dropShafts.push(box(new THREE.Vector3(x, floorY - FLOOR_THICKNESS - depth / 2, z), new THREE.Vector3(cell * 0.98, depth, cell * 0.98)));
+      }
       if (!FLOOR_CHARS.includes(ch)) continue;
       // Red warning edge wherever the floor drops into a hole.
       const h = cell / 2;
@@ -138,6 +157,12 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
       if (NO_FLOOR.includes(at(r + 1, c2))) redTrims.push(box(new THREE.Vector3(x, y, z + h - TRIM / 2), new THREE.Vector3(cell, TRIM, TRIM)));
       if (NO_FLOOR.includes(at(r, c2 - 1))) redTrims.push(box(new THREE.Vector3(x - h + TRIM / 2, y, z), new THREE.Vector3(TRIM, TRIM, cell)));
       if (NO_FLOOR.includes(at(r, c2 + 1))) redTrims.push(box(new THREE.Vector3(x + h - TRIM / 2, y, z), new THREE.Vector3(TRIM, TRIM, cell)));
+      // Teal edge where the floor opens into a drop hole: safe, it leads to the floor below.
+      const D = TRIM * 1.6;
+      if (at(r - 1, c2) === 'D') dropTrims.push(box(new THREE.Vector3(x, y, z - h + D / 2), new THREE.Vector3(cell, D, D)));
+      if (at(r + 1, c2) === 'D') dropTrims.push(box(new THREE.Vector3(x, y, z + h - D / 2), new THREE.Vector3(cell, D, D)));
+      if (at(r, c2 - 1) === 'D') dropTrims.push(box(new THREE.Vector3(x - h + D / 2, y, z), new THREE.Vector3(D, D, cell)));
+      if (at(r, c2 + 1) === 'D') dropTrims.push(box(new THREE.Vector3(x + h - D / 2, y, z), new THREE.Vector3(D, D, cell)));
 
       if (ch in padTiles) {
         const tile = new THREE.PlaneGeometry(cell * 0.96, cell * 0.96);
@@ -167,6 +192,7 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
     const m = new THREE.Mesh(g, material);
     m.receiveShadow = true;
     m.castShadow = Boolean(opts.shadow);
+    m.userData.castShadow = m.castShadow;
     objects.push(m);
     disposables.push(g);
   };
@@ -191,8 +217,11 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
     S: new THREE.MeshStandardMaterial({ color: '#0d3a4a', emissive: COLORS.safe, emissiveIntensity: 0.25, transparent: true, opacity: 0.5 }),
     C: new THREE.MeshStandardMaterial({ color: '#0d4a3a', emissive: '#3dffc8', emissiveIntensity: 0.45, transparent: true, opacity: 0.55 }),
     G: new THREE.MeshStandardMaterial({ color: '#0d3a4a', emissive: '#47f0ff', emissiveIntensity: 0.6, transparent: true, opacity: 0.55 }),
+    L: new THREE.MeshStandardMaterial({ color: '#0d4a3a', emissive: DROP_COLOR, emissiveIntensity: 0.55, transparent: true, opacity: 0.5 }),
   };
-  disposables.push(floorMat, wallMat, hazardMat, purpleMat, cyanMat, redMat, baseMat, stripes, ...Object.values(padMats));
+  const dropMat = new THREE.MeshStandardMaterial({ color: DROP_COLOR, emissive: DROP_COLOR, emissiveIntensity: 2.2 });
+  const shaftMat = new THREE.MeshBasicMaterial({ color: DROP_COLOR, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  disposables.push(floorMat, wallMat, hazardMat, purpleMat, cyanMat, redMat, baseMat, stripes, dropMat, shaftMat, ...Object.values(padMats));
 
   addMerged(floorBoxes, floorMat, { worldUV: 0.25 });
   addMerged(wallBoxes, wallMat, { shadow: true, worldUV: 0.5 });
@@ -202,8 +231,10 @@ export function buildMaze(def: MazeDef, physics: PhysicsManager, body: RAPIER.Ri
   addMerged(hazardTiles, hazardMat);
   addMerged(baseGlows, baseMat);
   for (const k of Object.keys(padTiles)) addMerged(padTiles[k], padMats[k]);
+  addMerged(dropTrims, dropMat);
+  addMerged(dropShafts, shaftMat);
 
-  return { objects, disposables, hazards, hazardMaterial: hazardMat, edgeMaterial: redMat, bounds };
+  return { objects, disposables, hazards, hazardMaterial: hazardMat, edgeMaterial: redMat, bounds, colliders };
 }
 
 /** Box-projected UVs in world space, so merged geometry tiles its texture seamlessly. */
