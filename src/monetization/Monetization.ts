@@ -18,6 +18,14 @@ export const REMOVE_ADS_ID = 'com.cnmbuckstudios.gravitor.removeads';
  */
 const AD_UNIT_ID = '';
 const TEST_AD_UNIT_ID = 'ca-app-pub-3940256099942544/4411468910';
+/** AdMob rewarded unit for "watch an ad to skip this level". Empty: Google's public iOS test unit. */
+const REWARDED_UNIT_ID = '';
+const TEST_REWARDED_UNIT_ID = 'ca-app-pub-3940256099942544/1712485313';
+/** How long to wait for a rewarded ad to load when the player asks to skip before giving the skip for free. */
+const REWARDED_WAIT_MS = 4000;
+
+/** How a skip request ended: watched the ad, skipped without one (no ads here or none to show), or closed the ad early. */
+export type SkipResult = 'rewarded' | 'free' | 'cancelled';
 
 /** Ad rules agreed in the ads plan. */
 const EVERY_N_LEVELS = 3;
@@ -32,6 +40,7 @@ export class Monetization {
   private admob: AdMobApi | null = null;
   private store: PurchasesApi | null = null;
   private adReady = false;
+  private rewardedReady = false;
   private sessionStart = Date.now();
   private lastAd = 0;
   private finishedSinceAd = 0;
@@ -66,6 +75,7 @@ export class Monetization {
       this.admob = (await import('@capacitor-community/admob')).AdMob;
       await this.admob.initialize({ initializeForTesting: !AD_UNIT_ID });
       void this.prepare();
+      void this.prepareRewarded();
     } catch (e) {
       console.warn('Ads unavailable', e);
       this.lastError = `Ads: ${errorText(e)}`;
@@ -81,6 +91,42 @@ export class Monetization {
     } catch (e) {
       this.adReady = false;
       this.lastError = `Ad load: ${errorText(e)}`;
+    }
+  }
+
+  private async prepareRewarded(): Promise<void> {
+    if (!this.admob || this.rewardedReady || this.adFree) return;
+    try {
+      await this.admob.prepareRewardVideoAd({ adId: REWARDED_UNIT_ID || TEST_REWARDED_UNIT_ID, isTesting: !REWARDED_UNIT_ID, npa: true });
+      this.rewardedReady = true;
+    } catch (e) {
+      this.rewardedReady = false;
+      this.lastError = `Rewarded load: ${errorText(e)}`;
+    }
+  }
+
+  /**
+   * "Watch an ad to skip this level". The player never pays for being stuck: with Remove Ads,
+   * on the web build, or when no ad can be loaded in a few seconds, the skip is simply given.
+   * Closing the ad before the reward cancels the skip.
+   */
+  async rewardedSkip(): Promise<SkipResult> {
+    if (!this.native || this.adFree || !this.admob) return 'free';
+    if (!this.rewardedReady) {
+      await Promise.race([this.prepareRewarded(), new Promise((r) => setTimeout(r, REWARDED_WAIT_MS))]);
+      if (!this.rewardedReady) return 'free';
+    }
+    this.rewardedReady = false;
+    try {
+      const reward = await this.admob.showRewardVideoAd();
+      // A rewarded ad also counts as this break's ad, so no interstitial follows right after.
+      this.lastAd = Date.now();
+      this.finishedSinceAd = 0;
+      return reward ? 'rewarded' : 'cancelled';
+    } catch {
+      return 'cancelled';
+    } finally {
+      void this.prepareRewarded();
     }
   }
 

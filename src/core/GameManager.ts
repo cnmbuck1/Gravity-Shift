@@ -173,6 +173,15 @@ export class GameManager {
     if (this.state === 'preview') this.camera.skipFlyover();
   }
 
+  /** Levels skipped with "Skip level": they unlock the next level but stay unplayed (no stars, no time). */
+  wasSkipped(levelId: string): boolean {
+    return this.save.load(`skipped:${levelId}`, { skipped: false }).skipped;
+  }
+
+  markSkipped(levelId: string): void {
+    this.save.save(`skipped:${levelId}`, { skipped: true });
+  }
+
   recordFor(levelId: string): LevelRecord {
     return this.save.load<LevelRecord>(`record:${levelId}`, { bestTime: null, bestStars: 0 });
   }
