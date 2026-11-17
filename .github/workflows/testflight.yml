@@ -21,6 +21,10 @@ on:
           - macos-26
           - macos-15
           - macos-15-intel
+      app_store:
+        description: App Store build (hides the testing options such as Unlock all levels and Physics). Untick for a tester build.
+        type: boolean
+        default: true
 concurrency:
   group: testflight
   cancel-in-progress: false
@@ -50,6 +54,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Build the game and copy it into the Xcode project
+        env:
+          GRAVITOR_RELEASE: ${{ inputs.app_store == false && '0' || '1' }}
         run: npm run ios:sync
       - name: Write the App Store Connect API key
         env:

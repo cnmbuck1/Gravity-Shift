@@ -68,7 +68,10 @@ export class SettingsManager {
     this.settings = { ...DEFAULT_SETTINGS, ...save.load('settings', { ...DEFAULT_SETTINGS }) };
     // While the worlds are being playtested, open every level once on each device, even if an
     // older save had the switch off. Turning it off afterwards still sticks.
-    if (!save.load('unlockAllTesting', false)) {
+    if (__RELEASE__) {
+      // App Store build: no testing switches, whatever a TestFlight build saved before.
+      Object.assign(this.settings, { unlockAll: false, showDebug: false, physics: 'refined' });
+    } else if (!save.load('unlockAllTesting', false)) {
       this.settings.unlockAll = true;
       this.save.save('settings', this.settings);
       this.save.save('unlockAllTesting', true);

@@ -18,7 +18,8 @@ async function boot(): Promise<void> {
   const game = await GameManager.create(canvas, ui, settings, save);
 
   // Multi-level boards are prototypes for the next batch of levels; they sit with the test courses for now.
-  const extras = [...MULTI_LEVEL_PROTOTYPES, SHIFT_PROOF, TEST_DECK];
+  // App Store builds ship the 100-level campaign only.
+  const extras = __RELEASE__ ? [] : [...MULTI_LEVEL_PROTOTYPES, SHIFT_PROOF, TEST_DECK];
   // The menu shows the final maze idling in the background.
   game.loadLevel(WORLDS[2].levels[9] ?? ORBITAL_LABYRINTH);
   game.toMenu();
