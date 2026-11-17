@@ -85,9 +85,52 @@ export class LevelManager {
       this.goal = new GoalPortal(def.goal.position, def.goal.up, def.goal.facing);
       this.group.add(this.goal.object);
     }
+    this.collectGhost();
+  }
+
+  /** Floor-level materials (floor, maze walls, underside) and how they looked, for setGhost. */
+  private ghostMats: { m: THREE.Material; opacity: number; transparent: boolean; depthWrite: boolean }[] = [];
+  private ghost = 0;
+
+  private collectGhost(): void {
+    this.ghostMats = [];
+    this.ghost = 0;
+    const seen = new Set<THREE.Material>();
+    const box = new THREE.Box3();
+    this.group.updateMatrixWorld(true);
+    this.group.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || o === this.goal?.object) return;
+      box.setFromObject(mesh);
+      if (box.max.y > 1.6) return;
+      for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        if (seen.has(m)) continue;
+        seen.add(m);
+        this.ghostMats.push({ m, opacity: m.opacity, transparent: m.transparent, depthWrite: m.depthWrite });
+      }
+    });
+  }
+
+  /**
+   * Fades the floor layer (0 = solid, 1 = mostly see-through). While the sphere rolls on a glass
+   * ceiling the camera looks up from below the course, so the floor would otherwise hide it.
+   */
+  setGhost(k: number): void {
+    const on = k > 0.01;
+    if (!on && this.ghost === 0) return;
+    this.ghost = on ? k : 0;
+    for (const g of this.ghostMats) {
+      const wasTransparent = g.m.transparent;
+      g.m.transparent = on || g.transparent;
+      g.m.opacity = on ? g.opacity * (1 - 0.82 * k) : g.opacity;
+      g.m.depthWrite = on ? false : g.depthWrite;
+      if (wasTransparent !== g.m.transparent) g.m.needsUpdate = true;
+    }
   }
 
   unload(): void {
+    this.setGhost(0);
+    this.ghostMats = [];
     if (this.body) this.physics.world.removeRigidBody(this.body);
     for (const m of this.movers) this.physics.world.removeRigidBody(m.body);
     this.movers = [];

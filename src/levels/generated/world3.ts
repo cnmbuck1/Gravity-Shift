@@ -10,41 +10,45 @@ const FLOOR = { down: [0, -1, 0] as [number, number, number], forward: [0, 0, -1
 export const SIDE_STEP: LevelDef = {
   id: 'w3-side-step',
   name: 'Side Step',
-  subtitle: 'Shift onto the wall and back',
-  spawn: [-9.5, 0.6, 6.0],
+  subtitle: 'A notch in the wall: steer around it',
+  spawn: [-9.5, 0.6, 7.0],
   frame: FLOOR,
   allowShifts: true,
   shiftZones: [
-    { min: [8.5, 0, 1.5], max: [11.5, 2, 4.5], allow: ['right'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ▶ ONTO THE WALL' },
+    { min: [8.5, 0, 2.5], max: [11.5, 2, 5.5], allow: ['right'], whenDown: [0, -1, 0], hint: 'GRAVITY ZONE · SHIFT ▶ ONTO THE WALL' },
     { min: [10.0, 0.2, -4.5], max: [11.6, 7.5, -1.5], allow: ['left'], whenDown: [1, 0, 0], hint: 'GRAVITY ZONE · SHIFT ◀ TO DROP IN' },
   ],
   maze: {
     cell: 1,
     wallHeight: 0.9,
     floorY: 0,
-    origin: [-12, -8],
+    origin: [-12, -9],
     rows: [
       '#########################', // 0
-      '#GGGGG..................#', // 1
-      '#GGGGG..................#', // 2
+      '############  ###########', // 1
+      '#GGGGG......  ..........#', // 2
       '#GGGGG..................#', // 3
-      '#####################PPP|', // 4
+      '#GGGGG..................#', // 4
       '#####################PPP|', // 5
       '#####################PPP|', // 6
-      '#####################   |', // 7
+      '#####################PPP|', // 7
       '#####################   |', // 8
       '#####################   |', // 9
-      '#####################PPP|', // 10
-      '#####################PPP|', // 11
+      '#####################   |', // 10
+      '#####################   |', // 11
       '#####################PPP|', // 12
-      '#SSSS...................#', // 13
-      '#SSSS...................#', // 14
-      '#SSSS...................#', // 15
-      '#########################', // 16
+      '#####################PPP|', // 13
+      '############  #######PPP|', // 14
+      '#SSSS.......  ..........#', // 15
+      '#SSSS...................#', // 16
+      '#SSSS...................#', // 17
+      '#########################', // 18
     ],
   },
   platforms: [
-    { position: [12, 3, 0.0], size: [1, 8, 9.0], role: 'gravity' },
+    { position: [12, 3, -2.5], size: [1, 8, 4.0], role: 'gravity' },
+    { position: [12, 4.8, 0.5], size: [1, 4.4, 2.0], role: 'gravity' },
+    { position: [12, 3, 3.5], size: [1, 8, 4.0], role: 'gravity' },
     { position: [11.48, 3.2, -3.0], size: [0.04, 6.2, 3], role: 'gravity' },
   ],
   movers: [],
