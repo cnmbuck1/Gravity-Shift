@@ -195,12 +195,12 @@ export class UIManager {
             <button class="btn btn-small" data-action="test-ad" data-bind-show="store-debug">SHOW A TEST AD NOW</button>
             <div class="note" data-bind="store-debug" data-bind-show="store-debug"></div>
           </div>
-          <div class="row">Physics
+          <div class="row" data-testing>Physics
             <span class="seg" data-setting="physics"><button data-value="refined">REFINED</button><button data-value="classic">CLASSIC</button></span>
           </div>
-          <label class="row">Debug readout <input type="checkbox" data-setting="showDebug" /></label>
-          <label class="row">Unlock all levels (testing) <input type="checkbox" data-setting="unlockAll" /></label>
-          <div class="note">Physics: REFINED is the new tuning; CLASSIC is the previous build, kept for comparison. Music arrives later; its toggle is saved now.</div>
+          <label class="row" data-testing>Debug readout <input type="checkbox" data-setting="showDebug" /></label>
+          <label class="row" data-testing>Unlock all levels (testing) <input type="checkbox" data-setting="unlockAll" /></label>
+          <div class="note" data-testing>Physics: REFINED is the new tuning; CLASSIC is the previous build, kept for comparison. Music arrives later; its toggle is saved now.</div>
           <button class="btn primary" data-action="close-settings">DONE</button>
         </div>
       </section>
@@ -247,6 +247,8 @@ export class UIManager {
       else if (e.key === 'c') this.action('calibrate');
     });
 
+    // App Store build: drop the testing-only settings rows entirely.
+    if (__RELEASE__) this.root.querySelectorAll('[data-testing]').forEach((el) => el.remove());
     this.bindSettings();
   }
 
@@ -535,7 +537,7 @@ export class UIManager {
     this.bind('play-sub', `Level ${this.levelLabel(n)} · ${this.campaign[n].name}`);
     const list = this.root.querySelector<HTMLElement>('[data-bind-html="level-list"]')!;
     const extras = this.root.querySelector<HTMLElement>('.extras-block')!;
-    extras.style.display = this.openWorld < 0 ? '' : 'none';
+    extras.style.display = this.openWorld < 0 && this.extras.length ? '' : 'none';
     if (this.openWorld < 0) {
       this.bind('levels-title', 'WORLDS');
       list.innerHTML = this.worlds
