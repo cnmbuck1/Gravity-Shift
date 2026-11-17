@@ -72,6 +72,7 @@ Each world runs: levels 1–2 introduce the idea, 3–4 practise it, 5 is a brea
   - **Gravity shortcut:** on the purple pad by the tall purple wall (near the start), ▶ appears. Shift onto the wall, roll north over the chasm, and at the purple band press ◀ to drop back in near the end.
   - Stars depend on time and falls only: 3★ ≤ 50 s with no falls, 2★ ≤ 80 s with at most 2 falls.
 - **Physics comparison:** Settings → Physics switches between REFINED (new) and CLASSIC (previous build). `npm test` prints a side-by-side table (time to 5 m/s, top speed, braking distance, coasting distance).
+- **Multi-level boards (prototype, under the test courses):** stacked floors. A teal-edged drop hole lets the ball fall to the floor below, where a teal landing pad catches it, and the floor above fades out while you're under it. **Trapdoor** has two floors around an open atrium; **Free Fall** has three, and its last drop is a glide chute: the fall slows and you can steer, and the only safe landing is an island off to one side. Levels use `tiers` (more mazes, each with its own `floorY`), `'D'` / `'L'` cells, and a well with `steer` for a chute; `tests/multiLevel.test.ts` checks every drop lands on floor and every level can be finished.
 - **Shift Lab:** the earlier proof of concept, where shifts work anywhere (floor → wall → ceiling).
 - **Test Deck:** a flat platform with no goal for judging tilt feel. Turn on **Settings → Debug readout** to see tilt angles, sensor rate and FPS.
 - Hold the phone however is comfortable, then tap **◎** to make that the neutral pose.

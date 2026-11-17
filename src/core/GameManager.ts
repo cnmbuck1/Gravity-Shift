@@ -3,7 +3,7 @@ import { PhysicsManager } from '../physics/PhysicsManager';
 import { SceneRenderer } from '../render/SceneRenderer';
 import { InputManager } from '../input/InputManager';
 import { BallController, BALL_RADIUS } from '../game/BallController';
-import { CameraController } from '../game/CameraController';
+import { CameraController, FALL_FOLLOW, FALL_FOLLOW_TIERS } from '../game/CameraController';
 import { GravityFrame, type ShiftDirection } from '../game/GravityFrame';
 import { LevelManager, v3 } from '../game/LevelManager';
 import { FeatureManager } from '../game/FeatureManager';
@@ -16,6 +16,8 @@ import { HapticsManager } from '../feedback/HapticsManager';
 import type { SaveManager } from '../settings/SaveManager';
 
 export const GRAVITY = 14;
+/** Fastest fall (m/s) inside a glide chute (a gravity well with `steer`). */
+const GLIDE_FALL_SPEED = 2.3;
 const RESPAWN_DELAY = 1.1;
 /** Short grace period after leaving a surface during which a shift is still allowed. */
 const COYOTE_TIME = 0.15;
@@ -121,6 +123,8 @@ export class GameManager {
     this.view.setTheme(def.theme);
     this.camera.configure(def.camera);
     this.camera.seeThrough = this.levels.seeThrough;
+    // Multi-level boards: follow the ball all the way down a drop to the floor below.
+    this.camera.fallFollow = def.tiers?.length ? FALL_FOLLOW_TIERS : FALL_FOLLOW;
     this.respawnFrame = def.frame;
     this.respawnPoint.copy(v3(def.spawn));
     this.restart();
@@ -298,6 +302,21 @@ export class GameManager {
           // or while a conveyor or boost pad is already pushing it).
           const pull = this.frame.down.y < -0.5 && !carry && !mod.push ? this.features.holePull(this.ball.position, this.ball.grounded) : null;
           if (pull) mod = { ...mod, push: mod.push ? mod.push.clone().add(pull) : pull };
+          // Glide chutes (multi-level boards): more air control while dropping, to steer onto the landing.
+          if (!this.ball.grounded) {
+            const steer = this.features.steerAt(this.ball.position);
+            if (steer !== 1) {
+              mod = { ...mod, accel: mod.accel * steer };
+              // ...and a gentle, capped fall speed, so there is time to steer.
+              const v = this.ball.body.linvel();
+              const d = this.frame.down;
+              const fall = v.x * d.x + v.y * d.y + v.z * d.z;
+              if (fall > GLIDE_FALL_SPEED) {
+                const k = fall - GLIDE_FALL_SPEED;
+                this.ball.body.setLinvel({ x: v.x - d.x * k, y: v.y - d.y * k, z: v.z - d.z * k }, true);
+              }
+            }
+          }
           this.ball.applyInput(move, this.frame, step, mod);
         },
         () => {
@@ -318,6 +337,7 @@ export class GameManager {
     this.camera.update(dt, this.ball.mesh.position, this.ball.body.linvel(), this.frame, this.ball.grounded, this.ball.collider);
     this.levels.update(dt, this.elapsed);
     this.levels.setGhost(this.camera.ceilingView);
+    this.levels.updateTiers(this.ball.mesh.position, dt);
     this.features.update(dt, this.elapsed);
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);
     this.view.ballLight.target.position.copy(this.ball.mesh.position);

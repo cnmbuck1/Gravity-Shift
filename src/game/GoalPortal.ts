@@ -15,7 +15,8 @@ export class GoalPortal {
   private rise: THREE.Points;
   private completed = 0;
 
-  constructor(position: V3, upArr: V3, facingArr?: V3) {
+  /** `beamHeight`: metres of light column (shorter under a floor above, on multi-level boards). */
+  constructor(position: V3, upArr: V3, facingArr?: V3, beamHeight = 7) {
     const up = new THREE.Vector3(...upArr).normalize();
     // Ring faces along whichever world axis is perpendicular to its surface normal (z preferred).
     const facing = facingArr ? new THREE.Vector3(...facingArr).normalize() : Math.abs(up.z) < 0.5 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
@@ -65,10 +66,10 @@ export class GoalPortal {
 
     // Vertical light column visible from anywhere in the maze.
     this.beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.9, 1.25, 7, 32, 1, true),
+      new THREE.CylinderGeometry(0.9, 1.25, beamHeight, 32, 1, true),
       new THREE.MeshBasicMaterial({ color: PORTAL_COLOR, transparent: true, opacity: 0.1, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }),
     );
-    this.beam.position.y = 3.5;
+    this.beam.position.y = beamHeight / 2;
     this.object.add(this.beam);
 
     // Motes rising off the base.

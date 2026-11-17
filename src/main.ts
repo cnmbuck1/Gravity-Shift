@@ -8,6 +8,7 @@ import { SHIFT_PROOF } from './levels/shiftProof';
 import { TEST_DECK } from './levels/testDeck';
 import { ORBITAL_LABYRINTH } from './levels/orbitalLabyrinth';
 import { WORLDS } from './levels/worlds';
+import { MULTI_LEVEL_PROTOTYPES } from './levels/multiLevel';
 
 async function boot(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -16,7 +17,8 @@ async function boot(): Promise<void> {
   const settings = new SettingsManager(save);
   const game = await GameManager.create(canvas, ui, settings, save);
 
-  const extras = [SHIFT_PROOF, TEST_DECK];
+  // Multi-level boards are prototypes for the next batch of levels; they sit with the test courses for now.
+  const extras = [...MULTI_LEVEL_PROTOTYPES, SHIFT_PROOF, TEST_DECK];
   // The menu shows the final maze idling in the background.
   game.loadLevel(WORLDS[2].levels[9] ?? ORBITAL_LABYRINTH);
   game.toMenu();

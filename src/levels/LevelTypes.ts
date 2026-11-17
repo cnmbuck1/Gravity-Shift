@@ -44,6 +44,8 @@ export interface CheckpointDef {
  *   'X' red energy floor (destroys the ball)
  *   'P' purple floor (marks a gravity zone; the zone itself is in `shiftZones`)
  *   'S' 'C' 'G' floor, labelled start / checkpoint / goal for readability
+ *   'D' drop hole: no floor, edged in teal; the ball falls to the floor below (multi-level boards)
+ *   'L' floor, marked as a landing pad (where a drop comes down)
  *   'B' no floor and no wall, filled by explicit platforms (bridges, ramps)
  *   '|' nothing: an explicit platform occupies this cell
  * Row 0 is the far end of the maze (most negative z); column 0 is the left edge.
@@ -162,6 +164,11 @@ export interface GravityWellDef {
   min: V3;
   max: V3;
   scale: number;
+  /**
+   * Multiplies the ball's air control while it falls through this box. A well with `steer` is a
+   * glide chute: drawn as a glowing shaft, it slows the drop so the ball can be steered onto a landing.
+   */
+  steer?: number;
 }
 
 /** A spinning obstacle: an arm that sweeps a room, or a disc platform that turns over the void. */
@@ -187,6 +194,11 @@ export interface LevelDef {
   /** If present, shifts only work inside these zones. */
   shiftZones?: ShiftZoneDef[];
   maze?: MazeDef;
+  /**
+   * Further floors of a multi-level board, stacked under `maze` (each with its own floorY).
+   * A 'D' drop hole drops the ball onto the floor below; a floor fades out while the ball is under it.
+   */
+  tiers?: MazeDef[];
   movers?: MoverDef[];
   camera?: CameraDef;
   /** Falling below this height always counts as a fall (holes in a maze floor). */

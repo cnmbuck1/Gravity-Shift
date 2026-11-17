@@ -3,7 +3,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsManager } from '../physics/PhysicsManager';
-import type { CheckpointDef, LevelDef, MoverDef, PlatformDef, PylonDef, ShiftZoneDef, V3 } from '../levels/LevelTypes';
+import type { CheckpointDef, LevelDef, MazeDef, MoverDef, PlatformDef, PylonDef, ShiftZoneDef, V3 } from '../levels/LevelTypes';
 import { COLORS, platformMaterial, trimMaterial, undersideMaterial } from '../render/Materials';
 import { GoalPortal } from './GoalPortal';
 import { buildMaze } from './MazeBuilder';
@@ -19,6 +19,19 @@ interface MoverRuntime {
   target?: THREE.Vector3;
   delta?: THREE.Vector3;
 }
+
+/** One floor of a multi-level board: it fades out (and the camera sees through it) while the ball is below it. */
+interface TierRuntime {
+  floorY: number;
+  objects: THREE.Object3D[];
+  colliders: number[];
+  /** 0 solid .. 1 faded, eased toward `target`. */
+  fade: number;
+  below: boolean;
+}
+
+/** How much a floor fades while the ball is underneath it. */
+const TIER_FADE = 0.86;
 
 export interface CheckpointRuntime {
   def: CheckpointDef;
@@ -42,6 +55,7 @@ export class LevelManager {
   readonly seeThrough = new Set<number>();
 
   private movers: MoverRuntime[] = [];
+  private tiers: TierRuntime[] = [];
   private hazardMaterial: THREE.MeshStandardMaterial | null = null;
   private edgeMaterial: THREE.MeshStandardMaterial | null = null;
   private moverTime = 0;
@@ -60,14 +74,22 @@ export class LevelManager {
     this.body = this.physics.world.createRigidBody(R.RigidBodyDesc.fixed());
 
     this.bounds.makeEmpty();
-    if (def.maze) {
-      const maze = buildMaze(def.maze, this.physics, this.body, def.theme);
+    // A multi-level board is several mazes stacked; the top one is `maze`, the rest are `tiers`.
+    const floors: MazeDef[] = [...(def.maze ? [def.maze] : []), ...(def.tiers ?? [])];
+    const multi = floors.length > 1;
+    for (const m of floors) {
+      // Drop holes get a light shaft down to the next floor below.
+      const below = floors.filter((o) => o.floorY < m.floorY).reduce((y, o) => Math.max(y, o.floorY), -Infinity);
+      const maze = buildMaze(m, this.physics, this.body, def.theme, { dropDepth: Number.isFinite(below) ? m.floorY - below : undefined });
       maze.objects.forEach((o) => this.group.add(o));
       this.disposables.push(...maze.disposables);
-      this.hazards = maze.hazards;
-      this.hazardMaterial = maze.hazardMaterial;
-      this.edgeMaterial = maze.edgeMaterial;
+      this.hazards.push(...maze.hazards);
+      if (!this.hazardMaterial) {
+        this.hazardMaterial = maze.hazardMaterial;
+        this.edgeMaterial = maze.edgeMaterial;
+      }
       this.bounds.union(maze.bounds);
+      if (multi) this.tiers.push({ floorY: m.floorY, objects: maze.objects, colliders: maze.colliders, fade: 0, below: false });
     }
     for (const p of def.platforms) {
       const half = new THREE.Vector3(...p.size).multiplyScalar(0.5);
@@ -82,19 +104,30 @@ export class LevelManager {
     this.moverTime = 0;
     this.checkpoints = (def.checkpoints ?? []).map((c) => this.addCheckpoint(c));
     if (def.goal) {
-      this.goal = new GoalPortal(def.goal.position, def.goal.up, def.goal.facing);
+      // On a multi-level board the light column stops short of the floor above the goal.
+      const gy = def.goal.position[1];
+      const above = floors.filter((m) => m.floorY > gy + 0.5).reduce((y, m) => Math.min(y, m.floorY), Infinity);
+      const beam = Number.isFinite(above) ? Math.min(7, above - gy - 1) : 7;
+      this.goal = new GoalPortal(def.goal.position, def.goal.up, def.goal.facing, beam);
       this.group.add(this.goal.object);
     }
     this.collectGhost();
   }
 
-  /** Floor-level materials (floor, maze walls, underside) and how they looked, for setGhost. */
-  private ghostMats: { m: THREE.Material; opacity: number; transparent: boolean; depthWrite: boolean }[] = [];
+  /**
+   * Materials that can fade, and how they looked: floor-level ones (floor, maze walls, underside)
+   * fade under a glass ceiling (setGhost); on a multi-level board each floor fades while the ball is below it.
+   */
+  private ghostMats: { m: THREE.Material; opacity: number; transparent: boolean; depthWrite: boolean; ceiling: boolean; tier: number }[] = [];
   private ghost = 0;
+  private faded = false;
 
   private collectGhost(): void {
     this.ghostMats = [];
     this.ghost = 0;
+    this.faded = false;
+    const tierOf = new Map<THREE.Object3D, number>();
+    this.tiers.forEach((t, i) => t.objects.forEach((o) => tierOf.set(o, i)));
     const seen = new Set<THREE.Material>();
     const box = new THREE.Box3();
     this.group.updateMatrixWorld(true);
@@ -102,11 +135,13 @@ export class LevelManager {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh || o === this.goal?.object) return;
       box.setFromObject(mesh);
-      if (box.max.y > 1.6) return;
+      const ceiling = box.max.y <= 1.6;
+      const tier = tierOf.get(o) ?? -1;
+      if (!ceiling && tier < 0) return;
       for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
         if (seen.has(m)) continue;
         seen.add(m);
-        this.ghostMats.push({ m, opacity: m.opacity, transparent: m.transparent, depthWrite: m.depthWrite });
+        this.ghostMats.push({ m, opacity: m.opacity, transparent: m.transparent, depthWrite: m.depthWrite, ceiling, tier });
       }
     });
   }
@@ -116,21 +151,54 @@ export class LevelManager {
    * ceiling the camera looks up from below the course, so the floor would otherwise hide it.
    */
   setGhost(k: number): void {
-    const on = k > 0.01;
-    if (!on && this.ghost === 0) return;
-    this.ghost = on ? k : 0;
+    this.ghost = k > 0.01 ? k : 0;
+    this.applyFade();
+  }
+
+  /**
+   * Multi-level boards: a floor above the ball fades out and the camera's anti-clipping ignores it,
+   * so the ball stays in view after it drops to a lower floor. Call once per frame.
+   */
+  updateTiers(ball: THREE.Vector3, dt: number): void {
+    if (!this.tiers.length) return;
+    for (const t of this.tiers) {
+      // Under this floor once the ball's top is below the floor slab.
+      const below = ball.y < t.floorY - 0.7;
+      if (below !== t.below) {
+        t.below = below;
+        for (const h of t.colliders) {
+          if (below) this.seeThrough.add(h);
+          else this.seeThrough.delete(h);
+        }
+        for (const o of t.objects) o.castShadow = below ? false : (o.userData.castShadow ?? o.castShadow);
+      }
+      const k = 1 - Math.exp(-dt * 5);
+      t.fade += ((below ? 1 : 0) - t.fade) * k;
+      if (!below && t.fade < 0.01) t.fade = 0;
+    }
+    this.applyFade();
+  }
+
+  private applyFade(): void {
+    const any = this.ghost > 0 || this.tiers.some((t) => t.fade > 0);
+    if (!any && !this.faded) return;
+    this.faded = any;
     for (const g of this.ghostMats) {
+      const k = Math.max(g.ceiling ? 0.82 * this.ghost : 0, g.tier >= 0 ? TIER_FADE * this.tiers[g.tier].fade : 0);
+      const on = k > 0.001;
       const wasTransparent = g.m.transparent;
       g.m.transparent = on || g.transparent;
-      g.m.opacity = on ? g.opacity * (1 - 0.82 * k) : g.opacity;
+      g.m.opacity = on ? g.opacity * (1 - k) : g.opacity;
       g.m.depthWrite = on ? false : g.depthWrite;
       if (wasTransparent !== g.m.transparent) g.m.needsUpdate = true;
     }
   }
 
   unload(): void {
+    for (const t of this.tiers) t.fade = 0;
     this.setGhost(0);
     this.ghostMats = [];
+    this.tiers = [];
     if (this.body) this.physics.world.removeRigidBody(this.body);
     for (const m of this.movers) this.physics.world.removeRigidBody(m.body);
     this.movers = [];

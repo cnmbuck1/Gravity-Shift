@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsManager } from '../physics/PhysicsManager';
-import type { CrumbleDef, DoorDef, LaserDef, LevelDef, PadDef, RotatorDef, SwitchDef } from '../levels/LevelTypes';
+import type { CrumbleDef, DoorDef, GravityWellDef, LaserDef, LevelDef, PadDef, RotatorDef, SwitchDef } from '../levels/LevelTypes';
+import { DROP_COLOR } from './MazeBuilder';
 import { COLORS, mazeFloorMaterial, trimMaterial } from '../render/Materials';
 import { BALL_RADIUS } from './BallController';
 
@@ -55,6 +57,8 @@ export class FeatureManager {
   private doors: DoorRt[] = [];
   private switches: SwitchRt[] = [];
   private rotators: RotatorRt[] = [];
+  /** Glide chutes: rings that drift down the shaft. */
+  private chutes: { def: GravityWellDef; rings: THREE.Mesh[] }[] = [];
   private pads: { def: PadDef; mat: THREE.MeshBasicMaterial | null }[] = [];
   private def: LevelDef | null = null;
   private body: RAPIER.RigidBody | null = null;
@@ -78,38 +82,42 @@ export class FeatureManager {
     for (const l of def.lasers ?? []) this.addLaser(l);
     for (const d of def.doors ?? []) this.addDoor(d);
     for (const s of def.switches ?? []) this.addSwitch(s);
+    for (const w of def.wells ?? []) if (w.steer) this.addChute(w);
     for (const r of def.rotators ?? []) this.addRotator(r);
     this.time = 0;
     this.findHoles(def);
   }
 
   /** Holes in the floor grid that should catch the sphere. Chasms beside gravity pads are left out (you wait beside them to shift). */
-  private holes: [number, number][] = [];
+  /** Hole cells: x, z, the floor height they sit in, and the cell size. Drop holes ('D') of multi-level boards count too. */
+  private holes: [number, number, number, number][] = [];
   private findHoles(def: LevelDef): void {
     this.holes = [];
-    const m = def.maze;
-    if (!m) return;
-    const at = (r: number, c: number) => m.rows[r]?.[c] ?? '#';
-    for (let r = 1; r < m.rows.length - 1; r++) {
-      for (let c = 1; c < m.rows[r].length - 1; c++) {
-        if (at(r, c) !== ' ') continue;
-        let nearPad = false;
-        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if ('P|'.includes(at(r + dr, c + dc))) nearPad = true;
-        if (!nearPad) this.holes.push([m.origin[0] + c * m.cell, m.origin[1] + r * m.cell]);
+    for (const m of [...(def.maze ? [def.maze] : []), ...(def.tiers ?? [])]) {
+      const at = (r: number, c: number) => m.rows[r]?.[c] ?? '#';
+      for (let r = 1; r < m.rows.length - 1; r++) {
+        for (let c = 1; c < m.rows[r].length - 1; c++) {
+          if (at(r, c) !== ' ' && at(r, c) !== 'D') continue;
+          let nearPad = false;
+          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if ('P|'.includes(at(r + dr, c + dc))) nearPad = true;
+          if (!nearPad) this.holes.push([m.origin[0] + c * m.cell, m.origin[1] + r * m.cell, m.floorY, m.cell]);
+        }
       }
     }
   }
 
   /** Sideways pull toward any hole the sphere overlaps (null when clear). `p` must be on the floor frame. */
   holePull(p: THREE.Vector3, grounded: boolean): THREE.Vector3 | null {
-    if (!grounded || !this.def?.maze || p.y > this.def.maze.floorY + BALL_RADIUS + 0.2) return null;
+    if (!grounded || !this.holes.length) return null;
     // A turning disc covers its hole.
     for (const r of this.rotators) {
       if (r.def.kind === 'disc' && Math.hypot(p.x - r.def.centre[0], p.z - r.def.centre[2]) < r.def.size + 0.3) return null;
     }
-    const half = this.def.maze.cell / 2;
     let best: THREE.Vector3 | null = null;
-    for (const [hx, hz] of this.holes) {
+    for (const [hx, hz, floorY, cell] of this.holes) {
+      // Only holes in the floor the ball is rolling on.
+      if (p.y > floorY + BALL_RADIUS + 0.2 || p.y < floorY) continue;
+      const half = cell / 2;
       const dx = p.x - Math.max(hx - half, Math.min(hx + half, p.x));
       const dz = p.z - Math.max(hz - half, Math.min(hz + half, p.z));
       const d = Math.hypot(dx, dz);
@@ -123,6 +131,41 @@ export class FeatureManager {
     return best;
   }
 
+  /** A glide chute: a faint shaft with glowing rings sinking down it, so the slow fall reads as a place to steer. */
+  private addChute(w: GravityWellDef): void {
+    const cx = (w.min[0] + w.max[0]) / 2;
+    const cz = (w.min[2] + w.max[2]) / 2;
+    const sx = w.max[0] - w.min[0];
+    const sz = w.max[2] - w.min[2];
+    const h = w.max[1] - w.min[1];
+    const shaftGeo = new THREE.BoxGeometry(sx, h, sz);
+    const shaftMat = new THREE.MeshBasicMaterial({ color: DROP_COLOR, transparent: true, opacity: 0.06, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+    const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+    shaft.position.set(cx, (w.min[1] + w.max[1]) / 2, cz);
+    this.group.add(shaft);
+    // A rectangular frame of four thin bars that follows the chute's outline.
+    const T = 0.07;
+    const bars = [
+      [sx, T, T, 0, -sz / 2],
+      [sx, T, T, 0, sz / 2],
+      [T, T, sz, -sx / 2, 0],
+      [T, T, sz, sx / 2, 0],
+    ].map(([a, b, c, x, z]) => new THREE.BoxGeometry(a, b, c).translate(x, 0, z));
+    const ringGeo = mergeGeometries(bars);
+    bars.forEach((g) => g.dispose());
+    const rings: THREE.Mesh[] = [];
+    for (let i = 0; i < 4; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: DROP_COLOR, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+      const ring = new THREE.Mesh(ringGeo, mat);
+      ring.position.set(cx, w.max[1], cz);
+      this.group.add(ring);
+      rings.push(ring);
+      this.disposables.push(mat);
+    }
+    this.disposables.push(shaftGeo, shaftMat, ringGeo);
+    this.chutes.push({ def: w, rings });
+  }
+
   unload(): void {
     if (this.body) this.physics.world.removeRigidBody(this.body);
     for (const r of this.rotators) this.physics.world.removeRigidBody(r.body);
@@ -132,6 +175,7 @@ export class FeatureManager {
     this.doors = [];
     this.switches = [];
     this.rotators = [];
+    this.chutes = [];
     this.pads = [];
     this.group.clear();
     for (const d of this.disposables) d.dispose();
@@ -251,6 +295,14 @@ export class FeatureManager {
     return mod;
   }
 
+  /** Air-control multiplier at `p` (glide chutes: wells with `steer`). */
+  steerAt(p: THREE.Vector3): number {
+    for (const w of this.def?.wells ?? []) {
+      if (w.steer && p.x >= w.min[0] && p.x <= w.max[0] && p.y >= w.min[1] && p.y <= w.max[1] && p.z >= w.min[2] && p.z <= w.max[2]) return w.steer;
+    }
+    return 1;
+  }
+
   /** Gravity multiplier at `p` (gravity wells). */
   gravityScale(p: THREE.Vector3): number {
     for (const w of this.def?.wells ?? []) {
@@ -339,6 +391,14 @@ export class FeatureManager {
 
   /** Per rendered frame: visuals only. */
   update(dt: number, time: number): void {
+    for (const c of this.chutes) {
+      const [y0, y1] = [c.def.min[1], c.def.max[1]];
+      c.rings.forEach((ring, i) => {
+        const u = ((time * 0.35 + i / c.rings.length) % 1 + 1) % 1;
+        ring.position.y = y1 - u * (y1 - y0);
+        (ring.material as THREE.MeshBasicMaterial).opacity = 0.5 * Math.sin(u * Math.PI);
+      });
+    }
     for (const r of this.rotators) {
       const q = r.body.rotation();
       r.mesh.quaternion.set(q.x, q.y, q.z, q.w);
