@@ -16,7 +16,7 @@ export const REMOVE_ADS_ID = 'com.cnmbuckstudios.gravitor.removeads';
  * used and ads are shown as test ads. The matching AdMob app ID lives in ios/App/App/Info.plist
  * (GADApplicationIdentifier) and must be swapped at the same time.
  */
-const AD_UNIT_ID = '';
+const AD_UNIT_ID = 'ca-app-pub-8965676427575286/1317249734';
 const TEST_AD_UNIT_ID = 'ca-app-pub-3940256099942544/4411468910';
 /** AdMob rewarded unit for "watch an ad to skip this level". Empty: Google's public iOS test unit. */
 const REWARDED_UNIT_ID = '';
