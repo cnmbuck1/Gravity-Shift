@@ -19,7 +19,7 @@ export const REMOVE_ADS_ID = 'com.cnmbuckstudios.gravitor.removeads';
 const AD_UNIT_ID = 'ca-app-pub-8965676427575286/1317249734';
 const TEST_AD_UNIT_ID = 'ca-app-pub-3940256099942544/4411468910';
 /** AdMob rewarded unit for "watch an ad to skip this level". Empty: Google's public iOS test unit. */
-const REWARDED_UNIT_ID = '';
+const REWARDED_UNIT_ID = 'ca-app-pub-8965676427575286/7138928760';
 const TEST_REWARDED_UNIT_ID = 'ca-app-pub-3940256099942544/1712485313';
 /** How long to wait for a rewarded ad to load when the player asks to skip before giving the skip for free. */
 const REWARDED_WAIT_MS = 4000;

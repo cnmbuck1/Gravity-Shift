@@ -50,7 +50,7 @@ macOS runners use GitHub Actions minutes at 10× the Linux rate on private repos
 
 ## 3. Before submitting to the App Store (not needed for TestFlight)
 
-- **AdMob IDs**: the real app ID (`Info.plist`, `GADApplicationIdentifier`) and interstitial unit (`AD_UNIT_ID` in `src/monetization/Monetization.ts`) are in (2026-11-17). Still to do: the **Rewarded** unit ID for "Skip level" (`REWARDED_UNIT_ID`; Google's test rewarded ad shows until then), and Google's full SKAdNetwork list in `Info.plist`. Don't tap your own real ads on TestFlight: AdMob can flag the account for invalid clicks.
+- **AdMob IDs**: the real app ID (`Info.plist`, `GADApplicationIdentifier`) and interstitial unit (`AD_UNIT_ID` in `src/monetization/Monetization.ts`) are in (2026-11-17). The Rewarded "Skip level" unit (`REWARDED_UNIT_ID`) is in too. Still to do: Google's full SKAdNetwork list in `Info.plist`. Don't tap your own real ads on TestFlight: AdMob can flag the account for invalid clicks.
 - **Testing switches**: "Unlock all levels" is on by default and makes the Cnmbuck Orb selectable. Turn the default off in `src/settings/SettingsManager.ts` once the world order is final.
 - **App Privacy answers** (App Store Connect → App Privacy): because of AdMob, declare Device ID, Advertising Data, Product Interaction, and Crash/Performance data, collected by third parties, not linked to identity, not used for tracking (non-personalised ads, no tracking prompt).
 - **Privacy policy URL** and **support URL** (required on the store page).
