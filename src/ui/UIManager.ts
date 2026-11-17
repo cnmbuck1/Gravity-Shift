@@ -7,6 +7,9 @@ import type { WorldDef } from '../levels/worldTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
 import { drawOrbIcon } from '../brand/cnmbuck-orb';
 
+/** Falls in one level (across restarts) before the Skip Level button is offered. */
+const SKIP_AFTER_FALLS = 3;
+
 /**
  * DOM overlay: menus, HUD, settings and toasts. Talks to the game only through
  * GameManager's public methods and events, so UI and gameplay stay decoupled.
@@ -27,6 +30,9 @@ export class UIManager {
   private levels: LevelDef[];
   private campaign: LevelDef[];
   private current = 0;
+  /** Falls in the current level, counted across restarts; the Skip Level button appears at SKIP_AFTER_FALLS. */
+  private levelFalls = 0;
+  private skipping = false;
   /** World shown in the level list (-1: the world list). */
   private openWorld = -1;
 
@@ -113,6 +119,7 @@ export class UIManager {
             <button class="icon-btn" data-action="reset" aria-label="Reset">↺</button>
           </div>
         </div>
+        <button class="skip-btn" data-action="skip-level" aria-label="Skip this level">SKIP LEVEL <span data-bind="skip-note">▶ AD</span></button>
         <div class="shift-pad">
           <button class="shift-btn" data-shift="left" aria-label="Shift gravity left">◀</button>
           <button class="shift-btn" data-shift="forward" aria-label="Shift gravity forward">▲</button>
@@ -309,7 +316,12 @@ export class UIManager {
         this.toast(`GRAVITY → ${surface}`);
       },
       onShiftRejected: (reason) => this.toast(reason),
-      onFall: () => this.toast('FELL INTO THE VOID'),
+      onFall: () => {
+        this.levelFalls++;
+        const offer = this.levelFalls === SKIP_AFTER_FALLS && this.canSkip();
+        this.toast(offer ? 'STUCK? YOU CAN SKIP THIS LEVEL' : 'FELL INTO THE VOID', offer ? 2400 : 1600);
+        this.syncSkip();
+      },
       onCheckpoint: () => this.toast('CHECKPOINT'),
       onSwitch: () => this.toast(`SWITCH · DOOR OPEN FOR ${Math.round(this.game.features.doorTimeLeft())} SECONDS`),
       onZoneEnter: (zone) => this.toast(zone.hint, 2400),
@@ -329,6 +341,8 @@ export class UIManager {
     const permission = this.settings.get().controlMode === 'tilt' ? this.ensureTilt() : Promise.resolve(true);
     const def = this.levels[index];
     this.current = index;
+    this.levelFalls = 0;
+    this.syncSkip();
     this.game.loadLevel(def);
     this.hud.classList.toggle('no-shifts', !def.allowShifts);
     this.show('hud');
@@ -423,6 +437,9 @@ export class UIManager {
       case 'howto':
         this.show('howto');
         break;
+      case 'skip-level':
+        void this.skipLevel();
+        break;
       case 'next':
         // A due ad shows here, between the result and the next level, never during play.
         void this.money.maybeShowAd().then(() => this.startLevel(this.current + 1));
@@ -454,7 +471,36 @@ export class UIManager {
 
   private unlocked(i: number): boolean {
     if (this.settings.get().unlockAll) return true;
-    return i === 0 || i >= this.campaign.length || this.game.recordFor(this.campaign[i - 1].id).bestTime !== null;
+    if (i === 0 || i >= this.campaign.length) return true;
+    const prev = this.campaign[i - 1].id;
+    return this.game.recordFor(prev).bestTime !== null || this.game.wasSkipped(prev);
+  }
+
+  /** Campaign levels other than the very last can be skipped (an extras course has nothing after it). */
+  private canSkip(): boolean {
+    return this.current < this.campaign.length - 1;
+  }
+
+  private syncSkip(): void {
+    this.hud.classList.toggle('can-skip', this.levelFalls >= SKIP_AFTER_FALLS && this.canSkip());
+    this.bind('skip-note', this.money.native && !this.money.adFree ? '▶ AD' : '');
+  }
+
+  /** Watch a rewarded ad (where ads run) and move on to the next level; the skipped one stays unplayed. */
+  private async skipLevel(): Promise<void> {
+    if (!this.canSkip() || this.skipping) return;
+    this.skipping = true;
+    this.game.pause();
+    const result = await this.money.rewardedSkip();
+    this.skipping = false;
+    if (result === 'cancelled') {
+      this.game.resume();
+      this.toast('Watch the whole ad to skip', 2000);
+      return;
+    }
+    this.game.markSkipped(this.campaign[this.current].id);
+    this.toast('LEVEL SKIPPED', 1400);
+    void this.startLevel(this.current + 1);
   }
 
   /** World index of campaign level `i`. */
@@ -520,7 +566,7 @@ export class UIManager {
         return `<button class="level-row ${open ? '' : 'locked'}" ${open ? `data-level="${i}"` : 'disabled'} style="--accent:${w.theme.accent}">
           <span class="lv-num">${this.levelLabel(i)}</span>
           <span class="lv-name">${l.name}<small>${open ? l.subtitle : 'Finish the level before to unlock'}</small></span>
-          <span class="lv-stats">${open ? `<span class="lv-stars">${stars}</span><small>${r.bestTime !== null ? r.bestTime.toFixed(1) + 's' : '—'}</small>` : '🔒'}</span>
+          <span class="lv-stats">${open ? `<span class="lv-stars">${stars}</span><small>${r.bestTime !== null ? r.bestTime.toFixed(1) + 's' : this.game.wasSkipped(l.id) ? 'skipped' : '—'}</small>` : '🔒'}</span>
         </button>`;
       })
       .join('');
