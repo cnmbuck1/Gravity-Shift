@@ -8,8 +8,17 @@ import type { GravityFrame } from './GravityFrame';
 const WALL_LIFT = 0;
 /** On a wall, the view is kept at least this high so it looks over the maze walls of the floor below. */
 const WALL_VIEW_Y = 3;
-/** How far the view leans out while the ball rolls on a ceiling. */
-const CEILING_LEAN = 1.05;
+/**
+ * How far (radians) the view leans out toward open space while the ball rolls on a ceiling.
+ * Zero keeps the full 180° flip (Chris, 2026-11-16: a partly turned view made the glass look
+ * like a crooked wall). Instead of leaning, the view looks more steeply up at the glass
+ * (CEILING_PITCH) so the floor below doesn't hide the ball.
+ */
+const CEILING_LEAN = 0;
+/** Camera pitch (degrees) while on a ceiling: nearly straight up through the gap under the glass. */
+const CEILING_PITCH = 76;
+/** Camera distance multiplier while on a ceiling. */
+const CEILING_DIST = 0.85;
 const DEFAULT_CAMERA: CameraDef = { pitchDeg: 40, distance: 10.5, lookAhead: 2.5 };
 const SHIFT_DURATION = 0.75;
 /** How far (m) the camera sinks after a falling ball before letting it vanish below. */
@@ -43,6 +52,12 @@ export class CameraController {
   private camDist = -1;
   private camRaise = 0;
   private wallRaise = 0;
+  /** 0 on floors and walls, easing to 1 while on a ceiling (steeper, closer view). */
+  private ceil = 0;
+  /** 0..1: how far the view has turned to the under-ceiling view (the floor fades with it). */
+  get ceilingView(): number {
+    return this.ceil;
+  }
   /** World direction to lean the view toward while on a ceiling (set by the shift zone used). */
   lean: THREE.Vector3 | null = null;
   /** Colliders the anti-clipping ray ignores (glass). */
@@ -74,6 +89,8 @@ export class CameraController {
     this.groundRef.copy(focus);
     this.camDist = -1;
     this.camRaise = 0;
+    this.ceil = frame.down.y > 0.5 ? 1 : 0;
+    this.lift = 0;
   }
 
   get inFlyover(): boolean {
@@ -163,7 +180,10 @@ export class CameraController {
     const liftTarget = leanTo ? (onWall ? WALL_LIFT : CEILING_LEAN) * Math.sign(right.dot(leanTo) || 1) : 0;
     this.lift += (liftTarget - this.lift) * (1 - Math.exp(-dt * 3));
     const roll = new THREE.Quaternion().setFromAxisAngle(forward, this.lift);
-    const camQ = roll.clone().multiply(this.frameQ).multiply(this.pitchQ);
+    this.ceil += ((onCeiling ? 1 : 0) - this.ceil) * (1 - Math.exp(-dt * 4));
+    const pitchDeg = THREE.MathUtils.lerp(this.cfg.pitchDeg, CEILING_PITCH, this.ceil);
+    const pitchQ = this.ceil > 1e-3 ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), (-pitchDeg * Math.PI) / 180) : this.pitchQ;
+    const camQ = roll.clone().multiply(this.frameQ).multiply(pitchQ);
     const lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camQ);
     // A small constant forward bias keeps more of the course ahead than behind on screen.
     const lookAt = this.focus.clone().addScaledVector(forward, this.cfg.forwardBias ?? this.cfg.lookAhead * 0.35).add(this.lead);
@@ -175,7 +195,7 @@ export class CameraController {
 
     // Pull the camera in if geometry sits between it and the ball. The ray starts a little
     // above the look point so low maze walls right beside the ball don't count.
-    let dist = this.cfg.distance;
+    let dist = this.cfg.distance * THREE.MathUtils.lerp(1, CEILING_DIST, this.ceil);
     let raise = 0;
     const back = lookDir.clone().negate();
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.frameQ).applyQuaternion(roll);
@@ -184,7 +204,8 @@ export class CameraController {
     this.ray.dir = { x: back.x, y: back.y, z: back.z };
     const skip = this.seeThrough;
     // Mid-shift the view swings through the floor plane; ignore the ray then or the camera lurches in at the ball.
-    const hit = this.t < 1 ? null : this.physics.world.castRay(this.ray, dist, true, undefined, undefined, ignore, undefined, skip.size ? (c: RAPIER.Collider) => !skip.has(c.handle) : undefined);
+    // Under a ceiling the floor between camera and ball is faded out, so it doesn't count either.
+    const hit = this.t < 1 || this.ceil > 0.05 ? null : this.physics.world.castRay(this.ray, dist, true, undefined, undefined, ignore, undefined, skip.size ? (c: RAPIER.Collider) => !skip.has(c.handle) : undefined);
     if (hit) {
       dist = Math.max(2, hit.timeOfImpact - 0.4);
       raise = 1.2;

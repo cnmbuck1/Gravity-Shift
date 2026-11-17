@@ -317,6 +317,7 @@ export class GameManager {
     this.ball.render(alpha, dt, this.view.camera, this.view.renderer);
     this.camera.update(dt, this.ball.mesh.position, this.ball.body.linvel(), this.frame, this.ball.grounded, this.ball.collider);
     this.levels.update(dt, this.elapsed);
+    this.levels.setGhost(this.camera.ceilingView);
     this.features.update(dt, this.elapsed);
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);
     this.view.ballLight.target.position.copy(this.ball.mesh.position);

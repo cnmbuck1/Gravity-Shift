@@ -71,8 +71,9 @@ W2 = [
 ]
 
 W3 = [
-    ('SIDE_STEP', dict(id='w3-side-step', name='Side Step', sub='Shift onto the wall and back', seed=31, segments=[
-        R(cw=3), C(len=9, feat='wall'), R(cw=3)])),
+    # 2026-11-16 playtest: 3-2 played the same as 3-1, so its wall now has a notch to steer around and holes either side.
+    ('SIDE_STEP', dict(id='w3-side-step', name='Side Step', sub='A notch in the wall: steer around it', seed=31, segments=[
+        R(cw=3, feats=[('holes', {})]), C(len=10, feat='wall', notches=['low']), R(cw=3, feats=[('holes', {})])])),
     ('WALL_RUN', dict(id='w3-wall-run', name='Wall Run', sub='A longer wall over a wider chasm', seed=32, segments=[
         R(cw=3), C(len=3), R(cw=3, checkpoint=True), C(len=12, feat='wall'), R(cw=3, feats=[('holes', {})])])),
     # Levels 4-10 rebuilt after Chris's playtest: the walls now carry obstacles of their own.
