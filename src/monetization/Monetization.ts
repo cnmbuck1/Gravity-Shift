@@ -21,11 +21,14 @@ const TEST_AD_UNIT_ID = 'ca-app-pub-3940256099942544/4411468910';
 /** AdMob rewarded unit for "watch an ad to skip this level". Empty: Google's public iOS test unit. */
 const REWARDED_UNIT_ID = 'ca-app-pub-8965676427575286/7138928760';
 const TEST_REWARDED_UNIT_ID = 'ca-app-pub-3940256099942544/1712485313';
-/** How long to wait for a rewarded ad to load when the player asks to skip before giving the skip for free. */
-const REWARDED_WAIT_MS = 4000;
+/** How long to wait for a rewarded ad to load when the player asks to skip. */
+const REWARDED_WAIT_MS = 8000;
 
-/** How a skip request ended: watched the ad, skipped without one (no ads here or none to show), or closed the ad early. */
-export type SkipResult = 'rewarded' | 'free' | 'cancelled';
+/**
+ * How a skip request ended: watched the ad, skipped for free (web build or Remove Ads owned),
+ * closed the ad early, or no ad could be loaded (no skip: the player can try again or keep playing).
+ */
+export type SkipResult = 'rewarded' | 'free' | 'cancelled' | 'unavailable';
 
 /** Ad rules agreed in the ads plan. */
 const EVERY_N_LEVELS = 3;
@@ -71,9 +74,16 @@ export class Monetization {
       this.lastError = `Store: ${errorText(e)}`;
     }
     if (this.adFree) return;
+    await this.startAds();
+  }
+
+  /** Starts the AdMob SDK and preloads both ads. Safe to call again after a failed start. */
+  private async startAds(): Promise<void> {
+    if (this.admob || this.adFree) return;
     try {
-      this.admob = (await import('@capacitor-community/admob')).AdMob;
-      await this.admob.initialize({ initializeForTesting: !AD_UNIT_ID });
+      const admob = (await import('@capacitor-community/admob')).AdMob;
+      await admob.initialize({ initializeForTesting: !AD_UNIT_ID });
+      this.admob = admob;
       void this.prepare();
       void this.prepareRewarded();
     } catch (e) {
@@ -106,15 +116,18 @@ export class Monetization {
   }
 
   /**
-   * "Watch an ad to skip this level". The player never pays for being stuck: with Remove Ads,
-   * on the web build, or when no ad can be loaded in a few seconds, the skip is simply given.
-   * Closing the ad before the reward cancels the skip.
+   * "Watch an ad to skip this level". In the iPhone app the skip needs a fully watched rewarded
+   * ad: closing it early cancels the skip, and when no ad loads within a few seconds there is no
+   * skip ('unavailable'; the player can try again, and retries are always free).
+   * Remove Ads owners and the web build skip without an ad.
    */
   async rewardedSkip(): Promise<SkipResult> {
-    if (!this.native || this.adFree || !this.admob) return 'free';
+    if (!this.native || this.adFree) return 'free';
+    if (!this.admob) await this.startAds();
+    if (!this.admob) return 'unavailable';
     if (!this.rewardedReady) {
       await Promise.race([this.prepareRewarded(), new Promise((r) => setTimeout(r, REWARDED_WAIT_MS))]);
-      if (!this.rewardedReady) return 'free';
+      if (!this.rewardedReady) return 'unavailable';
     }
     this.rewardedReady = false;
     try {
@@ -140,6 +153,7 @@ export class Monetization {
    * if one is due and loaded; never throws and never blocks the game for long.
    */
   async maybeShowAd(): Promise<void> {
+    if (!this.admob) void this.startAds();
     if (!this.admob || this.adFree) return;
     const now = Date.now();
     if (this.finishedSinceAd < EVERY_N_LEVELS || now - this.sessionStart < NO_ADS_FIRST_MS || now - this.lastAd < MIN_GAP_MS) return;
@@ -215,16 +229,24 @@ export class Monetization {
     try {
       await this.store.restorePurchases();
       await this.refreshEntitlement();
+      if (!this.adFree) void this.startAds();
     } catch (e) {
       console.warn('Restore failed', e);
     }
     return this.adFree;
   }
 
+  /**
+   * The App Store is the source of truth for Remove Ads. The saved flag is only a cache: a
+   * TestFlight (sandbox) purchase stays in the saved settings when the App Store version is
+   * installed over it, and would otherwise turn ads off for good. If the store can't be asked
+   * (throws), the cached flag is kept.
+   */
   private async refreshEntitlement(): Promise<void> {
     if (!this.store) return;
-    const { purchases } = await this.store.getPurchases();
+    const { purchases } = await this.store.getPurchases({ onlyCurrentEntitlements: true });
     if (purchases.some((p) => p.productIdentifier === REMOVE_ADS_ID)) this.grant();
+    else if (this.settings.get().adFree) this.settings.update({ adFree: false });
   }
 
   private grant(): void {
