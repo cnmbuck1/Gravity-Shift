@@ -62,6 +62,13 @@ export class LevelManager {
 
   private body: RAPIER.RigidBody | null = null;
   private disposables: { dispose(): void }[] = [];
+  private retired: { dispose(): void }[] = [];
+
+  /** Frees the previous level's geometry, materials and textures (see unload). */
+  disposeRetired(): void {
+    for (const d of this.retired) d.dispose();
+    this.retired = [];
+  }
 
   constructor(private physics: PhysicsManager, scene: THREE.Scene) {
     scene.add(this.group);
@@ -207,7 +214,9 @@ export class LevelManager {
     this.edgeMaterial = null;
     this.body = null;
     this.group.clear();
-    for (const d of this.disposables) d.dispose();
+    // Disposed only after the next level is built and its shaders compiled (disposeRetired):
+    // freeing first would drop shader programs the next level reuses and recompile them mid-play.
+    this.retired.push(...this.disposables);
     this.disposables = [];
     this.checkpoints = [];
     this.goal = null;
