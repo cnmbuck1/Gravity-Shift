@@ -74,7 +74,7 @@ export class UIManager {
           <button class="btn" data-action="howto">HOW TO PLAY</button>
           <button class="btn" data-action="settings">SETTINGS</button>
         </div>
-        <div class="menu-foot">A CNMBUCK GAME · v0.7 · ${this.worlds.length} worlds · ${this.campaign.length} levels</div>
+        <div class="menu-foot">A CNMBUCK STUDIOS GAME · v1.0.1 · ${this.worlds.length} worlds · ${this.campaign.length} levels</div>
       </section>
 
       <section class="screen panel-screen" data-screen="levels">
@@ -306,7 +306,7 @@ export class UIManager {
     const orbWon = orbAvailable(this.settings.get());
     panel.querySelector('.orb-choice')?.classList.toggle('locked', !orbWon);
     this.bind('orb-note', orbWon
-      ? 'The Cnmbuck Orb: Cnmbuck Studios\' signature ball, in every Cnmbuck game.'
+      ? 'The Cnmbuck Orb: Cnmbuck Studios\' signature ball, in every Cnmbuck Studios game.'
       : `🔒 Cnmbuck Orb: finish ${ORB_LEVELS} levels to win Cnmbuck Studios' signature ball.`);
     this.syncStore();
     this.debugEl.style.display = this.settings.get().showDebug ? 'block' : 'none';
