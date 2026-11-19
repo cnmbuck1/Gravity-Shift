@@ -138,6 +138,24 @@ export class FeatureManager {
     return best;
   }
 
+  /**
+   * True when the sphere's centre is over an open hole cell at rolling height (on the floor
+   * frame, not over a turning disc). The caller then pulls it down hard, so a hole catches
+   * the sphere at any speed instead of letting it skim across (Chris, 2026-11-19).
+   */
+  overHole(p: THREE.Vector3): boolean {
+    if (!this.holes.length) return false;
+    for (const r of this.rotators) {
+      if (r.def.kind === 'disc' && Math.hypot(p.x - r.def.centre[0], p.z - r.def.centre[2]) < r.def.size + 0.3) return false;
+    }
+    for (const [hx, hz, floorY, cell] of this.holes) {
+      if (p.y > floorY + BALL_RADIUS + 0.15 || p.y < floorY - 1.5) continue;
+      const half = cell / 2;
+      if (Math.abs(p.x - hx) <= half && Math.abs(p.z - hz) <= half) return true;
+    }
+    return false;
+  }
+
   /** A glide chute: a faint shaft with glowing rings sinking down it, so the slow fall reads as a place to steer. */
   private addChute(w: GravityWellDef): void {
     const cx = (w.min[0] + w.max[0]) / 2;
