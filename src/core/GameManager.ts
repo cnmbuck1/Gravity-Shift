@@ -16,6 +16,12 @@ import { HapticsManager } from '../feedback/HapticsManager';
 import type { SaveManager } from '../settings/SaveManager';
 
 export const GRAVITY = 14;
+/** Downward speed (m/s) a sphere gets the moment it rolls off into a hole, so holes catch it at any speed. */
+const HOLE_DROP_SPEED = 5;
+/** Share of sideways speed kept on that first drop step (a little drag so it can't hop the far rim). */
+const HOLE_DRAG = 0.85;
+/** Seconds after leaving the floor during which rolling over a hole still grabs the sphere. */
+const HOLE_GRAB_WINDOW = 0.3;
 /** Fastest fall (m/s) inside a glide chute (a gravity well with `steer`). */
 const GLIDE_FALL_SPEED = 2.3;
 const RESPAWN_DELAY = 1.1;
@@ -316,6 +322,15 @@ export class GameManager {
           // or while a conveyor or boost pad is already pushing it).
           const pull = this.frame.down.y < -0.5 && !carry && !mod.push ? this.features.holePull(this.ball.position, this.ball.grounded) : null;
           if (pull) mod = { ...mod, push: mod.push ? mod.push.clone().add(pull) : pull };
+          // Rolling off into a hole: drop at once. Real gravity alone let a fast sphere cross a
+          // 2 m hole before it sank below the far rim. Only for a sphere that just rolled off the
+          // floor: not one resting on a bridge, crumble tile or platform over a hole cell, nor one
+          // flying over on a jump pad.
+          if (this.frame.down.y < -0.5 && !carry && !this.ball.grounded && this.ball.airTime < HOLE_GRAB_WINDOW && this.features.overHole(this.ball.position)) {
+            const v = this.ball.body.linvel();
+            // v.y > 1: launched upward by a jump pad, leave it alone.
+            if (v.y > -HOLE_DROP_SPEED && v.y < 1) this.ball.body.setLinvel({ x: v.x * HOLE_DRAG, y: -HOLE_DROP_SPEED, z: v.z * HOLE_DRAG }, true);
+          }
           // Glide chutes (multi-level boards): more air control while dropping, to steer onto the landing.
           if (!this.ball.grounded) {
             const steer = this.features.steerAt(this.ball.position);
