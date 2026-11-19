@@ -25,7 +25,7 @@ const TEST_REWARDED_UNIT_ID = 'ca-app-pub-3940256099942544/1712485313';
 const REWARDED_WAIT_MS = 8000;
 
 /**
- * How a skip request ended: watched the ad, skipped for free (web build or Remove Ads owned),
+ * How a skip request ended: watched the ad, skipped for free (web build only),
  * closed the ad early, or no ad could be loaded (no skip: the player can try again or keep playing).
  */
 export type SkipResult = 'rewarded' | 'free' | 'cancelled' | 'unavailable';
@@ -44,6 +44,8 @@ export class Monetization {
   private store: PurchasesApi | null = null;
   private adReady = false;
   private rewardedReady = false;
+  /** TestFlight or Xcode install: use Google's test ad units, which always fill. */
+  private testAds = false;
   private sessionStart = Date.now();
   private lastAd = 0;
   private finishedSinceAd = 0;
@@ -73,16 +75,24 @@ export class Monetization {
       console.warn('Store unavailable', e);
       this.lastError = `Store: ${errorText(e)}`;
     }
-    if (this.adFree) return;
+    try {
+      // TestFlight and Xcode installs are 'Sandbox'/'Xcode': show test ads there, real ads only to App Store players.
+      const { appTransaction } = await this.store!.getAppTransaction();
+      this.testAds = appTransaction.environment !== 'Production';
+    } catch {
+      /* iOS 15 or no answer: keep real ads */
+    }
+    // Ads start even with Remove Ads: it only removes the between-level ads, and Skip Level
+    // always needs a rewarded ad.
     await this.startAds();
   }
 
   /** Starts the AdMob SDK and preloads both ads. Safe to call again after a failed start. */
   private async startAds(): Promise<void> {
-    if (this.admob || this.adFree) return;
+    if (this.admob) return;
     try {
       const admob = (await import('@capacitor-community/admob')).AdMob;
-      await admob.initialize({ initializeForTesting: !AD_UNIT_ID });
+      await admob.initialize({ initializeForTesting: this.testAds });
       this.admob = admob;
       void this.prepare();
       void this.prepareRewarded();
@@ -96,7 +106,7 @@ export class Monetization {
     if (!this.admob || this.adReady || this.adFree) return;
     try {
       // npa: non-personalised ads only, so the app needs no tracking prompt.
-      await this.admob.prepareInterstitial({ adId: AD_UNIT_ID || TEST_AD_UNIT_ID, isTesting: !AD_UNIT_ID, npa: true });
+      await this.admob.prepareInterstitial({ adId: this.testAds ? TEST_AD_UNIT_ID : AD_UNIT_ID, isTesting: this.testAds, npa: true });
       this.adReady = true;
     } catch (e) {
       this.adReady = false;
@@ -105,9 +115,9 @@ export class Monetization {
   }
 
   private async prepareRewarded(): Promise<void> {
-    if (!this.admob || this.rewardedReady || this.adFree) return;
+    if (!this.admob || this.rewardedReady) return;
     try {
-      await this.admob.prepareRewardVideoAd({ adId: REWARDED_UNIT_ID || TEST_REWARDED_UNIT_ID, isTesting: !REWARDED_UNIT_ID, npa: true });
+      await this.admob.prepareRewardVideoAd({ adId: this.testAds ? TEST_REWARDED_UNIT_ID : REWARDED_UNIT_ID, isTesting: this.testAds, npa: true });
       this.rewardedReady = true;
     } catch (e) {
       this.rewardedReady = false;
@@ -119,10 +129,10 @@ export class Monetization {
    * "Watch an ad to skip this level". In the iPhone app the skip needs a fully watched rewarded
    * ad: closing it early cancels the skip, and when no ad loads within a few seconds there is no
    * skip ('unavailable'; the player can try again, and retries are always free).
-   * Remove Ads owners and the web build skip without an ad.
+   * This applies with Remove Ads too (Chris, 2026-11-19); only the web build skips without an ad.
    */
   async rewardedSkip(): Promise<SkipResult> {
-    if (!this.native || this.adFree) return 'free';
+    if (!this.native) return 'free';
     if (!this.admob) await this.startAds();
     if (!this.admob) return 'unavailable';
     if (!this.rewardedReady) {
@@ -219,7 +229,7 @@ export class Monetization {
     const wait = Math.max(0, NO_ADS_FIRST_MS - (Date.now() - this.sessionStart));
     const gap = Math.max(0, MIN_GAP_MS - (Date.now() - this.lastAd));
     const store = this.store ? (this.productFound ? `store ok ${this.price ?? ''}` : 'store: product missing') : 'store: not started';
-    const ads = this.adFree ? 'ads off (owned)' : `ads ${this.admob ? (this.adReady ? 'loaded' : 'loading') : 'not started'}, ${this.finishedSinceAd}/${EVERY_N_LEVELS} levels after World 1, wait ${Math.ceil(Math.max(wait, gap) / 1000)}s`;
+    const ads = (this.testAds ? 'TEST ads, ' : '') + (this.adFree ? 'interstitials off (owned)' : `ads ${this.admob ? (this.adReady ? 'loaded' : 'loading') : 'not started'}, ${this.finishedSinceAd}/${EVERY_N_LEVELS} levels after World 1, wait ${Math.ceil(Math.max(wait, gap) / 1000)}s`);
     return `${store} · ${ads}${this.lastError ? ' · ' + this.lastError : ''}`;
   }
 
@@ -229,7 +239,7 @@ export class Monetization {
     try {
       await this.store.restorePurchases();
       await this.refreshEntitlement();
-      if (!this.adFree) void this.startAds();
+      void this.startAds();
     } catch (e) {
       console.warn('Restore failed', e);
     }

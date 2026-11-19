@@ -500,7 +500,7 @@ export class UIManager {
 
   private syncSkip(): void {
     this.hud.classList.toggle('can-skip', this.levelFalls >= SKIP_AFTER_FALLS && this.canSkip());
-    this.bind('skip-note', this.money.native && !this.money.adFree ? '▶ AD' : '');
+    this.bind('skip-note', this.money.native ? '▶ AD' : '');
   }
 
   /** Watch a rewarded ad (where ads run) and move on to the next level; the skipped one stays unplayed. */
@@ -508,7 +508,7 @@ export class UIManager {
     if (!this.canSkip() || this.skipping) return;
     this.skipping = true;
     this.game.pause();
-    if (this.money.native && !this.money.adFree) this.toast('LOADING AD…', 8000);
+    if (this.money.native) this.toast('LOADING AD…', 8000);
     const result = await this.money.rewardedSkip();
     this.skipping = false;
     if (result === 'cancelled' || result === 'unavailable') {
@@ -596,7 +596,7 @@ export class UIManager {
     show('store', this.money.native);
     show('can-buy', this.money.native && !this.money.adFree);
     if (this.money.price) this.bind('ads-price', `${this.money.price} · one-time · also unlocks the Cnmbuck Orb`);
-    this.bind('ads-note', this.money.adFree ? '✓ Ads removed. Thank you for supporting Cnmbuck Studios.' : '');
+    this.bind('ads-note', this.money.adFree ? '✓ Ads between levels removed. Thank you for supporting Cnmbuck Studios. (Skip Level still plays a short ad.)' : '');
     // With Debug readout on, Settings shows why ads/store are or aren't working, plus a test-ad button.
     show('store-debug', this.money.native && this.settings.get().showDebug);
     this.bind('store-debug', this.money.status());
