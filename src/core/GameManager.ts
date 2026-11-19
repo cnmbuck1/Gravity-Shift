@@ -121,6 +121,11 @@ export class GameManager {
     this.levels.load(def);
     this.features.load(def);
     this.view.setTheme(def.theme);
+    // Compile every shader the level needs now, at load, instead of the first time an object
+    // comes into view (that stalled the course preview and the first seconds of some levels).
+    this.view.prewarm();
+    this.levels.disposeRetired();
+    this.features.disposeRetired();
     this.camera.configure(def.camera);
     this.camera.seeThrough = this.levels.seeThrough;
     // Multi-level boards: follow the ball all the way down a drop to the floor below.

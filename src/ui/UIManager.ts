@@ -33,6 +33,8 @@ export class UIManager {
   /** Falls in the current level, counted across restarts; the Skip Level button appears at SKIP_AFTER_FALLS. */
   private levelFalls = 0;
   private skipping = false;
+  /** Set between tapping NEXT LEVEL and that level starting (an ad may show in between). */
+  private advancing = false;
   /** World shown in the level list (-1: the world list). */
   private openWorld = -1;
 
@@ -72,7 +74,7 @@ export class UIManager {
           <button class="btn" data-action="howto">HOW TO PLAY</button>
           <button class="btn" data-action="settings">SETTINGS</button>
         </div>
-        <div class="menu-foot">A CNMBUCK GAME · v0.7 · ${this.worlds.length} worlds · ${this.campaign.length} levels</div>
+        <div class="menu-foot">A CNMBUCK STUDIOS GAME · v1.0.1 · ${this.worlds.length} worlds · ${this.campaign.length} levels</div>
       </section>
 
       <section class="screen panel-screen" data-screen="levels">
@@ -304,7 +306,7 @@ export class UIManager {
     const orbWon = orbAvailable(this.settings.get());
     panel.querySelector('.orb-choice')?.classList.toggle('locked', !orbWon);
     this.bind('orb-note', orbWon
-      ? 'The Cnmbuck Orb: Cnmbuck Studios\' signature ball, in every Cnmbuck game.'
+      ? 'The Cnmbuck Orb: Cnmbuck Studios\' signature ball, in every Cnmbuck Studios game.'
       : `🔒 Cnmbuck Orb: finish ${ORB_LEVELS} levels to win Cnmbuck Studios' signature ball.`);
     this.syncStore();
     this.debugEl.style.display = this.settings.get().showDebug ? 'block' : 'none';
@@ -442,10 +444,20 @@ export class UIManager {
       case 'skip-level':
         void this.skipLevel();
         break;
-      case 'next':
+      case 'next': {
         // A due ad shows here, between the result and the next level, never during play.
-        void this.money.maybeShowAd().then(() => this.startLevel(this.current + 1));
+        // The target is fixed at the first tap and later taps are ignored until it starts:
+        // a double tap (the result screen stays tappable while it fades) used to run this
+        // twice and jump two levels ahead, leaving the level in between unplayed.
+        if (this.advancing || this.game.state !== 'complete') break;
+        this.advancing = true;
+        const next = this.current + 1;
+        void this.money.maybeShowAd().finally(() => {
+          this.advancing = false;
+          void this.startLevel(next);
+        });
         break;
+      }
       case 'remove-ads':
         void this.money.buyRemoveAds().then(({ owned, error }) => {
           if (owned) this.toast('✓ Ads removed · the Cnmbuck Orb is yours', 3000);
@@ -474,6 +486,9 @@ export class UIManager {
   private unlocked(i: number): boolean {
     if (this.settings.get().unlockAll) return true;
     if (i === 0 || i >= this.campaign.length) return true;
+    // A level already finished or skipped never shows as locked again.
+    const own = this.campaign[i].id;
+    if (this.game.recordFor(own).bestTime !== null || this.game.wasSkipped(own)) return true;
     const prev = this.campaign[i - 1].id;
     return this.game.recordFor(prev).bestTime !== null || this.game.wasSkipped(prev);
   }
@@ -493,11 +508,12 @@ export class UIManager {
     if (!this.canSkip() || this.skipping) return;
     this.skipping = true;
     this.game.pause();
+    if (this.money.native && !this.money.adFree) this.toast('LOADING AD…', 8000);
     const result = await this.money.rewardedSkip();
     this.skipping = false;
-    if (result === 'cancelled') {
+    if (result === 'cancelled' || result === 'unavailable') {
       this.game.resume();
-      this.toast('Watch the whole ad to skip', 2000);
+      this.toast(result === 'cancelled' ? 'Watch the whole ad to skip' : 'No ad available right now · try again in a moment', 2400);
       return;
     }
     this.game.markSkipped(this.campaign[this.current].id);

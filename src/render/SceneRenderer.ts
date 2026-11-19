@@ -103,6 +103,27 @@ export class SceneRenderer {
     pos.needsUpdate = true;
   }
 
+  /**
+   * Compiles the shader programs for everything in the scene (visible or not, in view or not)
+   * and uploads its textures, so nothing has to compile mid-play when it first comes on screen.
+   */
+  prewarm(): void {
+    this.renderer.compile(this.scene, this.camera);
+    const seen = new Set<THREE.Texture>();
+    this.scene.traverse((o) => {
+      const mats = (o as THREE.Mesh).material;
+      if (!mats) return;
+      for (const m of Array.isArray(mats) ? mats : [mats]) {
+        for (const v of Object.values(m)) {
+          if (v instanceof THREE.Texture && !seen.has(v)) {
+            seen.add(v);
+            this.renderer.initTexture(v);
+          }
+        }
+      }
+    });
+  }
+
   render(): void {
     this.renderer.render(this.scene, this.camera);
   }

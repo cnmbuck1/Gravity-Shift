@@ -63,6 +63,13 @@ export class FeatureManager {
   private def: LevelDef | null = null;
   private body: RAPIER.RigidBody | null = null;
   private disposables: { dispose(): void }[] = [];
+  private retired: { dispose(): void }[] = [];
+
+  /** Frees the previous level's geometry, materials and textures (see unload). */
+  disposeRetired(): void {
+    for (const d of this.retired) d.dispose();
+    this.retired = [];
+  }
   private time = 0;
   private jumpCooldown = 0;
   private boostTimer = 0;
@@ -178,7 +185,9 @@ export class FeatureManager {
     this.chutes = [];
     this.pads = [];
     this.group.clear();
-    for (const d of this.disposables) d.dispose();
+    // Disposed only after the next level is built and its shaders compiled (disposeRetired):
+    // freeing first would drop shader programs the next level reuses and recompile them mid-play.
+    this.retired.push(...this.disposables);
     this.disposables = [];
     this.def = null;
   }
