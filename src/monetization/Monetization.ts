@@ -31,9 +31,10 @@ const REWARDED_WAIT_MS = 8000;
 export type SkipResult = 'rewarded' | 'free' | 'cancelled' | 'unavailable';
 
 /** Ad rules agreed in the ads plan. */
+/** Between-level ad every 3 finished levels, from World 1 on (Chris, 2026-11-19). No time caps. */
 const EVERY_N_LEVELS = 3;
-const NO_ADS_FIRST_MS = 5 * 60_000;
-const MIN_GAP_MS = 3 * 60_000;
+/** Saved so quitting the app doesn't reset the count. */
+const COUNT_KEY = 'gravitor:levelsSinceAd';
 
 type AdMobApi = typeof import('@capacitor-community/admob').AdMob;
 type PurchasesApi = typeof import('@capgo/native-purchases').NativePurchases;
@@ -46,9 +47,7 @@ export class Monetization {
   private rewardedReady = false;
   /** TestFlight or Xcode install: use Google's test ad units, which always fill. */
   private testAds = false;
-  private sessionStart = Date.now();
-  private lastAd = 0;
-  private finishedSinceAd = 0;
+  private finishedSinceAd = loadCount();
   /** Localised price for the Remove Ads button, once the store answers. */
   price: string | null = null;
   /** Whether the App Store returned the Remove Ads product (false: not set up in App Store Connect). */
@@ -143,8 +142,8 @@ export class Monetization {
     try {
       const reward = await this.admob.showRewardVideoAd();
       // A rewarded ad also counts as this break's ad, so no interstitial follows right after.
-      this.lastAd = Date.now();
       this.finishedSinceAd = 0;
+      saveCount(0);
       return reward ? 'rewarded' : 'cancelled';
     } catch {
       return 'cancelled';
@@ -153,9 +152,10 @@ export class Monetization {
     }
   }
 
-  /** Call once per level finished. `world` is 0-based; World 1 never shows ads. */
-  levelFinished(world: number): void {
-    if (world > 0) this.finishedSinceAd++;
+  /** Call once per level finished (every world counts). */
+  levelFinished(_world: number): void {
+    this.finishedSinceAd++;
+    saveCount(this.finishedSinceAd);
   }
 
   /**
@@ -165,8 +165,7 @@ export class Monetization {
   async maybeShowAd(): Promise<void> {
     if (!this.admob) void this.startAds();
     if (!this.admob || this.adFree) return;
-    const now = Date.now();
-    if (this.finishedSinceAd < EVERY_N_LEVELS || now - this.sessionStart < NO_ADS_FIRST_MS || now - this.lastAd < MIN_GAP_MS) return;
+    if (this.finishedSinceAd < EVERY_N_LEVELS) return;
     if (!this.adReady) {
       void this.prepare();
       return;
@@ -174,8 +173,8 @@ export class Monetization {
     this.adReady = false;
     try {
       await this.admob.showInterstitial();
-      this.lastAd = Date.now();
       this.finishedSinceAd = 0;
+      saveCount(0);
     } catch {
       /* failed to show: skip silently */
     }
@@ -226,10 +225,8 @@ export class Monetization {
   /** One line for the debug readout: why the next ad will or won't show. */
   status(): string {
     if (!this.native) return 'web build: no ads or store';
-    const wait = Math.max(0, NO_ADS_FIRST_MS - (Date.now() - this.sessionStart));
-    const gap = Math.max(0, MIN_GAP_MS - (Date.now() - this.lastAd));
     const store = this.store ? (this.productFound ? `store ok ${this.price ?? ''}` : 'store: product missing') : 'store: not started';
-    const ads = (this.testAds ? 'TEST ads, ' : '') + (this.adFree ? 'interstitials off (owned)' : `ads ${this.admob ? (this.adReady ? 'loaded' : 'loading') : 'not started'}, ${this.finishedSinceAd}/${EVERY_N_LEVELS} levels after World 1, wait ${Math.ceil(Math.max(wait, gap) / 1000)}s`);
+    const ads = (this.testAds ? 'TEST ads, ' : '') + (this.adFree ? 'interstitials off (owned)' : `ads ${this.admob ? (this.adReady ? 'loaded' : 'loading') : 'not started'}, ${this.finishedSinceAd}/${EVERY_N_LEVELS} levels`);
     return `${store} · ${ads}${this.lastError ? ' · ' + this.lastError : ''}`;
   }
 
@@ -269,4 +266,20 @@ function errorText(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === 'object' && e && 'message' in e) return String((e as { message: unknown }).message);
   return String(e);
+}
+
+function loadCount(): number {
+  try {
+    return Number(localStorage.getItem(COUNT_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveCount(n: number): void {
+  try {
+    localStorage.setItem(COUNT_KEY, String(n));
+  } catch {
+    /* storage blocked: the count just restarts next launch */
+  }
 }
