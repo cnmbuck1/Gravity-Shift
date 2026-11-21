@@ -222,6 +222,11 @@ W10 = [
         R(cw=3, feats=[door(), strips(), piston(period=2.6)])),
 ]
 
+# Levels 6-10 of each world, made harder (Chris, 2026-11-21): see harden.py.
+from harden import harden
+W4, W5, W6, W7, W8, W9, W10 = ([(c, harden(sp, n) if k >= 5 else sp) for k, (c, sp) in enumerate(w)]
+                               for n, w in ((4, W4), (5, W5), (6, W6), (7, W7), (8, W8), (9, W9), (10, W10)))
+
 WORLDS = [
     ('world4', 'World 4 · Crumble Belt', W4), ('world5', 'World 5 · Flux Rails', W5), ('world6', 'World 6 · Skyward', W6),
     ('world7', 'World 7 · Circuit', W7), ('world8', 'World 8 · Low Orbit', W8), ('world9', 'World 9 · Spin Cycle', W9),
@@ -240,3 +245,6 @@ if __name__ == '__main__':
     old = json.load(open('routes.json')) if os.path.exists('routes.json') else {}
     old.update(routes)
     json.dump(old, open('routes.json', 'w'), indent=0)
+    import levelgen
+    for e in levelgen.ERRORS:
+        print('ERROR', e)

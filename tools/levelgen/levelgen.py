@@ -42,10 +42,15 @@ class Level:
         self.maze_lasers = []
         self.wall_notches = []     # (crossing index, row a, row b, 'low' | 'high')
         self.wall_pistons = []     # (crossing index, row)      # indexes of lasers placed inside mazes (the route finds them itself)
+        self.portals = []          # dicts: a, b (cell coords), exit (dx, dy y-up) or None, decoy
+        self.keys = []             # (cx, cy)
+        self.fans = []             # (c0, c1, y0, y1, dir (dx, dy y-up), strength, period, on, phase)
+        self.pulses = []           # (c0, c1, y0, y1, period, on, phase)
+        self.maze_pulses = []      # indexes of pulses placed in maze doorways
         self.checkpoints = []      # (cx, cy) cell coords (float)
         self.legs = []             # route legs, cell coords until resolved
         self.y = 1                 # next free row (y-up); row 0 is the border
-        self.side = 'W'            # side the next segment is entered from
+        self.side = spec.get('side', 'W')  # side the next segment is entered from
         self.specials = 0
 
     # ---------- grid ----------
@@ -86,6 +91,8 @@ class Level:
         lo = 7 if start else 5
         usable = order[lo:len(order) - (6 if goal else 5)]
         feats = list(feats)
+        if self.spec.get('fit'):
+            feats = self._fit(usable, feats)
         slots = self._slots(usable, feats)
         mid = (y0 + y1) / 2
         route_marks = []                 # (col index along order, leg) specials in travel order
@@ -105,9 +112,9 @@ class Level:
         return (y0, y1)
 
     # Clear cells needed before a feature for the approach (waiting spot, run-up).
-    APPROACH = {'platform': 2, 'laser': 2, 'jump': 2, 'door': 6, 'bridge': 0}
+    APPROACH = {'platform': 2, 'laser': 2, 'jump': 2, 'door': 6, 'bridge': 0, 'fan': 2, 'pulse': 1, 'gapwarp': 1}
     # Clear cells needed after a feature (where the route steps off it).
-    EXIT = {'platform': 2, 'arm': 2, 'bridge': 0}
+    EXIT = {'platform': 2, 'arm': 2, 'bridge': 0, 'fan': 1, 'pulse': 1, 'gapwarp': 1}
 
     def _slots(self, usable, feats):
         if self.spec.get('layout', 1) == 1:
@@ -118,7 +125,7 @@ class Level:
             return []
         widths = [self._feat_width(f, a) for f, a in feats]
         names = [f for f, _ in feats]
-        need = [max(self.APPROACH.get(f, 1), self.EXIT.get(names[k - 1], 1) if k else 0) for k, f in enumerate(names)] + [self.EXIT.get(names[-1], 1)]
+        need = [max(self.APPROACH.get(f, 1), self._exit().get(names[k - 1], 1) if k else 0) for k, f in enumerate(names)] + [self._exit().get(names[-1], 1)]
         free = len(usable) - sum(widths) - sum(need)
         assert free >= 0, f'features {feats} do not fit in {len(usable)} columns'
         extra = [free // len(need)] * len(need)
@@ -130,6 +137,31 @@ class Level:
             out.append((usable[i], usable[i + w - 1]))
             i += w
         return out
+
+    def _exit(self):
+        # Worlds 11+: two clear cells after crumbling floor, so a fast crossing can run out onto solid ground.
+        return {**self.EXIT, 'crumble': 2} if self.spec.get('fit') and not self.spec.get('hardened') else self.EXIT
+
+    SHRINK = {'fan': ('len', 3), 'pulse': ('len', 2), 'gapwarp': ('gap', 2), 'crumble': ('len', 3), 'ice': ('len', 4)}
+
+    def _fit(self, usable, feats):
+        """Worlds 11+: shorten stretchy features (fans, pulses, gate gaps, crumble, ice) until a run's features fit."""
+        feats = [(f, dict(a)) for f, a in feats]
+        while True:
+            widths = [self._feat_width(f, a) for f, a in feats]
+            names = [f for f, _ in feats]
+            need = sum(max(self.APPROACH.get(f, 1), self._exit().get(names[k - 1], 1) if k else 0) for k, f in enumerate(names)) + (self._exit().get(names[-1], 1) if names else 0)
+            if not feats or len(usable) - sum(widths) - need >= 0:
+                return feats
+            for f, a in sorted(feats, key=lambda fa: -self._feat_width(*fa)):
+                if f in self.SHRINK:
+                    k, lo = self.SHRINK[f]
+                    cur = a.get(k, {'fan': 4, 'pulse': 3, 'gapwarp': 3, 'crumble': 4, 'ice': 6}[f])
+                    if cur > lo:
+                        a[k] = cur - 1
+                        break
+            else:
+                return feats
 
     def _slots_v1(self, usable, feats):
         """Worlds 1-3 layout (kept so those tested levels stay as they are). Splits the usable columns evenly among the features: returns (first, last) index pairs into usable."""
@@ -147,7 +179,8 @@ class Level:
     def _feat_width(self, f, args):
         return {'holes': 2, 'piston': 1, 'strips': 1, 'bridge': 6 + args.get('deck', 5), 'crumble': args.get('len', 4),
                 'platform': args.get('gap', 5), 'pad': args.get('len', 5), 'laser': 1, 'door': 1, 'arm': args.get('size', 5),
-                'disc': 5, 'jump': 2 + args.get('gap', 3), 'well': args.get('len', 6), 'ice': args.get('len', 6)}.get(f, 1)
+                'disc': 5, 'jump': 2 + args.get('gap', 3), 'well': args.get('len', 6), 'ice': args.get('len', 6),
+                'fan': args.get('len', 4), 'pulse': args.get('len', 3), 'key': 2, 'gapwarp': 3 + args.get('gap', 3)}.get(f, 1)
 
     def _run_feature(self, f, args, order, a, b, y0, y1, east):
         cw = y1 - y0 + 1
@@ -248,6 +281,40 @@ class Level:
             return ('jump', a, a + step * (gap + 1))
         elif f == 'well':
             self.wells.append((lo, hi, y0, y1, args.get('scale', 0.4)))
+        elif f == 'fan':
+            # Crosswind: the fan sits on one wall and blows toward 2x2 holes punched into the other.
+            top = args.get('top', self.rng.random() < 0.5)       # holes on the top (far) edge?
+            if not top and y0 - 1 < 1:
+                top = True
+            self._edge_holes('top' if top else 'low', lo, hi, y0, y1)
+            d = (0, 1) if top else (0, -1)
+            self.fans.append((lo, hi, y0, y1, d, args.get('strength', 11), args.get('period', 3.0), args.get('on', 0.5), args.get('phase', 0)))
+            return ('fan', len(self.fans) - 1, lo if east else hi, hi if east else lo)
+        elif f == 'pulse':
+            self.pulses.append((lo, hi, y0, y1, args.get('period', 2.6), args.get('on', 0.45), args.get('phase', 0)))
+            return ('pulse', len(self.pulses) - 1, lo if east else hi, hi if east else lo)
+        elif f == 'key':
+            # A key in a pocket off the corridor (like a switch pocket).
+            top = args.get('top', self.rng.random() < 0.5)
+            if not top and y0 - 2 < 1:
+                top = True
+            pocket = (y1 + 1, y1 + 2) if top else (y0 - 2, y0 - 1)
+            self.carve(a, a + step, pocket[0], pocket[1])
+            if top:
+                self.pocket_top = max(getattr(self, 'pocket_top', 0), pocket[1])
+            kx = a + step * 0.5
+            ky = pocket[1] if top else pocket[0]
+            self.keys.append((kx, ky))
+            return ('switch', (kx, ky), a)
+        elif f == 'gapwarp':
+            # A chasm across the corridor: a gate before it sends you to a gate past it.
+            gap = args.get('gap', 3)
+            cs = [a + step * (1 + i) for i in range(gap)]
+            for c in cs:
+                self.carve(c, c, y0, y1, ' ')
+            ga, gb = (a, mid), (a + step * (gap + 2), mid)
+            self.portals.append(dict(a=ga, b=gb, exit=(step, 0), decoy=False))
+            return ('warp', len(self.portals) - 1, ga, (gb[0] + step, mid))
         elif f == 'ice':
             py0, py1 = self._edge_holes(args.get('holes'), lo, hi, y0, y1)
             self.pads.append(dict(kind='ice', c0=lo, c1=hi, y0=py0, y1=py1, dir=None))
@@ -336,8 +403,51 @@ class Level:
                     else:
                         yy = cell_y(j1) + mw
                         self.movers.append(('pistonX', yy, cell_c(i1), cell_c(i1) + mw - 1, period, round(k * 0.31 % 1, 2)))
+            elif f == 'keys':
+                # Keys in the dead ends farthest from the exit (after any switch's).
+                first = 1 if getattr(self, 'maze_switch', None) else 0
+                ks = dead[first:first + args.get('n', 2)]
+                self.maze_keys = []
+                for d in ks:
+                    kx, ky = cell_c(d[0]) + (mw - 1) / 2, cell_y(d[1]) + (mw - 1) / 2
+                    self.keys.append((kx, ky))
+                    self.maze_keys.append((kx, ky))
+                self.key_dead = set(ks)
+            elif f == 'warpexit':
+                # The exit is walled up: the way out is a gate in a far dead end. Gates in other dead ends are decoys
+                # that send you back to the maze's start.
+                used = getattr(self, 'key_dead', set())
+                free = [d for d in dead if d not in used]
+                if getattr(self, 'maze_switch', None):
+                    free = free[1:]
+                assert free, 'warpexit needs a dead end'
+                d = free[0]
+                self.warp_dead = set(free[:1 + args.get('decoys', 0)])
+                ga = (cell_c(d[0]) + (mw - 1) / 2, cell_y(d[1]) + (mw - 1) / 2)
+                self.maze_warp = dict(gate=ga, idx=len(self.portals))
+                self.portals.append(dict(a=ga, b=None, exit=None, decoy=False))   # b set once the next segment exists
+                for dd in free[1:1 + args.get('decoys', 0)]:
+                    gd = (cell_c(dd[0]) + (mw - 1) / 2, cell_y(dd[1]) + (mw - 1) / 2)
+                    st = (cell_c(start[0]) + (mw - 1) / 2, y0 + (mw - 1) / 2)
+                    self.portals.append(dict(a=gd, b=st, exit=None, decoy=True))
+            elif f == 'pulses':
+                # Pulse floors across maze doorways.
+                ls = sorted(links, key=lambda l: sorted(l))
+                rng.shuffle(ls)
+                for k, l in enumerate(ls[:args.get('n', 2)]):
+                    (a_, b_) = tuple(l)
+                    (i1, j1), (i2, j2) = sorted((a_, b_))
+                    period = args.get('period', 2.6) + 0.3 * (k % 3)
+                    if j1 == j2:
+                        c = cell_c(i1) + mw
+                        self.pulses.append((c, c, cell_y(j1), cell_y(j1) + mw - 1, period, 0.35, round(k * 0.29 % 1, 2)))
+                    else:
+                        yy = cell_y(j1) + mw
+                        self.pulses.append((cell_c(i1), cell_c(i1) + mw - 1, yy, yy, period, 0.35, round(k * 0.29 % 1, 2)))
+                    self.maze_pulses.append(len(self.pulses) - 1)
             elif f == 'deadholes':
-                for d in dead[1:1 + args.get('n', 2)]:
+                used = getattr(self, 'key_dead', set()) | getattr(self, 'warp_dead', set())
+                for d in [d for d in dead[1:] if d not in used][:args.get('n', 2)]:
                     self.carve(cell_c(d[0]), cell_c(d[0]) + mw - 1, cell_y(d[1]), cell_y(d[1]) + mw - 1, ' ')
             elif f == 'ice':
                 self.pads.append(dict(kind='ice', c0=1, c1=W - 2, y0=y0, y1=y0 + h - 1, dir=None))
@@ -376,6 +486,8 @@ class Level:
         if goal:
             self.carve(ex[0], ex[1], y0 + h - mw, y0 + h - 1, 'G')
             self.goal = ((ex[0] + ex[1]) / 2, y0 + h - (mw + 1) / 2)
+        self.key_dead = set()
+        self.warp_dead = set()
         self.maze_route = (((sc[0] + sc[1]) / 2, y0), ((ex[0] + ex[1]) / 2, y0 + h - 1))
         self.y = y0 + h
         self.side = 'E' if self.side == 'W' else 'W'
@@ -416,7 +528,15 @@ class Level:
         args = args or {}
         side = 'E' if self.side == 'E' else 'W'
         c0, c1 = self.side_cols(side, width)
+        if self.spec.get('fit'):
+            # Room for a key or switch pocket off the corridor below.
+            length = max(length, getattr(self, 'pocket_top', -9) + 2 - self.y)
         y0, y1 = self.y, self.y + length - 1
+        if feat == 'warp':
+            # No corridor: the rows stay solid and a warp gate carries the sphere over them.
+            self.conn_route = ('warp', None, y0, y1, None)
+            self.y = y1 + 1
+            return (y0, y1)
         self.carve(c0, c1, y0, y1)
         crossing = None
         if feat == 'holes':
@@ -499,6 +619,7 @@ def build(spec):
     legs = []          # route legs in y-up cell coords
     segs = spec['segments']
     last_exit = None   # (c, y) where the previous segment left
+    pending_warp = None  # portal index whose far gate goes at the next segment's entry
     for k, (kind, a) in enumerate(segs):
         is_first = k == 0
         is_last = k == len(segs) - 1
@@ -507,27 +628,60 @@ def build(spec):
             entry, exitc, mid, marks, step = L.run_route
             if is_first:
                 last_exit = L.spawn
-            if last_exit and not is_first:
+            if pending_warp is not None:
+                L.portals[pending_warp]['b'] = (entry, mid)
+                L.portals[pending_warp]['exit'] = (step, 0)
+                last_exit = (entry, mid)
+                pending_warp = None
+            elif last_exit and not is_first:
                 legs.append(('path', last_exit, (entry, mid)))
                 last_exit = (entry, mid)
             for m in marks:
-                last_exit = route_mark(legs, last_exit, m, mid, step)
+                last_exit = route_mark(legs, last_exit, m, mid, step, 2 if spec.get('fit') and not spec.get('hardened') else 1)
             end = L.goal if is_last else (exitc, mid)
             legs.append(('path', last_exit, end))
             last_exit = end
         elif kind == 'maze':
             (y0, y1) = L.maze(mw=a.get('mw', 3), ny=a.get('ny', 3), feats=a.get('feats', []), goal=is_last, checkpoint=a.get('checkpoint', False))
             (s, e) = L.maze_route
+            if pending_warp is not None:
+                L.portals[pending_warp]['b'] = s
+                L.portals[pending_warp]['exit'] = (0, 1)
+                last_exit = s
+                pending_warp = None
+            # Keys first (nearest first), then the switch: its door only stays open a few seconds.
+            ks = list(getattr(L, 'maze_keys', []))
+            L.maze_keys = []
+            while ks:
+                ks.sort(key=lambda q: abs(q[0] - last_exit[0]) + abs(q[1] - last_exit[1]))
+                q = ks.pop(0)
+                legs.append(('path', last_exit, q))
+                last_exit = q
             sw = getattr(L, 'maze_switch', None)
             if sw:
                 legs.append(('path', last_exit, sw))
                 last_exit = sw
                 L.maze_switch = None
+            mw_ = getattr(L, 'maze_warp', None)
+            if mw_:
+                legs.append(('path', last_exit, mw_['gate']))
+                legs.append(('warp', mw_['idx']))
+                last_exit = None
+                L.maze_warp = None
+                pending_warp = mw_['idx']
+                continue
             end = L.goal if is_last else e
             legs.append(('path', last_exit, end))
             last_exit = end
         elif kind == 'conn':
             (y0, y1) = L.conn(length=a.get('len', 3), width=a.get('w', 3), feat=a.get('feat'), args=a)
+            if L.conn_route[0] == 'warp':
+                if pending_warp is None:
+                    # Gate at the end of the corridor we just ran.
+                    L.portals.append(dict(a=last_exit, b=None, exit=None, decoy=False))
+                    legs.append(('warp', len(L.portals) - 1))
+                    pending_warp = len(L.portals) - 1
+                continue
             side, cx, cy0, cy1, crossing = L.conn_route
             if crossing:
                 feat = crossing[0]
@@ -547,7 +701,7 @@ def build(spec):
     return L
 
 
-def route_mark(legs, last, m, mid, s):
+def route_mark(legs, last, m, mid, s, runout=1):
     kind = m[0]
     if kind == 'bridge':
         return last          # the grid path already runs over the bridge cells
@@ -555,8 +709,8 @@ def route_mark(legs, last, m, mid, s):
         a, b = m[1], m[2]
         s = 1 if b > a else -1
         legs.append(('path', last, (a - s, mid)))
-        legs.append(('go', (b + s, mid), 3.2))
-        return (b + s, mid)
+        legs.append(('go', (b + runout * s, mid), 3.2))
+        return (b + runout * s, mid)
     if kind == 'slow':
         return last
     if kind == 'platform':
@@ -585,6 +739,20 @@ def route_mark(legs, last, m, mid, s):
         legs.append(('path', last, (a - s, lane)))
         legs.append(('arm', idx, (a - s, lane), (b + 2 * s, lane)))
         return (b + 2 * s, lane)
+    if kind in ('fan', 'pulse'):
+        idx, a, b = m[1], m[2], m[3]
+        s = 1 if b > a else -1
+        back = 2 if kind == 'fan' else 1
+        legs.append(('path', last, (a - back * s, mid)))
+        legs.append((kind, idx, (a - back * s, mid), (b + 2 * s, mid)))
+        return (b + 2 * s, mid)
+    if kind == 'warp':
+        idx, ga, after = m[1], m[2], m[3]
+        s = 1 if after[0] > ga[0] else -1
+        legs.append(('path', last, ga))
+        legs.append(('warp', idx))
+        legs.append(('path', (after[0] - s, mid), after))
+        return after
     if kind == 'jump':
         a, land = m[1], m[2]
         s = 1 if land > a else -1
@@ -598,7 +766,9 @@ def route_mark(legs, last, m, mid, s):
 # Emit TypeScript + route.
 # ---------------------------------------------------------------------------
 
-def emit(L, const, meta):
+def emit(L, const, meta, export=True, drop_end=None, land_start=False):
+    """drop_end: cells (c, y) that become drop holes (the end of an upper floor); land_start: the start pad
+    becomes a landing pad (a lower floor of a multi-level board)."""
     ys = [y for (_, y) in L.cells]
     H = max(ys) + 2                      # top border row
     ox, oz = -(W // 2), -(H // 2)
@@ -708,15 +878,47 @@ def emit(L, const, meta):
                 ds.append(f"    {{ position: [{X(c)}, 0.5, {(Z(y0) + Z(y1)) / 2}], size: [0.9, 1, {y1 - y0 + 1}] }},\n")
         extra.append('  doors: [\n' + ''.join(ds) + '  ],')
         extra.append('  switches: [\n' + ''.join(f"    {{ position: [{X(sx)}, 0.05, {Z(sy)}], doors: [{d}], time: {door_time(L, rows, R, sx, sy, d)} }},\n" for sx, sy, d in L.switches) + '  ],')
-    if L.wells:
-        extra.append('  wells: [\n' + ''.join(f"    {{ min: [{X(a) - 0.5}, -1, {Z(y1) - 0.5}], max: [{X(b) + 0.5}, 6, {Z(y0) + 0.5}], scale: {s} }},\n" for a, b, y0, y1, s in L.wells) + '  ],')
+    chutes = getattr(L, 'chutes', [])
+    if L.wells or chutes:
+        extra.append('  wells: [\n' + ''.join(f"    {{ min: [{X(a) - 0.5}, -1, {Z(y1) - 0.5}], max: [{X(b) + 0.5}, 6, {Z(y0) + 0.5}], scale: {s} }},\n" for a, b, y0, y1, s in L.wells)
+                     + ''.join(f"    {{ min: [{X(a) - 0.5}, 1.1, {Z(y1) - 0.5}], max: [{X(b) + 0.5}, 5.4, {Z(y0) + 0.5}], scale: 0.3, steer: 2.6 }},\n" for a, b, y0, y1 in chutes) + '  ],')
     if L.rotators:
         rs = []
         for (k, cx, cy, size, speed, phase) in L.rotators:
             yy = 0 if k == 'arm' else 0
             rs.append(f"    {{ kind: '{k}', centre: [{X(cx)}, {yy}, {Z(cy)}], size: {size}, speed: {speed}, phase: {phase} }},\n")
         extra.append('  rotators: [\n' + ''.join(rs) + '  ],')
-    rows_src = '\n'.join(f"      '{r}', // {i}" for i, r in enumerate(rows))
+    if L.portals:
+        ps = []
+        for g in L.portals:
+            a, b = g['a'], g['b']
+            assert b is not None, 'warp gate without a far end (a warp connector must be followed by a segment)'
+            ex = f", exit: [{g['exit'][0]}, {-g['exit'][1]}]" if g.get('exit') else ''
+            dc = ', decoy: true' if g.get('decoy') else ''
+            ps.append(f"    {{ a: [{X(a[0])}, 0, {Z(a[1])}], b: [{X(b[0])}, 0, {Z(b[1])}]{ex}{dc} }},\n")
+        extra.append('  portals: [\n' + ''.join(ps) + '  ],')
+    if L.keys:
+        extra.append('  keys: [\n' + ''.join(f"    {{ position: [{X(kx)}, 0, {Z(ky)}] }},\n" for kx, ky in L.keys) + '  ],')
+    if L.fans:
+        fs = []
+        for (c0, c1, y0, y1, d, strength, period, on, phase) in L.fans:
+            fs.append(f"    {{ min: [{X(c0) - 0.5}, -0.2, {Z(y1) - 0.5}], max: [{X(c1) + 0.5}, 2, {Z(y0) + 0.5}], dir: [{d[0]}, {-d[1]}], strength: {strength}, period: {period}, on: {on}, phase: {phase} }},\n")
+        extra.append('  fans: [\n' + ''.join(fs) + '  ],')
+    if L.pulses:
+        extra.append('  pulses: [\n' + ''.join(f"    {{ min: [{X(c0) - 0.5}, {Z(y1) - 0.5}], max: [{X(c1) + 0.5}, {Z(y0) + 0.5}], y: 0, period: {period}, on: {on}, phase: {phase} }},\n" for (c0, c1, y0, y1, period, on, phase) in L.pulses) + '  ],')
+    if L.spec.get('dark'):
+        extra.append('  dark: true,')
+    out_rows = []
+    for i, r in enumerate(rows):
+        y = H - 1 - i
+        r = list(r)
+        for c in range(W):
+            if drop_end is not None and r[c] == 'G':
+                r[c] = 'D' if (c, y) in drop_end else '.'
+            if land_start and r[c] == 'S':
+                r[c] = 'L'
+        out_rows.append(''.join(r))
+    rows_src = '\n'.join(f"      '{r}', // {i}" for i, r in enumerate(out_rows))
     sp = L.spawn
     gp = L.goal
     route = resolve_route(L, rows, X, Z, R)
@@ -724,8 +926,10 @@ def emit(L, const, meta):
     meta['par'] = (par3, par2)
     zsrc = ('\n  shiftZones: [\n    ' + ',\n    '.join(zones) + ',\n  ],') if zones else ''
     nl = '\n'
+    L.counts = dict(movers=len(movers), lasers=len(L.lasers), rotators=len(L.rotators), fans=len(L.fans), pulses=len(L.pulses), portals=len(L.portals))
+    L.H, L.ox, L.oz = H, ox, oz
     src = f"""
-export const {const}: LevelDef = {{
+{'export ' if export else ''}const {const}: LevelDef = {{
   id: '{meta['id']}',
   name: '{meta['name']}',
   subtitle: '{meta['sub']}',
@@ -792,7 +996,7 @@ def door_time(L, rows, R, sx, sy, d):
 def grid_path(rows, a, b):
     """Dijkstra over walkable cells, preferring the middle of corridors. a, b: (c, row)."""
     H, Wd = len(rows), len(rows[0])
-    WALK = '.SCGPBK'
+    WALK = '.SCGPBKL'
 
     def ok(r, c):
         return 0 <= r < H and 0 <= c < Wd and rows[r][c] in WALK
@@ -860,7 +1064,16 @@ def resolve_route(L, rows, X, Z, R):
                 c, y0, y1 = L.lasers[idx][0], L.lasers[idx][1], L.lasers[idx][2]
                 for y in range(y0, y1 + 1):
                     beams[(R(y), c)] = idx
-            hits = [i for i, cell in enumerate(cells) if cell in beams]
+            for idx in L.maze_pulses:
+                c0, c1, y0, y1 = L.pulses[idx][:4]
+                for y in range(y0, y1 + 1):
+                    for c in range(c0, c1 + 1):
+                        beams[(R(y), c)] = ('pulses', idx)
+            hits = []
+            for i, cell in enumerate(cells):
+                # One wait per doorway (a pulse patch can cover several cells in a row).
+                if cell in beams and not (hits and i - hits[-1] <= 2 and beams[cells[hits[-1]]] == beams[cell]):
+                    hits.append(i)
             if hits:
                 start = 0
                 for i in hits:
@@ -872,7 +1085,9 @@ def resolve_route(L, rows, X, Z, R):
                     for (r, c) in sub[1:]:
                         steps.append({'p': [X(c), 0.5, round(r + (Z(0) - R(0)), 3)]})
                     zr = lambda r: round(r + (Z(0) - R(0)), 3)
-                    steps.append({'laser': beams[cells[i]], 'near': [X(cells[i0][1]), 0.5, zr(cells[i0][0])], 'at': [X(cells[i][1]), 0.5, zr(cells[i][0])], 'far': [X(cells[i1][1]), 0.5, zr(cells[i1][0])]})
+                    bm = beams[cells[i]]
+                    pts3 = {'near': [X(cells[i0][1]), 0.5, zr(cells[i0][0])], 'at': [X(cells[i][1]), 0.5, zr(cells[i][0])], 'far': [X(cells[i1][1]), 0.5, zr(cells[i1][0])]}
+                    steps.append({'cycle': bm[0], 'idx': bm[1], **pts3} if isinstance(bm, tuple) else {'laser': bm, **pts3})
                     start = i1
                 sub, _, _ = grid_path(rows, (cells[start][1], cells[start][0]), (cells[-1][1], cells[-1][0]))
                 pts = sub
@@ -932,12 +1147,20 @@ def resolve_route(L, rows, X, Z, R):
             idx, a, b = leg[1], leg[2], leg[3]
             steps.append({'arm': idx, 'near': [X(a[0]), 0.5, Z(a[1])], 'far': [X(b[0]), 0.5, Z(b[1])]})
             L.route_len += abs(b[0] - a[0]) + 4
+        elif k in ('fan', 'pulse'):
+            idx, a, b = leg[1], leg[2], leg[3]
+            steps.append({'cycle': k + 's', 'idx': idx, 'near': [X(a[0]), 0.5, Z(a[1])], 'far': [X(b[0]), 0.5, Z(b[1])]})
+            L.route_len += abs(b[0] - a[0]) + 4
+        elif k == 'warp':
+            g = L.portals[leg[1]]
+            steps.append({'warp': leg[1], 'to': [X(g['b'][0]), 0.5, Z(g['b'][1])]})
     return steps
 
 
 def estimate_par(L, rows, route):
     # Roughly 2.4 m/s for a clean run through corridors, plus time for each special crossing.
-    secs = L.route_len / 2.4 + 5 * L.specials + 3 * len(L.lasers) + 3 * len(L.switches) + 4 * len([m for m in L.movers if m[0] == 'platform'])
+    secs = L.route_len / 2.4 + 5 * L.specials + 3 * len(L.lasers) + 3 * len(L.switches) + 4 * len([m for m in L.movers if m[0] == 'platform']) \
+        + 3 * len(L.fans) + 2 * len(L.pulses) + 2 * len(L.portals) + 1.5 * len(L.keys)
     three = int(math.ceil(secs / 5.0) * 5)
     two = int(math.ceil(secs * 1.6 / 5.0) * 5)
     return max(three, 20), max(two, 35)
@@ -954,14 +1177,175 @@ const FLOOR = {{ down: [0, -1, 0] as [number, number, number], forward: [0, 0, -
 """
 
 
+TIER_DROP = 5.0      # metres between the floors of a multi-level board
+
+
+def _no_crumble_turns(L, route, redo):
+    """The route must never turn on a crumbling tile: turn those tiles back into floor and emit again."""
+    s = None
+    while True:
+        ys = [y for (_, y) in L.cells]
+        H = max(ys) + 2
+        ox, oz = -(W // 2), -(H // 2)
+        bad = set()
+        for st in route:
+            if 'p' in st and 'v' not in st:
+                c, y = int(round(st['p'][0] - ox)), int(round(H - 1 - (st['p'][2] - oz)))
+                if L.get(c, y) == 'K':
+                    bad.add((c, y))
+        if not bad:
+            return s, route
+        todo = list(bad)
+        while todo:
+            c, y = todo.pop()
+            if L.get(c, y) != 'K':
+                continue
+            L.put(c, y, '.')
+            L.crumble.remove((c, y))
+            todo += [(c + 1, y), (c - 1, y), (c, y + 1), (c, y - 1)]
+        s, route = redo()
+
+
+def build_tiered(const, spec):
+    """A multi-level board: each floor is built as its own level, then placed under the one above
+    (every second floor mirrored front to back, so it starts right under the drop hole)."""
+    tiers = spec['tiers']
+    src, route, side = '', [], 'W'
+    parts, pars = [], [0, 0]
+    offs = dict(movers=0, lasers=0, rotators=0, fans=0, pulses=0, portals=0)
+    prev = None      # (world z of the drop's middle row, cw)
+    for t, ts in enumerate(tiers):
+        last = t == len(tiers) - 1
+        segs = ts['segments']
+        if t:
+            # Under another floor a wall has only about 4 m of headroom: notches go high (the lane runs low).
+            segs = [(k, {**a, 'notches': ['high' for _ in a['notches']]}) if k == 'conn' and a.get('notches') else (k, a) for k, a in segs]
+        sub = dict(spec, segments=segs, side=side, seed=spec.get('seed', 1) * 10 + t)
+        L = build(sub)
+        nxt_chute = None if last else tiers[t + 1].get('chute')
+        chute = ts.get('chute') if t else None
+        sgn_order = None
+        if t:
+            # Start of a lower floor: where the floor above dropped us.
+            order = [W - 2 - i for i in range(W - 2)] if side == 'E' else [1 + i for i in range(W - 2)]
+            srows = sorted({y for (c, y), ch in L.cells.items() if ch == 'S'})
+            if chute:
+                g = chute
+                for i in range(4):
+                    for y in srows:
+                        L.put(order[i], y, '.')
+                for i in range(g):
+                    for y in srows:
+                        L.put(order[i], y, ' ')
+                for i in (g, g + 1):
+                    for y in srows:
+                        L.put(order[i], y, 'L')
+                island = ((order[g] + order[g + 1]) / 2, (srows[0] + srows[-1]) / 2)
+                L.checkpoints.append(island)
+                L.legs[0] = ('path', island, L.legs[0][2])
+                L.spawn = island
+                L.chutes = [(min(order[0], order[g + 1]), max(order[0], order[g + 1]), srows[0], srows[-1])]
+            elif not any(True for _ in L.checkpoints):
+                pass
+        drop = None
+        if not last:
+            gcells = [(c, y) for (c, y), ch in L.cells.items() if ch == 'G']
+            cols = sorted({c for c, _ in gcells})
+            gys = sorted({y for _, y in gcells})
+            if nxt_chute:
+                far = cols[-2:] if L.side == 'E' else cols[:2]
+                drop = {(c, y) for (c, y) in gcells if c in far}
+                L.goal = (sum(far) / 2, (gys[0] + gys[-1]) / 2)
+                # The route must run on to the drop holes, not stop at the old goal.
+                assert L.legs[-1][0] == 'path', 'a floor before a chute must end with a corridor'
+                L.legs[-1] = ('path', L.legs[-1][1], L.goal)
+            else:
+                drop = set(gcells)
+        name = f'{const}__{t}'
+        meta = dict(id=f"{spec['id']}-{t}", name=spec['name'], sub=spec['sub'])
+        redo = lambda: emit(L, name, meta, export=False, drop_end=drop, land_start=bool(t) and not chute)
+        s, r = redo()
+        s2, r2 = _no_crumble_turns(L, r, redo)
+        if s2:
+            s, r = s2, r2
+        src += s
+        pars[0] += meta['par'][0]
+        pars[1] += meta['par'][1]
+        # Placement: floor t sits TIER_DROP lower than floor t-1; odd floors are mirrored.
+        flip = t % 2 == 1
+        sg = -1 if flip else 1
+        dy = -TIER_DROP * t
+        Zl = lambda y: L.H - 1 - y + L.oz
+        if t == 0:
+            dz = 0.0
+        else:
+            srows = sorted({y for (c, y), ch in L.cells.items() if ch in 'SL' and (c, y) != (-1, -1)})
+            mid_local = Zl((srows[0] + srows[-1]) / 2)
+            dz = prev - sg * mid_local
+        parts.append(f"placeTier({name}, {{ dy: {dy}, dz: {round(dz, 3)}{', flip: true' if flip else ''} }})")
+        # Route: move into place and renumber obstacles.
+        tf = lambda q: [q[0], round(q[1] + dy, 3), round(sg * q[2] + dz, 3)]
+        kinds = {'platform': 'movers', 'piston': 'movers', 'laser': 'lasers', 'arm': 'rotators', 'warp': 'portals'}
+        for st in r:
+            st = dict(st)
+            for key in ('p', 'near', 'far', 'at', 'to'):
+                if key in st:
+                    st[key] = tf(st[key])
+            for key, kind in kinds.items():
+                if key in st and isinstance(st[key], int) and not isinstance(st[key], bool):
+                    st[key] += offs[kind]
+            if 'cycle' in st:
+                st['idx'] += offs[st['cycle']]
+            route.append(st)
+        for k in offs:
+            offs[k] += L.counts[k]
+        if not last:
+            gys = sorted({y for (c, y) in drop})
+            prev = sg * Zl((gys[0] + gys[-1]) / 2) + dz
+            step = {'drop': round(-TIER_DROP * (t + 1), 3)}
+            if nxt_chute:
+                step['chute'] = True
+            route.append(step)
+        side = L.side
+    # Chute steps steer toward the island: that is the next floor's first route point.
+    for i, st in enumerate(route):
+        if st.get('chute'):
+            st['steer'] = route[i + 1]['p']
+    par3 = int(math.ceil((pars[0] + 4 * (len(tiers) - 1)) / 5.0) * 5)
+    par2 = int(math.ceil((pars[1] + 6 * (len(tiers) - 1)) / 5.0) * 5)
+    src += f"""
+export const {const}: LevelDef = stackTiers({{ id: '{spec['id']}', name: '{spec['name']}', subtitle: '{spec['sub']}', par: {{ three: {par3}, two: {par2} }} }}, [
+  {(','+chr(10)+'  ').join(parts)},
+]);
+"""
+    return src, route, (par3, par2)
+
+
+ERRORS = []
+
+
 def write_world(path, title, script, levels):
     """levels: list of (const, spec). Returns {id: route}."""
     src = HEADER.format(title=title, script=script)
     routes = {}
     for const, spec in levels:
-        L = build(spec)
-        meta = dict(id=spec['id'], name=spec['name'], sub=spec['sub'])
-        s, route = emit(L, const, meta)
+        if 'tiers' in spec:
+            try:
+                s, route, par = build_tiered(const, spec)
+            except (AssertionError, ValueError) as e:
+                ERRORS.append(f"{spec['id']}: {e}")
+                continue
+            src += s
+            routes[spec['id']] = route
+            print(f"  {spec['id']:28s} tiers {len(spec['tiers'])}  par {par}")
+            continue
+        try:
+            L = build(spec)
+            meta = dict(id=spec['id'], name=spec['name'], sub=spec['sub'])
+            s, route = emit(L, const, meta)
+        except (AssertionError, ValueError) as e:
+            ERRORS.append(f"{spec['id']}: {e}")
+            continue
         # The route must never turn on a crumbling tile: turn those tiles back into floor and emit again.
         while True:
             ys = [y for (_, y) in L.cells]
@@ -991,5 +1375,7 @@ def write_world(path, title, script, levels):
         print(f"  {spec['id']:28s} rows {len([1 for _ in s.splitlines() if _.strip().startswith(chr(39))])}  par {meta['par']}")
     if 'rampX(' not in src:
         src = src.replace("import { MAZE_CAMERA, rampX } from '../levelHelpers';", "import { MAZE_CAMERA } from '../levelHelpers';")
+    if 'stackTiers(' in src:
+        src = src.replace("from '../levelHelpers';\n", "from '../levelHelpers';\nimport { placeTier, stackTiers } from '../tiers';\n", 1)
     open(path, 'w').write(src)
     return routes

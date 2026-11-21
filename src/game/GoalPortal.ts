@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { V3 } from '../levels/LevelTypes';
 
 const PORTAL_COLOR = new THREE.Color('#47f0ff');
+const LOCKED_COLOR = new THREE.Color('#ff5a8a');
 
 /** Animated energy ring standing on its surface. Centre point is where the ball must reach. */
 export class GoalPortal {
@@ -14,6 +15,10 @@ export class GoalPortal {
   private beam: THREE.Mesh;
   private rise: THREE.Points;
   private completed = 0;
+  /** Vault levels: the goal stays dim and shut until every key is collected. */
+  locked = false;
+  private lockGlow = 1;
+  private ringMat!: THREE.MeshStandardMaterial;
 
   /** `beamHeight`: metres of light column (shorter under a floor above, on multi-level boards). */
   constructor(position: V3, upArr: V3, facingArr?: V3, beamHeight = 7) {
@@ -26,6 +31,7 @@ export class GoalPortal {
     this.centre = this.object.position.clone().addScaledVector(up, 1.3);
 
     const ringMat = new THREE.MeshStandardMaterial({ color: PORTAL_COLOR, emissive: PORTAL_COLOR, emissiveIntensity: 3, metalness: 0.3, roughness: 0.2 });
+    this.ringMat = ringMat;
     this.ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.09, 16, 64), ringMat);
     this.ring.position.y = 1.3;
     this.object.add(this.ring);
@@ -100,6 +106,11 @@ export class GoalPortal {
   }
 
   update(dt: number, time: number): void {
+    // A locked goal fades to a dim red-violet glow and brightens back when it opens.
+    this.lockGlow += ((this.locked ? 0 : 1) - this.lockGlow) * Math.min(1, dt * 3);
+    this.ringMat.emissiveIntensity = 0.5 + 2.5 * this.lockGlow;
+    this.ringMat.emissive.copy(LOCKED_COLOR).lerp(PORTAL_COLOR, this.lockGlow);
+    this.inner.visible = this.lockGlow > 0.3;
     const pulse = 1 + Math.sin(time * 3) * 0.04;
     const burst = this.completed > 0 ? 1 + (1 - this.completed) * 1.5 : 1;
     if (this.completed > 0) this.completed = Math.max(0.0001, this.completed - dt * 0.9);

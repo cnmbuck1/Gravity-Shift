@@ -4,6 +4,8 @@ const { chromium } = require('playwright');
 const routes = require('./routes.json');
 const ID = process.argv[2];
 const SHOTS = process.argv[3];
+// Game speed while testing: half speed gives the controller time to react on a busy machine (waits below are in game time).
+const SPEED = Number(process.env.SPEED ?? 0.5);
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport: { width: 240, height: 520 } });
@@ -22,8 +24,10 @@ const SHOTS = process.argv[3];
   });
   const index = await page.evaluate((id) => window.gravitorWorlds.flatMap((w) => w.levels).findIndex((l) => l.id === id), ID);
   if (index < 0) throw new Error('unknown level ' + ID);
+  await page.evaluate(([s, r]) => { window.gravityShift.timeScale = s; window.gravityShift.render = r; }, [SPEED, Boolean(SHOTS)]);
   await page.evaluate((i) => window.gravitorUI.startLevel(i), index);
-  await page.waitForTimeout(2200);
+  await page.evaluate(() => { const ev = window.gravityShift.events; const prev = ev.onWarp; window.__warps = 0; const pf = ev.onFall; ev.onFall = () => { const g = window.gravityShift; const p = g.ball.position; window.__fallAt = [p.x, p.y, p.z].map((v) => +v.toFixed(2)).join(',') + (g.features.inLaser(p) ? ' laser' : '') + (g.features.inPulse(p) ? ' pulse' : '') + (g.features.fellThrough(p) ? ' through' : '') + (g.levels.inHazard(p) ? ' hazard' : '') + (g.levels.isOutOfBounds(p) ? ' out' : ''); pf?.(); }; ev.onWarp = (d) => { window.__warps++; prev?.(d); }; });
+  await page.waitForTimeout(2200 / SPEED);
   const st = () => page.evaluate(() => { const g = window.gravityShift; const p = g.ball.position; return { state: g.state, pos: [p.x, p.y, p.z].map((v) => +v.toFixed(2)), down: [g.frame.down.x, g.frame.down.y, g.frame.down.z].map(Math.round), time: +g.stats.time.toFixed(1), falls: g.stats.falls }; });
   const tilt = (b, g) => page.evaluate(([b, g]) => { window.__tilt.beta = b; window.__tilt.gamma = g; }, [b, g]);
   const downKey = async () => (await st()).down.join(',');
@@ -35,6 +39,7 @@ const SHOTS = process.argv[3];
     const t0 = await gameTime();
     const d0 = await downKey();
     const f0 = await page.evaluate(() => window.gravityShift.stats.falls);
+    const w0 = await page.evaluate(() => window.__warps ?? 0);
     const s0 = await page.evaluate(() => { const p = window.gravityShift.ball.position; return [p.x, p.y, p.z]; });
     let n = 0;
     let stuck = 0;
@@ -46,10 +51,11 @@ const SHOTS = process.argv[3];
         const d = (a, b) => a[0] * b.x + a[1] * b.y + a[2] * b.z;
         const e = [T[0] - p.x, T[1] - p.y, T[2] - p.z]; const V = [v.x, v.y, v.z];
         const L = [T[0] - s0[0], T[1] - s0[1], T[2] - s0[2]]; const P = [p.x - s0[0], p.y - s0[1], p.z - s0[2]];
-        return { ef: d(e, f.forward), er: d(e, f.right), vf: d(V, f.forward), vr: d(V, f.right), lf: d(L, f.forward), lr: d(L, f.right), pf: d(P, f.forward), pr: d(P, f.right), falls: gm.stats.falls, state: gm.state, down: [f.down.x, f.down.y, f.down.z].map(Math.round).join(',') };
+        return { ef: d(e, f.forward), er: d(e, f.right), vf: d(V, f.forward), vr: d(V, f.right), lf: d(L, f.forward), lr: d(L, f.right), pf: d(P, f.forward), pr: d(P, f.right), falls: gm.stats.falls, warps: window.__warps ?? 0, state: gm.state, down: [f.down.x, f.down.y, f.down.z].map(Math.round).join(',') };
       }, [T, s0]);
       if (r.state !== 'playing') return 'state';
       if (r.falls > f0) return 'fell';
+      if (r.warps !== w0) return 'warp';
       if (r.down !== d0) return 'frame';
       const dist = Math.hypot(r.ef, r.er);
       if (dist < tol && !live) return 'ok';
@@ -98,6 +104,7 @@ const SHOTS = process.argv[3];
   const steps = routes[ID];
   let i = 0;
   let fallsSeen = 0;
+  let warpsSeen = 0;
   let status = 'route';
   const skipToAfterShift = () => { while (i < steps.length && !steps[i].shift) i++; i++; };
   while (i < steps.length) {
@@ -114,13 +121,13 @@ const SHOTS = process.argv[3];
       await still();
       if (s.auto) {
         const d = await downKey();
-        for (let k = 0; k < 60 && (await downKey()) === d; k++) await page.waitForTimeout(50);
+        for (let k = 0; k < 60 && (await downKey()) === d; k++) await page.waitForTimeout(50 / SPEED);
       } else {
-        await page.waitForTimeout(400);
+        await page.waitForTimeout(400 / SPEED);
         const ok = await page.evaluate((d) => window.gravityShift.requestShift(d), s.shift);
         if (!ok) { console.log('  shift refused', s.shift, JSON.stringify(await st())); status = 'shift'; break; }
       }
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(1500 / SPEED);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/${ID}-shift${i}.png` });
       i++;
       continue;
@@ -132,23 +139,52 @@ const SHOTS = process.argv[3];
       // Wait for the platform to come to this side, ride it to the far side, then step off.
       const near = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
       // Let it leave first if it is already here, then catch it as it arrives.
-      for (let k = 0; k < 200 && near(await pos(), s.near) < 3.2; k++) await page.waitForTimeout(50);
-      for (let k = 0; k < 300 && near(await pos(), s.near) > 2.8; k++) await page.waitForTimeout(30);
+      for (let k = 0; k < 200 && near(await pos(), s.near) < 3.2; k++) await page.waitForTimeout(50 / SPEED);
+      for (let k = 0; k < 300 && near(await pos(), s.near) > 2.8; k++) await page.waitForTimeout(30 / SPEED);
       const ride = async () => pos();
       ride.done = async () => near(await pos(), s.far) < 2.8;
       const r = await go(null, 4, 0.3, 20, ride);
-      if (r !== 'ok') { status = r; break; }
+      if (r === 'warp') { i++; while (i < steps.length && steps[i].warp === undefined) i++; continue; } if (r !== 'ok') { status = r; break; }
       const r2 = await go(s.far, 2.5);
-      if (r2 !== 'ok') { status = r2; break; }
+      if (r2 === 'warp') { i++; while (i < steps.length && steps[i].warp === undefined) i++; continue; } if (r2 !== 'ok') { status = r2; break; }
+      i++;
+      continue;
+    }
+    if (s.cycle !== undefined) { s.laser = s.idx; s.kind = s.cycle; }
+    if (s.warp !== undefined) {
+      // Already through the gate (the leg into it ends on contact)? Otherwise roll onto its centre.
+      const w = await page.evaluate(() => window.__warps);
+      if (w <= warpsSeen) {
+        for (let k = 0; k < 60 && (await page.evaluate(() => window.__warps)) <= warpsSeen; k++) await page.waitForTimeout(50 / SPEED);
+      }
+      warpsSeen = await page.evaluate(() => window.__warps);
+      await page.waitForTimeout(250 / SPEED);
+      await settle();
+      i++;
+      continue;
+    }
+    if (s.drop !== undefined) {
+      // Falling to the floor below; on a glide chute, steer onto the island while falling.
+      const y = () => page.evaluate(() => window.gravityShift.ball.position.y);
+      if (s.steer) {
+        // Keep steering over the landing until we touch down.
+        const target = async () => s.steer;
+        target.done = async () => (await y()) < s.drop + 0.8;
+        const r = await go(null, 3, 0.3, 10, target);
+        if (r === 'fell') { status = 'fell'; console.log('  fell in chute'); break; }
+      }
+      for (let k = 0; k < 120 && (await y()) > s.drop + 0.8; k++) await page.waitForTimeout(40 / SPEED);
+      await page.waitForTimeout(300 / SPEED);
+      await settle();
       i++;
       continue;
     }
     if (s.laser !== undefined) {
       // Wait close to the beam (1.3 m short of it) so one off-phase is enough to cross.
-      let wait = null; if (s.near) { const m = s.at ?? [0, 1, 2].map((k) => (s.near[k] + s.far[k]) / 2); const L = Math.hypot(m[0] - s.near[0], m[2] - s.near[2]); wait = m.map((v, k) => v - ((m[k] - s.near[k]) / L) * Math.min(1.6, L) * (k === 1 ? 0 : 1)); await go(wait, 1.4, 0.3); }
+      let wait = null; if (s.kind && s.kind !== 'lasers' && !s.at) { wait = s.near; await go(wait, 2, 0.3); } else if (s.near) { const m = s.at ?? [0, 1, 2].map((k) => (s.near[k] + s.far[k]) / 2); const L = Math.hypot(m[0] - s.near[0], m[2] - s.near[2]); wait = m.map((v, k) => v - ((m[k] - s.near[k]) / L) * Math.min(1.25, L) * (k === 1 ? 0 : 1)); await go(wait, 1.4, 0.3); }
       await settle();
       if ((await st()).falls > fallsSeen) continue;
-      const on = () => page.evaluate((k) => window.gravityShift.features['lasers'][k].on, s.laser);
+      const on = () => page.evaluate(([k, kind]) => window.gravityShift.features[kind][k].on, [s.laser, s.kind ?? 'lasers']);
       // Hold this spot while waiting (on ice the ball would otherwise creep into the beam).
       const here = wait ?? (await st()).pos; if (process.env.DBG) console.log('hold at', here);
       const hold = async () => {
@@ -159,10 +195,10 @@ const SHOTS = process.argv[3];
       };
       for (let k = 0; k < 200 && !(await on()); k++) await hold();
       for (let k = 0; k < 200 && (await on()); k++) await hold();
-      if (process.env.DBG) console.log('after wait', JSON.stringify(await st()));
+      if (process.env.DBG) console.log('after wait', JSON.stringify(await st()), await on());
       if ((await st()).falls > fallsSeen) continue;
       const r = await go(s.far, 4, 0.3);
-      if (r !== 'ok') { status = r; break; }
+      if (r === 'warp') { i++; while (i < steps.length && steps[i].warp === undefined) i++; continue; } if (r !== 'ok') { status = r; break; }
       i++;
       continue;
     }
@@ -176,7 +212,7 @@ const SHOTS = process.argv[3];
       let prev = Math.abs((await k()) - lane);
       for (let n = 0; n < 300; n++) { await page.waitForTimeout(20); const c = Math.abs((await k()) - lane); if (c > 0.32 && prev <= 0.32) break; prev = c; }
       const r = await go(s.far, 4, 0.4);
-      if (r !== 'ok') { status = r; break; }
+      if (r === 'warp') { i++; while (i < steps.length && steps[i].warp === undefined) i++; continue; } if (r !== 'ok') { status = r; break; }
       // Brake once clear, so the run-on doesn't carry the sphere onto whatever lies just past the piston.
       await settle();
       i++;
@@ -191,28 +227,35 @@ const SHOTS = process.argv[3];
       let prev = Math.abs(Math.sin(await ang()));
       for (let k = 0; k < 400; k++) { await page.waitForTimeout(20); const c = Math.abs(Math.sin(await ang())); if (c < 0.75 && prev >= 0.75) break; prev = c; }
       const r = await go(s.far, 3.6);
-      if (r !== 'ok') { status = r; break; }
+      if (r === 'warp') { i++; while (i < steps.length && steps[i].warp === undefined) i++; continue; } if (r !== 'ok') { status = r; break; }
       i++;
       continue;
     }
     // Sharp turn here (on the floor): brake first so momentum doesn't carry us wide into a hole.
     const pv = steps[i - 1], pp = steps[i - 2];
-    if (pv && pp && pv.p && pp.p && !s.v && pv.p[1] < 1) {
+    // A door is open on a timer: hurry (a player would too).
+    const hurry = await page.evaluate(() => window.gravityShift.features.doorTimeLeft() > 0);
+    if (!hurry && pv && pp && pv.p && pp.p && !s.v && pv.p[1] < 1) {
       const a1 = [pv.p[0] - pp.p[0], pv.p[2] - pp.p[2]], a2 = [s.p[0] - pv.p[0], s.p[2] - pv.p[2]];
       const cos = (a1[0] * a2[0] + a1[1] * a2[1]) / ((Math.hypot(...a1) * Math.hypot(...a2)) || 1);
       if (cos < 0.5 && Math.hypot(...a1) > 0.3) await settle();
     }
-    const r = await go(s.p, s.v ?? 3.2);
-    if (r === 'frame') { skipToAfterShift(); await page.waitForTimeout(1500); continue; }
+    // Roll into a warp gate gently: you come out at the same speed.
+    const gate = [1, 2].some((k) => steps[i + k]?.warp !== undefined);
+    const r = await go(s.p, s.v ?? (hurry ? 4.2 : gate ? 1.8 : 3.2), hurry ? 0.75 : 0.4);
+    if (r === 'frame') { skipToAfterShift(); await page.waitForTimeout(1500 / SPEED); continue; }
+    if (r === 'warp') { while (i < steps.length && steps[i].warp === undefined) i++; continue; }
     if (r === 'timeout') { console.log('  timeout at step', i, JSON.stringify(s), JSON.stringify(await st())); status = 'timeout'; break; }
     if (r === 'state') break;
     if (r === 'fell') { console.log('  fell during step', i, JSON.stringify(s), 'prev', JSON.stringify(steps[i - 1])); status = 'fell'; break; }
     i++;
   }
   await still();
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(800 / SPEED);
   const end = await st();
   const ok = end.state === 'complete';
+  const fallAt = await page.evaluate(() => window.__fallAt);
+  if (fallAt) console.log('  last fall at', fallAt);
   console.log(`${ok ? 'PASS' : 'FAIL'} ${ID} time ${end.time}s falls ${end.falls}${ok ? '' : ' (' + status + ' at step ' + i + '/' + steps.length + ') ' + JSON.stringify(end)}${errors.length ? ' ERRORS ' + errors.join(' | ') : ''}`);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${ID}-end.png` });
   await browser.close();

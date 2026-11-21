@@ -3,7 +3,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsManager } from '../physics/PhysicsManager';
-import type { CrumbleDef, DoorDef, GravityWellDef, LaserDef, LevelDef, PadDef, RotatorDef, SwitchDef } from '../levels/LevelTypes';
+import type { CrumbleDef, DoorDef, FanDef, GravityWellDef, KeyDef, LaserDef, LevelDef, PadDef, PortalDef, PulseDef, RotatorDef, SwitchDef } from '../levels/LevelTypes';
 import { DROP_COLOR } from './MazeBuilder';
 import { COLORS, mazeFloorMaterial, trimMaterial } from '../render/Materials';
 import { BALL_RADIUS } from './BallController';
@@ -44,6 +44,19 @@ interface DoorRt { def: DoorDef; collider: RAPIER.Collider; mesh: THREE.Mesh; op
 /** `left` counts down the seconds the switch's doors have left (0 when not pressed). */
 interface SwitchRt { def: SwitchDef; mesh: THREE.Mesh; pressed: boolean; left: number; occupied: boolean }
 interface RotatorRt { def: RotatorDef; body: RAPIER.RigidBody; mesh: THREE.Object3D }
+/** `armed[i]` is false while the sphere still sits on gate i after arriving (so it doesn't bounce straight back). */
+interface PortalRt { def: PortalDef; gates: THREE.Object3D[]; armed: [boolean, boolean] }
+interface KeyRt { def: KeyDef; mesh: THREE.Object3D; got: boolean; fly: number }
+interface FanRt { def: FanDef; on: boolean; level: number; blades: THREE.Object3D; air: THREE.Mesh }
+interface PulseRt { def: PulseDef; on: boolean; mat: THREE.MeshBasicMaterial; edge: THREE.LineBasicMaterial }
+
+/** Seconds before a pulse floor lights (or a fan starts) during which it flickers as a warning. */
+const WARN_AHEAD = 0.6;
+const PORTAL_COLOR = '#ffffff';
+const PORTAL_TINTS = ['#3dffa0', '#ffd23d', '#4dc3ff', '#ff7ad9', '#b48cff', '#ff9a3d'];
+const DECOY_COLOR = '#ff3b4e';
+const KEY_COLOR = '#ffd84a';
+const FAN_COLOR = '#d8f6ff';
 
 /**
  * The mechanics that later worlds add on top of the maze: crumbling tiles, floor pads
@@ -60,6 +73,10 @@ export class FeatureManager {
   /** Glide chutes: rings that drift down the shaft. */
   private chutes: { def: GravityWellDef; rings: THREE.Mesh[] }[] = [];
   private pads: { def: PadDef; mat: THREE.MeshBasicMaterial | null }[] = [];
+  private portals: PortalRt[] = [];
+  private keys: KeyRt[] = [];
+  private fans: FanRt[] = [];
+  private pulses: PulseRt[] = [];
   private def: LevelDef | null = null;
   private body: RAPIER.RigidBody | null = null;
   private disposables: { dispose(): void }[] = [];
@@ -91,6 +108,10 @@ export class FeatureManager {
     for (const s of def.switches ?? []) this.addSwitch(s);
     for (const w of def.wells ?? []) if (w.steer) this.addChute(w);
     for (const r of def.rotators ?? []) this.addRotator(r);
+    (def.portals ?? []).forEach((p, i) => this.addPortal(p, i));
+    for (const k of def.keys ?? []) this.addKey(k);
+    for (const f of def.fans ?? []) this.addFan(f);
+    for (const p of def.pulses ?? []) this.addPulse(p);
     this.time = 0;
     this.findHoles(def);
   }
@@ -98,12 +119,18 @@ export class FeatureManager {
   /** Holes in the floor grid that should catch the sphere. Chasms beside gravity pads are left out (you wait beside them to shift). */
   /** Hole cells: x, z, the floor height they sit in, and the cell size. Drop holes ('D') of multi-level boards count too. */
   private holes: [number, number, number, number][] = [];
+  /** Open cells of an upper floor (holes, crumble tiles, gaps): falling through one is a fall, not a drop. */
+  private voids: [number, number, number, number][] = [];
   private findHoles(def: LevelDef): void {
     this.holes = [];
-    for (const m of [...(def.maze ? [def.maze] : []), ...(def.tiers ?? [])]) {
+    this.voids = [];
+    const floors = [...(def.maze ? [def.maze] : []), ...(def.tiers ?? [])];
+    const lowest = Math.min(...floors.map((m) => m.floorY));
+    for (const m of floors) {
       const at = (r: number, c: number) => m.rows[r]?.[c] ?? '#';
       for (let r = 1; r < m.rows.length - 1; r++) {
         for (let c = 1; c < m.rows[r].length - 1; c++) {
+          if (m.floorY > lowest && ' KB|'.includes(at(r, c))) this.voids.push([m.origin[0] + c * m.cell, m.origin[1] + r * m.cell, m.floorY, m.cell]);
           if (at(r, c) !== ' ' && at(r, c) !== 'D') continue;
           let nearPad = false;
           for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if ('P|'.includes(at(r + dr, c + dc))) nearPad = true;
@@ -111,6 +138,16 @@ export class FeatureManager {
         }
       }
     }
+  }
+
+  /** The sphere has fallen through an open cell of an upper floor (it would land on the floor below). */
+  fellThrough(p: THREE.Vector3): boolean {
+    for (const [hx, hz, floorY, cell] of this.voids) {
+      if (p.y > floorY - 1.1 || p.y < floorY - 3) continue;
+      const half = cell / 2 + 0.05;
+      if (Math.abs(p.x - hx) <= half && Math.abs(p.z - hz) <= half) return true;
+    }
+    return false;
   }
 
   /** Sideways pull toward any hole the sphere overlaps (null when clear). `p` must be on the floor frame. */
@@ -202,6 +239,10 @@ export class FeatureManager {
     this.rotators = [];
     this.chutes = [];
     this.pads = [];
+    this.portals = [];
+    this.keys = [];
+    this.fans = [];
+    this.pulses = [];
     this.group.clear();
     // Disposed only after the next level is built and its shaders compiled (disposeRetired):
     // freeing first would drop shader programs the next level reuses and recompile them mid-play.
@@ -222,6 +263,7 @@ export class FeatureManager {
     }
     this.jumpCooldown = 0;
     this.boostTimer = 0;
+    for (const p of this.portals) p.armed = [true, true];
   }
 
   /** Restarting the level resets everything, doors included. */
@@ -239,6 +281,14 @@ export class FeatureManager {
       s.left = 0;
       s.occupied = false;
     }
+    for (const k of this.keys) {
+      k.got = false;
+      k.fly = 0;
+      k.mesh.visible = true;
+      k.mesh.position.fromArray(k.def.position);
+      k.mesh.scale.setScalar(1);
+    }
+    for (const p of this.portals) p.armed = [true, true];
     this.time = 0;
   }
 
@@ -266,6 +316,8 @@ export class FeatureManager {
       const t = ((this.time / l.def.period + (l.def.phase ?? 0)) % 1 + 1) % 1;
       l.on = t < l.def.on;
     }
+    for (const f of this.fans) f.on = this.cycleOn(f.def);
+    for (const p of this.pulses) p.on = this.cycleOn(p.def);
     this.jumpCooldown = Math.max(0, this.jumpCooldown - dt);
     this.boostTimer = Math.max(0, this.boostTimer - dt);
   }
@@ -336,6 +388,95 @@ export class FeatureManager {
       if (p.x >= w.min[0] && p.x <= w.max[0] && p.y >= w.min[1] && p.y <= w.max[1] && p.z >= w.min[2] && p.z <= w.max[2]) return w.scale;
     }
     return 1;
+  }
+
+  /** Whether a cycling obstacle (fan, pulse floor) is on right now. */
+  private cycleOn(d: { period: number; on: number; phase?: number }): boolean {
+    return this.cyclePos(d) < d.on;
+  }
+
+  /** 0..1 position in an obstacle's on/off cycle (on during [0, on)). */
+  private cyclePos(d: { period: number; on: number; phase?: number }): number {
+    return ((this.time / d.period + (d.phase ?? 0)) % 1 + 1) % 1;
+  }
+
+  /** Seconds until a cycling obstacle next switches on (0 while it is on). */
+  private untilOn(d: { period: number; on: number; phase?: number }): number {
+    const t = this.cyclePos(d);
+    return t < d.on ? 0 : (1 - t) * d.period;
+  }
+
+  /** Wind from fans that are blowing on the sphere at `p` (m/s², world space), or null. */
+  windAt(p: THREE.Vector3): THREE.Vector3 | null {
+    let out: THREE.Vector3 | null = null;
+    for (const f of this.fans) {
+      if (!f.on) continue;
+      const { min, max } = f.def;
+      if (p.x < min[0] || p.x > max[0] || p.y < min[1] || p.y > max[1] || p.z < min[2] || p.z > max[2]) continue;
+      const d = new THREE.Vector3(f.def.dir[0], 0, f.def.dir[1]).normalize().multiplyScalar(f.def.strength);
+      out = out ? out.add(d) : d;
+    }
+    return out;
+  }
+
+  /** A lit pulse floor is under the sphere. */
+  inPulse(p: THREE.Vector3): boolean {
+    for (const q of this.pulses) {
+      if (!q.on) continue;
+      const { min, max, y } = q.def;
+      // The sphere's footprint must be well onto the patch (a brush along its edge is forgiven).
+      const m = 0.15;
+      if (p.x > min[0] + m && p.x < max[0] - m && p.z > min[1] + m && p.z < max[1] - m && p.y > y && p.y < y + BALL_RADIUS + 0.35) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Warp gates: if the sphere rolls into an armed gate, returns where it comes out and which way
+   * it leaves (null otherwise). The exit gate stays disarmed until the sphere has rolled off it.
+   */
+  checkPortals(p: THREE.Vector3): { to: THREE.Vector3; dir: THREE.Vector3 | null; decoy: boolean } | null {
+    for (const g of this.portals) {
+      const ends = [g.def.a, g.def.b];
+      for (let i = 0; i < 2; i++) {
+        const e = ends[i];
+        const on = Math.hypot(p.x - e[0], p.z - e[2]) < 0.75 && Math.abs(p.y - e[1]) < 1.2;
+        if (!on) {
+          g.armed[i] = true;
+          continue;
+        }
+        if (!g.armed[i] || (i === 1 && !g.def.twoWay)) continue;
+        const o = 1 - i;
+        g.armed[o] = false;
+        const to = new THREE.Vector3(...ends[o]);
+        const dir = i === 0 && g.def.exit ? new THREE.Vector3(g.def.exit[0], 0, g.def.exit[1]).normalize() : null;
+        return { to, dir, decoy: Boolean(g.def.decoy) };
+      }
+    }
+    return null;
+  }
+
+  /** Collects any key the sphere touches. Returns how many were picked up this call. */
+  collectKeys(p: THREE.Vector3): number {
+    let n = 0;
+    for (const k of this.keys) {
+      if (k.got) continue;
+      const [x, y, z] = k.def.position;
+      if (Math.hypot(p.x - x, p.z - z) < 0.95 && Math.abs(p.y - y) < 1.4) {
+        k.got = true;
+        k.fly = 0.0001;
+        n++;
+      }
+    }
+    return n;
+  }
+
+  get keyCount(): number {
+    return this.keys.length;
+  }
+
+  get keysLeft(): number {
+    return this.keys.filter((k) => !k.got).length;
   }
 
   /** A lit laser is touching the ball. */
@@ -474,6 +615,41 @@ export class FeatureManager {
         ring.visible = k > 0;
         (ring.geometry as THREE.RingGeometry).setDrawRange(0, Math.ceil(k * RING_SEGMENTS) * 6);
       }
+    }
+    for (const g of this.portals) {
+      g.gates.forEach((gate, i) => {
+        gate.rotation.y = time * (i ? -1.6 : 1.6);
+        const swirl = gate.children[1] as THREE.Mesh | undefined;
+        if (swirl) (swirl.material as THREE.MeshBasicMaterial).opacity = 0.35 + Math.sin(time * 4 + i) * 0.12;
+      });
+    }
+    for (const k of this.keys) {
+      const [x, y, z] = k.def.position;
+      if (k.got) {
+        if (k.fly > 0 && k.fly < 1) {
+          k.fly = Math.min(1, k.fly + dt * 2.2);
+          k.mesh.position.set(x, y + 0.6 + k.fly * 2.5, z);
+          k.mesh.scale.setScalar(1 - k.fly * 0.9);
+        }
+        k.mesh.visible = k.fly < 1;
+        continue;
+      }
+      k.mesh.position.set(x, y + 0.6 + Math.sin(time * 2.4 + x) * 0.12, z);
+      k.mesh.rotation.y = time * 1.8;
+    }
+    for (const f of this.fans) {
+      const warn = !f.on && this.untilOn(f.def) < WARN_AHEAD;
+      f.level += ((f.on ? 1 : warn ? 0.25 : 0) - f.level) * Math.min(1, dt * 6);
+      f.blades.rotation.z += dt * (2 + f.level * 26);
+      const m = f.air.material as THREE.MeshBasicMaterial;
+      m.opacity = 0.04 + f.level * 0.5;
+      if (m.map) m.map.offset.y = (m.map.offset.y - dt * (0.3 + f.level * 3) + 1) % 1;
+    }
+    for (const q of this.pulses) {
+      const warn = !q.on && this.untilOn(q.def) < WARN_AHEAD;
+      q.mat.opacity = q.on ? 0.85 + Math.sin(time * 30) * 0.1 : warn ? (Math.sin(time * 40) > 0 ? 0.45 : 0.12) : 0.1;
+      q.mat.color.set(q.on || warn ? COLORS.hazard : '#ff9a5a');
+      q.edge.opacity = q.on ? 1 : 0.55;
     }
     for (const p of this.pads) if (p.mat?.map) {
       const dir = p.def.dir;
@@ -661,6 +837,126 @@ export class FeatureManager {
     }
     this.group.add(holder);
     this.rotators.push({ def, body, mesh: holder });
+  }
+
+  /** Two glowing gate rings on the floor, tinted per pair so pairs can be told apart (decoys are red). */
+  private addPortal(def: PortalDef, index: number): void {
+    const tint = def.decoy ? DECOY_COLOR : PORTAL_TINTS[index % PORTAL_TINTS.length];
+    const ringGeo = new THREE.TorusGeometry(0.72, 0.07, 10, 48);
+    ringGeo.rotateX(Math.PI / 2);
+    const ringMat = new THREE.MeshStandardMaterial({ color: tint, emissive: tint, emissiveIntensity: 2.4, metalness: 0.4, roughness: 0.3 });
+    const swirlGeo = new THREE.CircleGeometry(0.68, 6);
+    swirlGeo.rotateX(-Math.PI / 2);
+    const gates: THREE.Object3D[] = [];
+    const ends = [def.a, def.b];
+    for (let i = 0; i < 2; i++) {
+      const g = new THREE.Group();
+      g.position.set(ends[i][0], ends[i][1] + 0.04, ends[i][2]);
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.y = 0.05;
+      g.add(ring);
+      const swirlMat = new THREE.MeshBasicMaterial({ color: i === 0 || def.twoWay ? tint : PORTAL_COLOR, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      const swirl = new THREE.Mesh(swirlGeo, swirlMat);
+      swirl.position.y = 0.02;
+      g.add(swirl);
+      this.disposables.push(swirlMat);
+      // The entry gate has a short glow column so it reads from a distance; the exit is a flat ring.
+      if (i === 0 || def.twoWay) {
+        const colGeo = new THREE.CylinderGeometry(0.7, 0.7, 1.4, 24, 1, true);
+        const colMat = new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+        const col = new THREE.Mesh(colGeo, colMat);
+        col.position.y = 0.7;
+        g.add(col);
+        this.disposables.push(colGeo, colMat);
+      }
+      this.group.add(g);
+      gates.push(g);
+    }
+    this.disposables.push(ringGeo, ringMat, swirlGeo);
+    this.portals.push({ def, gates, armed: [true, true] });
+  }
+
+  /** A floating golden key core. */
+  private addKey(def: KeyDef): void {
+    const holder = new THREE.Group();
+    const coreGeo = new THREE.OctahedronGeometry(0.32, 0);
+    const coreMat = new THREE.MeshStandardMaterial({ color: KEY_COLOR, emissive: KEY_COLOR, emissiveIntensity: 1.8, metalness: 0.6, roughness: 0.25 });
+    holder.add(new THREE.Mesh(coreGeo, coreMat));
+    const haloGeo = new THREE.TorusGeometry(0.5, 0.035, 8, 40);
+    const halo = new THREE.Mesh(haloGeo, coreMat);
+    halo.rotation.x = Math.PI / 2;
+    holder.add(halo);
+    const light = new THREE.PointLight(KEY_COLOR, 3, 3.5, 1.8);
+    holder.add(light);
+    holder.position.fromArray(def.position);
+    this.group.add(holder);
+    this.disposables.push(coreGeo, coreMat, haloGeo);
+    this.keys.push({ def, mesh: holder, got: false, fly: 0 });
+  }
+
+  /** A fan housing on the upwind side of its air box, and moving streaks showing where the air blows. */
+  private addFan(def: FanDef): void {
+    const dir = new THREE.Vector3(def.dir[0], 0, def.dir[1]).normalize();
+    const cx = (def.min[0] + def.max[0]) / 2;
+    const cz = (def.min[2] + def.max[2]) / 2;
+    const sx = def.max[0] - def.min[0];
+    const sz = def.max[2] - def.min[2];
+    const floorY = def.min[1] + 0.5;
+    // Housing sits at the upwind edge, facing downwind.
+    const alongX = Math.abs(dir.x) > Math.abs(dir.z);
+    const span = alongX ? sz : sx;
+    // Just in front of the upwind wall, so the whole rotor shows above the floor.
+    const hx = alongX ? (dir.x > 0 ? def.min[0] : def.max[0]) + dir.x * 0.03 : cx;
+    const hz = alongX ? cz : (dir.z > 0 ? def.min[2] : def.max[2]) + dir.z * 0.03;
+    const housing = new THREE.Group();
+    const r = Math.min(0.62, span / 2 - 0.05);
+    housing.position.set(hx, floorY + r + 0.08, hz);
+    housing.rotation.y = Math.atan2(dir.x, dir.z);
+    const rimGeo = new THREE.TorusGeometry(r, 0.07, 8, 40);
+    const rimMat = new THREE.MeshStandardMaterial({ color: '#8fa0b8', metalness: 0.9, roughness: 0.3, emissive: FAN_COLOR, emissiveIntensity: 0.5 });
+    housing.add(new THREE.Mesh(rimGeo, rimMat));
+    const blades = new THREE.Group();
+    const bladeGeo = new THREE.BoxGeometry(0.16, r * 1.8, 0.04);
+    for (let i = 0; i < 3; i++) {
+      const b = new THREE.Mesh(bladeGeo, rimMat);
+      b.rotation.z = (i / 3) * Math.PI;
+      blades.add(b);
+    }
+    housing.add(blades);
+    this.group.add(housing);
+    // Air: chevrons scrolling over the floor along the wind.
+    this.padTexture ??= chevronTexture();
+    const tex = this.padTexture.clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(1, alongX ? sx : sz);
+    const airMat = new THREE.MeshBasicMaterial({ color: FAN_COLOR, map: tex, transparent: true, opacity: 0.05, depthWrite: false, blending: THREE.AdditiveBlending });
+    const airGeo = alongX ? new THREE.PlaneGeometry(sz * 0.96, sx) : new THREE.PlaneGeometry(sx * 0.96, sz);
+    airGeo.rotateX(-Math.PI / 2);
+    const air = new THREE.Mesh(airGeo, airMat);
+    air.position.set(cx, floorY - 0.5 + 0.35, cz);
+    air.rotation.y = Math.atan2(-dir.x, -dir.z);
+    this.group.add(air);
+    this.disposables.push(rimGeo, rimMat, bladeGeo, tex, airMat, airGeo);
+    this.fans.push({ def, on: false, level: 0, blades, air });
+  }
+
+  /** A pulse floor: a tinted patch with a bright edge that turns hazard red while it is live. */
+  private addPulse(def: PulseDef): void {
+    const w = def.max[0] - def.min[0];
+    const d = def.max[1] - def.min[1];
+    const geo = new THREE.PlaneGeometry(w * 0.98, d * 0.98);
+    geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({ color: '#ff9a5a', transparent: true, opacity: 0.1, depthWrite: false });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set((def.min[0] + def.max[0]) / 2, def.y + 0.02, (def.min[1] + def.max[1]) / 2);
+    const edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(w * 0.98, 0.001, d * 0.98));
+    const edge = new THREE.LineBasicMaterial({ color: COLORS.hazard, transparent: true, opacity: 0.55 });
+    const line = new THREE.LineSegments(edgeGeo, edge);
+    line.position.y = 0.01;
+    mesh.add(line);
+    this.group.add(mesh);
+    this.disposables.push(geo, mat, edgeGeo, edge);
+    this.pulses.push({ def, on: false, mat, edge });
   }
 }
 
