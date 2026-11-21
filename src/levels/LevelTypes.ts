@@ -183,6 +183,50 @@ export interface RotatorDef {
   phase?: number;
 }
 
+/**
+ * A warp gate pair (World 12): rolling into gate `a` sends the sphere out of gate `b` (and back, if
+ * `twoWay`), keeping its speed. Both are floor pads; `b`'s exit points along `exit` (x, z).
+ */
+export interface PortalDef {
+  a: V3;
+  b: V3;
+  /** Direction (x, z) the sphere leaves gate b. Defaults to its velocity going in. */
+  exit?: [number, number];
+  twoWay?: boolean;
+  /** Decoy gates glow red and send you back toward the start (the `b` end). */
+  decoy?: boolean;
+}
+
+/** A key core (World 13): roll through every key to unlock the goal. Keys stay collected after a fall. */
+export interface KeyDef {
+  position: V3;
+}
+
+/**
+ * A fan (World 14): while it blows, a box of air pushes the sphere along `dir` (x, z). It blows
+ * for `on` of every `period` seconds, so you cross in the lulls or fight the gust.
+ */
+export interface FanDef {
+  min: V3;
+  max: V3;
+  dir: [number, number];
+  /** Push in m/s² (a conveyor is 7). */
+  strength: number;
+  period: number;
+  on: number;
+  phase?: number;
+}
+
+/** A pulse floor (World 16): a patch of floor that turns into red energy for `on` of every `period` seconds. */
+export interface PulseDef {
+  min: [number, number];
+  max: [number, number];
+  y: number;
+  period: number;
+  on: number;
+  phase?: number;
+}
+
 export interface LevelDef {
   id: string;
   name: string;
@@ -221,4 +265,10 @@ export interface LevelDef {
   doors?: DoorDef[];
   wells?: GravityWellDef[];
   rotators?: RotatorDef[];
+  portals?: PortalDef[];
+  keys?: KeyDef[];
+  fans?: FanDef[];
+  pulses?: PulseDef[];
+  /** Blackout (World 15): the lights are off; only the sphere's own lamp and glowing parts show the way. */
+  dark?: boolean;
 }
