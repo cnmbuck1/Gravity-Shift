@@ -13,7 +13,7 @@ holes = ('holes', {})
 EXTRA = {
     # world: (connector, run features) added before the last segment
     1: (('conn', {'len': 4, 'feat': 'holes'}), [holes, holes, holes]),
-    2: (('conn', {'len': 3, 'feat': 'pistonX', 'period': 2.6}), [('piston', {'period': 2.5}), ('strips', {}), ('piston', {'period': 2.4, 'phase': 0.5})]),
+    2: (('conn', {'len': 3, 'feat': 'pistonX', 'period': 2.6}), [('piston', {'period': 2.5}), ('strips', {}), holes]),
     3: (('conn', {'len': 12, 'feat': 'wall', 'notches': ['low'], 'wpistons': 1}), [('piston', {'period': 2.6}), holes]),
     4: (('conn', {'len': 3}), [('crumble', {'len': 4}), ('platform', {'gap': 5, 'period': 5.0})]),
     5: (('conn', {'len': 3}), [('pad', {'kind': 'conveyor', 'len': 5, 'against': True}), ('pad', {'kind': 'boost', 'len': 3})]),
