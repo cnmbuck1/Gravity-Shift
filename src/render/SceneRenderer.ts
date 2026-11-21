@@ -20,6 +20,11 @@ export class SceneRenderer {
   readonly ballLight: THREE.SpotLight;
 
   private dust: THREE.Points;
+  private key!: THREE.DirectionalLight;
+  private rim!: THREE.DirectionalLight;
+  /** Lamp carried by the sphere in blackout levels. */
+  readonly lamp = new THREE.PointLight('#bfe4ff', 0, 7, 1.6);
+  private dark = false;
   private hemi = new THREE.HemisphereLight('#6fa8ff', '#1a0f2e', 0.5);
   private dustVel = new THREE.Vector3(0, -1, 0);
   private dustCentre = new THREE.Vector3();
@@ -50,6 +55,9 @@ export class SceneRenderer {
     const rim = new THREE.DirectionalLight('#7a4bff', 0.6);
     rim.position.set(8, -6, -10);
     this.scene.add(rim);
+    this.key = key;
+    this.rim = rim;
+    this.scene.add(this.lamp);
 
     this.ballLight = new THREE.SpotLight('#cfe9ff', 60, 18, Math.PI / 5, 0.6, 1.6);
     this.ballLight.castShadow = true;
@@ -79,6 +87,26 @@ export class SceneRenderer {
     (this.scene.background as THREE.Color).copy(sky);
     (this.scene.fog as THREE.FogExp2).color.copy(sky);
     this.hemi.color.set(theme ? new THREE.Color(theme.accent).lerp(new THREE.Color('#6fa8ff'), 0.5) : '#6fa8ff');
+  }
+
+  /**
+   * Blackout levels: the sky lights go almost out and the fog closes in, so only the pool of light
+   * around the sphere (its spot and its own lamp) and glowing trims, hazards and pads show the course.
+   */
+  setDark(on: boolean): void {
+    this.dark = on;
+    this.hemi.intensity = on ? 0.05 : 0.5;
+    this.key.intensity = on ? 0.04 : 1.1;
+    this.rim.intensity = on ? 0.05 : 0.6;
+    this.scene.environmentIntensity = on ? 0.06 : 0.55;
+    (this.scene.fog as THREE.FogExp2).density = on ? 0.034 : 0.022;
+    this.lamp.intensity = on ? 14 : 0;
+    this.ballLight.intensity = on ? 45 : 60;
+    if (on) (this.scene.background as THREE.Color).multiplyScalar(0.35);
+  }
+
+  get isDark(): boolean {
+    return this.dark;
   }
 
   setGravityDirection(down: THREE.Vector3): void {

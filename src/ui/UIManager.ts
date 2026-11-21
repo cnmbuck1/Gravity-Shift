@@ -102,6 +102,7 @@ export class UIManager {
           <div class="howto-card"><div class="hi hi-grav">▶</div><div><b>Gravity zones</b><p>On purple floor, a shift button appears. Tap it and gravity turns 90°: the wall beside you becomes the floor. Shifts are optional shortcuts, so use them when you're ready.</p></div></div>
           <div class="howto-card"><div class="hi hi-grav">⇅</div><div><b>Flips</b><p>Under a glass ceiling, the ⇅ button flips gravity upside down. Roll across the ceiling, then flip back down.</p></div></div>
           <div class="howto-card"><div class="hi">▦</div><div><b>Later worlds</b><p>Cracked orange tiles crumble after you touch them. Green chevrons boost you, blue ones carry you, pale floor is ice. Yellow switches open yellow doors. Red lasers blink: go when they're off. Pink rings launch you, and teal zones lower gravity. Cyan platforms ferry you over gaps (they wait at each end), amber arms sweep the floor and discs turn under you.</p></div></div>
+          <div class="howto-card"><div class="hi">◎</div><div><b>Worlds 11 to 20</b><p>Teal-edged holes drop you to the floor below. Coloured rings on the floor are warp gates: roll in and come out of the matching ring (red ones send you back). Gold keys unlock the goal. Fans blow you toward the edge while they spin, and floors with a red outline turn into energy for a moment, so cross while they're dark.</p></div></div>
           <div class="howto-card"><div class="hi">✋</div><div><b>Prefer touch?</b><p>Settings → Controls → TOUCH. Drag anywhere on the screen to steer with a virtual joystick.</p></div></div>
           <button class="btn primary" data-action="menu">GOT IT</button>
         </div>
@@ -112,6 +113,7 @@ export class UIManager {
           <div class="hud-stats" aria-label="Run stats">
             <span class="stat" title="Time"><i class="ico">◷</i><b data-bind="time">0.0</b></span>
             <span class="stat" title="Falls"><i class="ico">↓</i><b data-bind="falls">0</b></span>
+            <span class="stat keys-stat" title="Keys"><i class="ico">⚿</i><b data-bind="keys">0/0</b></span>
             <span class="stat shifts-stat" title="Gravity shifts"><i class="ico">⟲</i><b data-bind="shifts">0</b></span>
             <span class="gravity-ind" title="Gravity"><i class="g-arrow">▼</i><b data-bind="surface-short">F</b></span>
           </div>
@@ -328,6 +330,9 @@ export class UIManager {
       },
       onCheckpoint: () => this.toast('CHECKPOINT'),
       onSwitch: () => this.toast(`SWITCH · DOOR OPEN FOR ${Math.round(this.game.features.doorTimeLeft())} SECONDS`),
+      onKey: (left, total) => this.toast(left ? `KEY ${total - left} OF ${total}` : 'ALL KEYS · THE GOAL IS OPEN', 1600),
+      onGoalLocked: (left) => this.toast(`LOCKED · FIND ${left} MORE KEY${left === 1 ? '' : 'S'}`, 2000),
+      onWarp: (decoy) => this.toast(decoy ? 'DECOY GATE · BACK YOU GO' : 'WARP', decoy ? 1600 : 700),
       onZoneEnter: (zone) => this.toast(zone.hint, 2400),
       onPreviewEnd: () => {
         this.hud.classList.remove('flyover');
@@ -655,6 +660,9 @@ export class UIManager {
       this.bind('time', g.stats.time.toFixed(1));
       this.bind('falls', String(g.stats.falls));
       this.bind('shifts', String(g.stats.shifts));
+      const total = g.features.keyCount;
+      this.hud.classList.toggle('has-keys', total > 0);
+      if (total) this.bind('keys', `${total - g.features.keysLeft}/${total}`);
       this.bind('surface-short', g.surfaceName[0]);
       // Only offer the shifts that are possible right now.
       const allowed = g.availableShifts();

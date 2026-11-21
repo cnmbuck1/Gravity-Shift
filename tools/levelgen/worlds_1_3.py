@@ -103,6 +103,13 @@ W3 = [
         R(cw=3, feats=[('piston', {'period': 2.6}), ('strips', {}), ('piston', {'period': 2.4, 'phase': 0.5}), ('holes', {})])])),
 ]
 
+# Levels 6-10 of each world, made harder (Chris, 2026-11-21): see harden.py.
+from harden import harden
+HARD = {1: {'BRANCHES', 'NARROW_WAYS', 'LABYRINTH', 'LAUNCH_FINALE'},
+        2: {'SWITCHBACK2', 'GEARS', 'RED_LINE', 'CROSSFIRE2', 'PISTON_WORKS'},
+        3: {'WALL_MAZE', 'TWIN_WALLS2', 'HIGH_WIRE', 'EVENT_HORIZON2'}}
+W1, W2, W3 = ([(c, harden(sp, n) if c in HARD[n] else sp) for c, sp in w] for n, w in ((1, W1), (2, W2), (3, W3)))
+
 routes = {}
 print('world 1'); routes.update(write_world('../../src/levels/generated/world1.ts', 'World 1 · Launch Deck: new levels.', 'worlds_1_3.py', W1))
 print('world 2'); routes.update(write_world('../../src/levels/generated/world2.ts', 'World 2 · Piston Works: new levels.', 'worlds_1_3.py', W2))
@@ -110,3 +117,6 @@ print('world 3'); routes.update(write_world('../../src/levels/generated/world3.t
 old = json.load(open('routes.json')) if __import__('os').path.exists('routes.json') else {}
 old.update(routes)
 json.dump(old, open('routes.json', 'w'), indent=0)
+import levelgen
+for e in levelgen.ERRORS:
+    print('ERROR', e)

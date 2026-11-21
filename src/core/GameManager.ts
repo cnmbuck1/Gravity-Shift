@@ -49,6 +49,11 @@ export interface GameEvents {
   onFall?(): void;
   onCheckpoint?(): void;
   onSwitch?(): void;
+  /** A key was collected (`left` still to find, of `total`). */
+  onKey?(left: number, total: number): void;
+  /** The sphere reached a goal that still needs keys. */
+  onGoalLocked?(left: number): void;
+  onWarp?(decoy: boolean): void;
   onZoneEnter?(zone: ShiftZoneDef): void;
   onPreviewEnd?(): void;
   onComplete?(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void;
@@ -63,6 +68,10 @@ export class GameManager {
   readonly stats: RunStats = { time: 0, falls: 0, shifts: 0 };
   events: GameEvents = {};
   fps = 0;
+  /** Game speed (1 = real time). Only the level-test autopilot slows it down. */
+  timeScale = 1;
+  /** Draw frames (the level-test autopilot turns this off to run faster). */
+  render = true;
 
   readonly frame = new GravityFrame({ down: [0, -1, 0], forward: [0, 0, -1] });
   private respawnFrame: GravityFrameDef = this.frame.toDef();
@@ -77,6 +86,8 @@ export class GameManager {
   readonly audio = new AudioManager();
   readonly haptics = new HapticsManager();
   private frameImpact = 0;
+  /** The "goal locked" notice was shown for this approach to the goal. */
+  private lockedNotice = false;
   /** Current gravity multiplier from gravity wells (1 outside them). */
   private gravityScale = 1;
 
@@ -127,6 +138,7 @@ export class GameManager {
     this.levels.load(def);
     this.features.load(def);
     this.view.setTheme(def.theme);
+    this.view.setDark(Boolean(def.dark));
     // Compile every shader the level needs now, at load, instead of the first time an object
     // comes into view (that stalled the course preview and the first seconds of some levels).
     this.view.prewarm();
@@ -148,6 +160,8 @@ export class GameManager {
     for (const c of this.levels.checkpoints) c.active = false;
     this.levels.goal?.reset();
     this.features.reset();
+    if (this.levels.goal) this.levels.goal.locked = this.features.keyCount > 0;
+    this.lockedNotice = false;
     this.respawnFrame = def.frame;
     this.respawnPoint.copy(v3(def.spawn));
     this.respawn();
@@ -285,7 +299,7 @@ export class GameManager {
 
   private loop = (now: number): void => {
     requestAnimationFrame(this.loop);
-    const dt = Math.min(0.1, (now - this.lastTime) / 1000);
+    const dt = Math.min(0.1, (now - this.lastTime) / 1000) * this.timeScale;
     this.lastTime = now;
     this.elapsed += dt;
 
@@ -322,6 +336,9 @@ export class GameManager {
           // or while a conveyor or boost pad is already pushing it).
           const pull = this.frame.down.y < -0.5 && !carry && !mod.push ? this.features.holePull(this.ball.position, this.ball.grounded) : null;
           if (pull) mod = { ...mod, push: mod.push ? mod.push.clone().add(pull) : pull };
+          // Fans blow the sphere along while they run (floor gravity only).
+          const wind = this.frame.down.y < -0.5 ? this.features.windAt(this.ball.position) : null;
+          if (wind) mod = { ...mod, push: mod.push ? mod.push.clone().add(wind) : wind };
           // Rolling off into a hole: drop at once. Real gravity alone let a fast sphere cross a
           // 2 m hole before it sank below the far rim. Only for a sphere that just rolled off the
           // floor: not one resting on a bridge, crumble tile or platform over a hole cell, nor one
@@ -369,9 +386,10 @@ export class GameManager {
     this.levels.updateTiers(this.ball.mesh.position, dt);
     this.features.update(dt, this.elapsed);
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);
+    if (this.view.isDark) this.view.lamp.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 1.2);
     this.view.ballLight.target.position.copy(this.ball.mesh.position);
     this.view.update(dt, this.ball.mesh.position);
-    this.view.render();
+    if (this.render) this.view.render();
   };
 
   private updateRules(dt: number): void {
@@ -383,7 +401,7 @@ export class GameManager {
     this.stats.time += dt;
     const p = this.ball.position;
 
-    if (this.levels.isOutOfBounds(p) || this.levels.inHazard(p) || this.features.inLaser(p)) {
+    if (this.levels.isOutOfBounds(p) || this.levels.inHazard(p) || this.features.inLaser(p) || (this.frame.down.y < -0.5 && (this.features.inPulse(p) || this.features.fellThrough(p)))) {
       this.stats.falls++;
       this.respawnTimer = 0;
       this.audio.fall();
@@ -408,6 +426,32 @@ export class GameManager {
       this.events.onSwitch?.();
     }
 
+    const warp = this.frame.down.y < -0.5 ? this.features.checkPortals(p) : null;
+    if (warp) {
+      // Out of the far gate at the same speed, heading along the gate's exit (or the way we came in).
+      const v = this.ball.body.linvel();
+      const speed = Math.max(1.6, Math.hypot(v.x, v.z));
+      const dir = warp.dir ?? new THREE.Vector3(v.x, 0, v.z).normalize();
+      const to = warp.to.clone().setY(warp.to.y + BALL_RADIUS + 0.05);
+      this.ball.teleport(to);
+      if (dir.lengthSq() > 0.5) this.ball.body.setLinvel({ x: dir.x * speed, y: 0, z: dir.z * speed }, true);
+      this.camera.snap(this.frame, to);
+      this.physics.resetAccumulator();
+      this.audio.shift();
+      this.haptics.shift();
+      this.events.onWarp?.(warp.decoy);
+      return;
+    }
+
+    const got = this.features.collectKeys(p);
+    if (got) {
+      const left = this.features.keysLeft;
+      if (this.levels.goal && left === 0) this.levels.goal.locked = false;
+      this.audio.checkpoint();
+      this.haptics.success();
+      this.events.onKey?.(left, this.features.keyCount);
+    }
+
     for (const c of this.levels.checkpoints) {
       if (c.active) continue;
       const surfacePoint = v3(c.def.position);
@@ -424,7 +468,12 @@ export class GameManager {
     }
 
     const goal = this.levels.goal;
-    if (goal && goal.centre.distanceTo(p) < 1.4) this.complete();
+    const atGoal = Boolean(goal && goal.centre.distanceTo(p) < 1.4);
+    if (atGoal && this.features.keysLeft > 0) {
+      if (!this.lockedNotice) this.events.onGoalLocked?.(this.features.keysLeft);
+      this.lockedNotice = true;
+    } else if (atGoal) this.complete();
+    else if (goal && goal.centre.distanceTo(p) > 3) this.lockedNotice = false;
   }
 
   private complete(): void {

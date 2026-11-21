@@ -85,6 +85,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .stat b { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; }
 .stat b[data-bind='time'] { min-width: 3.2ch; }
 .shifts-stat b { color: #cfa6ff; }
+.keys-stat { display: none; }
+.hud.has-keys .keys-stat { display: inline-flex; }
+.keys-stat b { color: #ffd84a; }
 .gravity-ind {
   display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px; border-radius: 6px;
   background: rgba(162, 75, 255, 0.22); border: 1px solid rgba(162, 75, 255, 0.55); color: #e2ccff; font-size: 10px; letter-spacing: 0.08em;
