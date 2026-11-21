@@ -4,6 +4,7 @@ import { SaveManager } from './settings/SaveManager';
 import { SettingsManager } from './settings/SettingsManager';
 import { UIManager } from './ui/UIManager';
 import { Monetization } from './monetization/Monetization';
+import { Analytics } from './analytics/Analytics';
 import { SHIFT_PROOF } from './levels/shiftProof';
 import { TEST_DECK } from './levels/testDeck';
 import { ORBITAL_LABYRINTH } from './levels/orbitalLabyrinth';
@@ -24,7 +25,8 @@ async function boot(): Promise<void> {
   game.loadLevel(WORLDS[2].levels[9] ?? ORBITAL_LABYRINTH);
   game.toMenu();
   const money = new Monetization(settings);
-  const uiManager = new UIManager(ui, game, settings, WORLDS, extras, money);
+  const analytics = new Analytics(save);
+  const uiManager = new UIManager(ui, game, settings, WORLDS, extras, money, analytics);
   // Store and ads start in the background (iPhone app only); the game never waits on them.
   void money.init().then(() => settings.update({}));
   game.start();
