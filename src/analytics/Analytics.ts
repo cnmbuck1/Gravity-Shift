@@ -44,11 +44,18 @@ interface LevelTally {
 }
 
 type FirebaseApi = typeof import('@capacitor-firebase/analytics').FirebaseAnalytics;
+/**
+ * The plugin, wrapped in a plain object. A Capacitor plugin is a Proxy that answers every
+ * property, `then` included, so a promise must never resolve to the plugin itself: the promise
+ * would treat it as a thenable and call a native "then" method that doesn't exist, which rejects
+ * and silently dropped every event in build 1.0.2 (122).
+ */
+type FirebaseBox = { api: FirebaseApi };
 type Params = Record<string, string | number>;
 
 export class Analytics {
   readonly native = Capacitor.isNativePlatform();
-  private fb: Promise<FirebaseApi | null>;
+  private fb: Promise<FirebaseBox | null>;
   private level: LevelInfo | null = null;
   private tally: LevelTally = { attempts: 0, playSec: 0, cleared: false };
   /** Whether the current try is still running (not yet finished, skipped or quit). */
@@ -56,7 +63,7 @@ export class Analytics {
   private falls = 0;
 
   /** `loadFirebase` is replaceable for tests. */
-  constructor(private save: SaveManager, loadFirebase: () => Promise<FirebaseApi> = loadPlugin) {
+  constructor(private save: SaveManager, loadFirebase: () => Promise<FirebaseBox> = loadPlugin) {
     // Loaded lazily, like the ads and store plugins, so the web bundle never touches it.
     this.fb = this.native
       ? loadFirebase().catch((e) => {
@@ -127,14 +134,14 @@ export class Analytics {
 
   /** How many campaign levels this player has finished: a user property for slicing reports. */
   setLevelsCleared(n: number): void {
-    void this.fb.then((fb) => fb?.setUserProperty({ key: 'levels_cleared', value: String(n) })).catch(() => {});
+    void this.fb.then((fb) => fb?.api.setUserProperty({ key: 'levels_cleared', value: String(n) })).catch(() => {});
   }
 
   private log(name: string, extra: Params): void {
     const l = this.level;
     if (!l) return;
     const params: Params = { level_id: l.id, level_name: l.name, world: l.world, level: l.number, label: l.label, ...extra };
-    void this.fb.then((fb) => fb?.logEvent({ name, params })).catch(() => {});
+    void this.fb.then((fb) => fb?.api.logEvent({ name, params })).catch(() => {});
   }
 
   private store(): void {
@@ -142,6 +149,6 @@ export class Analytics {
   }
 }
 
-const loadPlugin = () => import('@capacitor-firebase/analytics').then((m) => m.FirebaseAnalytics);
+const loadPlugin = async (): Promise<FirebaseBox> => ({ api: (await import('@capacitor-firebase/analytics')).FirebaseAnalytics });
 const key = (levelId: string) => `analytics:${levelId}`;
 const round = (s: number) => Math.round(s * 10) / 10;
