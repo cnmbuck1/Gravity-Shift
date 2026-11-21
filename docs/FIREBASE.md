@@ -31,7 +31,8 @@ The questions you asked map to these:
    **Gravitor**. Keep **Google Analytics on**, create a new Analytics account (for example
    "Cnmbuck Studios"), pick your country, accept the terms, **Create project**.
 2. **Add the iPhone app.** On the project page, click the **iOS+** icon (Add app).
-   - Apple bundle ID: **`Com.cnmbuckstudios.gravitor`** (capital C, exactly like this)
+   - Apple bundle ID: `com.cnmbuckstudios.gravitor` (Firebase stores it in lowercase; the build
+     accepts that and writes the app's exact `Com...` spelling into the plist)
    - App nickname: Gravitor
    - App Store ID: `6829235034`
    - **Register app**, then **Download GoogleService-Info.plist**. Skip the remaining steps
@@ -39,7 +40,7 @@ The questions you asked map to these:
 3. **Give the file to the build.** Open the downloaded file in TextEdit and copy all of it. In GitHub:
    **cnmbuck1/Gravity-Shift → Settings → Secrets and variables → Actions → New repository secret**,
    name **`GOOGLE_SERVICE_INFO_PLIST`**, paste the whole file as the value, **Add secret**.
-   (The file stays out of git; the TestFlight workflow writes it into the app and checks the bundle ID.)
+   (The file stays out of git; the TestFlight workflow writes it into the app and checks the bundle ID, ignoring upper/lower case.)
 4. **Make the values show up in reports.** Firebase keeps the extra values, but its reports only
    show the ones you register. In the Firebase console: **Analytics → Custom definitions**
    (in Google Analytics: Admin → Custom definitions).

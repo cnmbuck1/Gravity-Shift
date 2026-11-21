@@ -70,11 +70,17 @@ jobs:
           fi
           printf '%s\n' "$GOOGLE_SERVICE_INFO_PLIST" > ios/App/App/GoogleService-Info.plist
           plutil -lint ios/App/App/GoogleService-Info.plist
+          # Firebase registers bundle IDs in lowercase, but this app's is "Com..." (capital C, as in
+          # App Store Connect). Same app, different case: accept it and write the app's exact ID into
+          # the plist so Firebase doesn't log a bundle ID mismatch at launch.
+          app_id="Com.cnmbuckstudios.gravitor"
           bundle=$(plutil -extract BUNDLE_ID raw ios/App/App/GoogleService-Info.plist)
-          if [ "$bundle" != "Com.cnmbuckstudios.gravitor" ]; then
-            echo "::error::GoogleService-Info.plist is for bundle ID '$bundle', but the app is Com.cnmbuckstudios.gravitor. Register the iOS app in Firebase with that exact bundle ID and download the plist again."
+          if [ "$(printf '%s' "$bundle" | tr 'A-Z' 'a-z')" != "$(printf '%s' "$app_id" | tr 'A-Z' 'a-z')" ]; then
+            echo "::error::GoogleService-Info.plist is for bundle ID '$bundle', but the app is $app_id. Register the iOS app in Firebase with that bundle ID and download the plist again."
             exit 1
           fi
+          plutil -replace BUNDLE_ID -string "$app_id" ios/App/App/GoogleService-Info.plist
+          echo "Firebase config added (project $(plutil -extract PROJECT_ID raw ios/App/App/GoogleService-Info.plist))"
       - name: Write the App Store Connect API key
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
