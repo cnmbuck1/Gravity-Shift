@@ -66,6 +66,9 @@
 	<key>NSMotionUsageDescription</key>
 	<string>Gravitor uses your iPhone's motion sensors so you can roll the sphere by tilting your phone.</string>
 	<!-- AdMob app ID: Google's public TEST id until the real Gravitor app id is filled in (see src/monetization/Monetization.ts). -->
+	<!-- Firebase Analytics (level progress only): never used for ads or personalisation. -->
+	<key>GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS</key>
+	<false/>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-8965676427575286~7387834068</string>
 	<key>SKAdNetworkItems</key>
