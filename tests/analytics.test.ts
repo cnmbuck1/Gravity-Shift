@@ -15,14 +15,21 @@ function memorySave(): SaveManager {
   } as SaveManager;
 }
 
-/** Firebase stand-in that records what would be sent. */
-const fakeFirebase = {
+/**
+ * Firebase stand-in that records what would be sent. Like a real Capacitor plugin, it is a Proxy
+ * that answers every property, `then` included (a native "then" call rejects), so analytics
+ * must never resolve a promise to the plugin itself.
+ */
+const methods: Record<string, unknown> = {
   logEvent: async (e: { name: string; params: Record<string, string | number> }) => void logged.push(e),
   setUserProperty: async () => {},
 };
+const fakePlugin = new Proxy({}, {
+  get: (_, prop) => methods[prop as string] ?? (() => Promise.reject(new Error(`${String(prop)} is not implemented on ios`))),
+});
 class Analytics extends RealAnalytics {
   constructor(save: SaveManager) {
-    super(save, async () => fakeFirebase as never);
+    super(save, async () => ({ api: fakePlugin as never }));
   }
 }
 
