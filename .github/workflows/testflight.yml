@@ -6,6 +6,9 @@
 #   ASC_KEY_ID                    App Store Connect API key ID
 #   ASC_ISSUER_ID                 App Store Connect API issuer ID
 #   ASC_KEY_P8                    Contents of the AuthKey_XXXX.p8 file (Admin role, for cloud signing)
+# Optional (see docs/FIREBASE.md):
+#   GOOGLE_SERVICE_INFO_PLIST     Contents of GoogleService-Info.plist from the Gravitor Firebase project.
+#                                 Without it the build still works, just without analytics.
 name: Upload to TestFlight
 on:
   workflow_dispatch:
@@ -57,6 +60,27 @@ jobs:
         env:
           GRAVITOR_RELEASE: ${{ inputs.app_store == false && '0' || '1' }}
         run: npm run ios:sync
+      - name: Add the Firebase config (analytics)
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -z "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "::warning::No GOOGLE_SERVICE_INFO_PLIST secret, so this build has no Firebase Analytics. See docs/FIREBASE.md."
+            exit 0
+          fi
+          printf '%s\n' "$GOOGLE_SERVICE_INFO_PLIST" > ios/App/App/GoogleService-Info.plist
+          plutil -lint ios/App/App/GoogleService-Info.plist
+          # Firebase registers bundle IDs in lowercase, but this app's is "Com..." (capital C, as in
+          # App Store Connect). Same app, different case: accept it and write the app's exact ID into
+          # the plist so Firebase doesn't log a bundle ID mismatch at launch.
+          app_id="Com.cnmbuckstudios.gravitor"
+          bundle=$(plutil -extract BUNDLE_ID raw ios/App/App/GoogleService-Info.plist)
+          if [ "$(printf '%s' "$bundle" | tr 'A-Z' 'a-z')" != "$(printf '%s' "$app_id" | tr 'A-Z' 'a-z')" ]; then
+            echo "::error::GoogleService-Info.plist is for bundle ID '$bundle', but the app is $app_id. Register the iOS app in Firebase with that bundle ID and download the plist again."
+            exit 1
+          fi
+          plutil -replace BUNDLE_ID -string "$app_id" ios/App/App/GoogleService-Info.plist
+          echo "Firebase config added (project $(plutil -extract PROJECT_ID raw ios/App/App/GoogleService-Info.plist))"
       - name: Write the App Store Connect API key
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}

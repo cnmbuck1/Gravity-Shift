@@ -2,6 +2,7 @@ import type { GameManager, LevelRecord, RunStats } from '../core/GameManager';
 import type { SettingsManager } from '../settings/SettingsManager';
 import { DEFAULT_SETTINGS, orbAvailable, ORB_LEVELS } from '../settings/SettingsManager';
 import type { Monetization } from '../monetization/Monetization';
+import type { Analytics, LevelInfo } from '../analytics/Analytics';
 import type { LevelDef } from '../levels/LevelTypes';
 import type { WorldDef } from '../levels/worldTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
@@ -39,7 +40,7 @@ export class UIManager {
   private openWorld = -1;
 
   /** Campaign levels (all worlds, in order) unlock one after another; `extras` (test courses) are always available. */
-  constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private worlds: WorldDef[], private extras: LevelDef[], private money: Monetization) {
+  constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private worlds: WorldDef[], private extras: LevelDef[], private money: Monetization, private analytics: Analytics) {
     this.campaign = worlds.flatMap((w) => w.levels);
     this.levels = [...this.campaign, ...extras];
     this.root = root;
@@ -324,6 +325,7 @@ export class UIManager {
       onShiftRejected: (reason) => this.toast(reason),
       onFall: () => {
         this.levelFalls++;
+        this.analytics.levelFail(this.game.stats.time);
         const offer = this.levelFalls === SKIP_AFTER_FALLS && this.canSkip();
         this.toast(offer ? 'STUCK? YOU CAN SKIP THIS LEVEL' : 'FELL INTO THE VOID', offer ? 2400 : 1600);
         this.syncSkip();
@@ -353,6 +355,7 @@ export class UIManager {
     this.levelFalls = 0;
     this.syncSkip();
     this.game.loadLevel(def);
+    this.analytics.levelStart(this.levelInfo(index));
     this.hud.classList.toggle('no-shifts', !def.allowShifts);
     this.show('hud');
     const previewing = this.game.startPreview(this.settings.get().preview);
@@ -407,7 +410,9 @@ export class UIManager {
         this.show('hud');
         break;
       case 'restart':
+        this.analytics.levelQuit('restart', this.game.stats.time);
         this.game.restart();
+        this.analytics.levelStart(this.levelInfo(this.current));
         this.show('hud');
         break;
       case 'reset':
@@ -424,6 +429,7 @@ export class UIManager {
         break;
       }
       case 'menu':
+        this.analytics.levelQuit('menu', this.game.stats.time);
         this.game.toMenu();
         this.refreshMenu();
         this.show('menu');
@@ -521,6 +527,7 @@ export class UIManager {
       this.toast(result === 'cancelled' ? 'Watch the whole ad to skip' : 'No ad available right now · try again in a moment', 2400);
       return;
     }
+    this.analytics.levelSkip(this.game.stats.time, this.levelFalls);
     this.game.markSkipped(this.campaign[this.current].id);
     this.toast('LEVEL SKIPPED', 1400);
     void this.startLevel(this.current + 1);
@@ -542,6 +549,13 @@ export class UIManager {
   }
 
   /** "3-7": world 3, level 7. */
+  /** Campaign level `i` as analytics reports it (null for test courses, which aren't tracked). */
+  private levelInfo(i: number): LevelInfo | null {
+    if (i >= this.campaign.length) return null;
+    const l = this.campaign[i];
+    return { id: l.id, name: l.name, world: this.worldOf(i) + 1, number: i + 1, label: this.levelLabel(i) };
+  }
+
   private levelLabel(i: number): string {
     const w = this.worldOf(i);
     return `${w + 1}-${i - this.worldStart(w) + 1}`;
@@ -610,6 +624,8 @@ export class UIManager {
   private showComplete(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void {
     const hasNext = this.current + 1 < this.campaign.length;
     if (this.current < this.campaign.length) this.money.levelFinished(this.worldOf(this.current));
+    this.analytics.levelEnd(stats, stars);
+    this.analytics.setLevelsCleared(this.campaign.filter((l) => this.game.recordFor(l.id).bestTime !== null).length);
     this.syncStore();
     this.root.querySelectorAll<HTMLElement>('[data-bind-show="has-next"]').forEach((el) => (el.style.display = hasNext ? '' : 'none'));
     this.bind('stars', '★'.repeat(stars) + '☆'.repeat(3 - stars));

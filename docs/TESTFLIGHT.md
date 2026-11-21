@@ -34,6 +34,7 @@ What is already set up in the repo:
    - `ASC_KEY_ID`: the Key ID
    - `ASC_ISSUER_ID`: the Issuer ID
    - `ASC_KEY_P8`: the whole text of the `.p8` file, including the BEGIN/END lines
+   - Optional, for level analytics: `GOOGLE_SERVICE_INFO_PLIST`, the whole text of the Firebase `GoogleService-Info.plist` (see [FIREBASE.md](FIREBASE.md))
 3. GitHub → Actions → **Upload to TestFlight** → Run workflow (branch `main`).
 4. About 15 to 30 minutes later the build shows in App Store Connect → TestFlight (it says "Processing" first). Add it to your internal group and install it with the TestFlight app on your iPhone.
 

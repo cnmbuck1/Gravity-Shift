@@ -249,13 +249,14 @@ export class GameManager {
     this.state = 'menu';
   }
 
-  requestShift(dir: ShiftDirection): boolean {
+  /** `quiet`: an auto-shift pad retrying, so a refusal shows no toast. */
+  requestShift(dir: ShiftDirection, quiet = false): boolean {
     if (this.state !== 'playing' || !this.levels.level?.allowShifts) return false;
     if (this.respawnTimer >= 0) return false;
     if (this.camera.transitioning) return false;
     if (!this.availableShifts().includes(dir) && !this.zone?.auto) return false;
     if (!this.ball.grounded && this.ball.airTime > COYOTE_TIME) {
-      this.events.onShiftRejected?.('Land on a surface to shift');
+      if (!quiet) this.events.onShiftRejected?.('Land on a surface to shift');
       return false;
     }
     if (this.zone?.lean) this.camera.lean = v3(this.zone.lean);
@@ -415,10 +416,13 @@ export class GameManager {
       this.zone = zone;
       if (zone) {
         this.audio.zone();
-        if (zone.auto) this.requestShift(zone.allow[0]);
-        else this.events.onZoneEnter?.(zone);
+        if (!zone.auto) this.events.onZoneEnter?.(zone);
       }
     }
+    // Auto-shift pads keep trying until the shift happens: a ball that lands on the pad from a
+    // bounce (still airborne) or arrives while the camera is still turning from the last shift
+    // would otherwise sit on the pad with no shift and no button.
+    if (this.zone?.auto) this.requestShift(this.zone.allow[0], true);
 
     if (this.features.checkSwitches(p)) {
       this.audio.checkpoint();
