@@ -58,7 +58,7 @@ macOS runners use GitHub Actions minutes at 10× the Linux rate on private repos
 - **Privacy policy URL** and **support URL** (required on the store page).
 - **Screenshots**: 6.9" iPhone (1320 × 2868 or 1290 × 2796). One size is enough; Apple scales it for smaller phones.
 - **Age rating** questionnaire (expect 4+), category Games → Puzzle (secondary: Action), description, keywords, and promotional text.
-- Bump `MARKETING_VERSION` (target → General → Version) for each App Store release after 1.0.
+- Bump `MARKETING_VERSION` (target → General → Version) for each App Store release after 1.0. That is the only place the version lives: the home screen footer reads it at build time and adds the build number, so it shows e.g. "v1.0.3 (125)" with no other edits.
 
 ## Troubleshooting the GitHub upload
 
