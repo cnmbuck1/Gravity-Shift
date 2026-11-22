@@ -27,8 +27,13 @@ export interface Settings {
   orbWon: boolean;
   /** Testing: every world and level is playable without unlocking. */
   unlockAll: boolean;
-  /** Remove Ads was bought (also unlocks the Cnmbuck Orb). */
+  /** Remove Ads was bought, on its own or with the world bundle (also unlocks the Cnmbuck Orb). */
   adFree: boolean;
+  /**
+   * App Store products owned (Remove Ads, world packs, bundle). A cache only: the App Store is
+   * checked at every launch and overrides it (see Monetization.refreshEntitlement).
+   */
+  owned: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -47,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   orbWon: false,
   unlockAll: true,
   adFree: false,
+  owned: [],
 };
 
 /** Levels to finish (any of them) to win the Cnmbuck Orb. */

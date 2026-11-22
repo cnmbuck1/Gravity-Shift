@@ -250,3 +250,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* Store (iPhone app only). */
 .store { display: flex; flex-direction: column; gap: 8px; }
 .link-btn { background: none; border-color: transparent; font-size: 11px; color: var(--muted); }
+
+/* World pack paywall and locked pack worlds. */
+.world-row.pack-locked { opacity: 0.85; border-style: dashed; }
+.lv-pack { color: var(--accent, var(--cyan)); font-weight: 800; font-size: 13px; letter-spacing: 0.04em; }
+.paywall { gap: 10px; }
+.paywall h2 { margin-bottom: 2px; }
+.pw-kicker { text-align: center; font-size: 10px; letter-spacing: 0.24em; color: var(--muted); }
+.pw-worlds { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.pw-world {
+  display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); background: rgba(10, 16, 28, 0.6);
+}
+.pw-world.here { border-color: var(--accent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 30%, transparent); }
+.pw-best { position: relative; border-color: var(--amber); box-shadow: 0 0 18px rgba(255, 176, 46, 0.25); }
+.pw-best b { color: var(--amber); }
+.pw-badge {
+  position: absolute; top: -9px; right: 12px; padding: 2px 8px; border-radius: 6px; font-size: 9px; letter-spacing: 0.18em;
+  background: var(--amber); color: #1a1002;
+}
+.paywall .btn small { font-weight: 500; letter-spacing: 0.04em; font-size: 11px; color: var(--muted); }
+.paywall .btn:disabled { opacity: 0.5; }
+.pw-note { text-align: center; }
