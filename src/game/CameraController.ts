@@ -56,6 +56,12 @@ export class CameraController {
   private camDist = -1;
   private camRaise = 0;
   private wallRaise = 0;
+  /**
+   * Height of the floor the ball last rolled on (with floor gravity). The wall view is kept
+   * WALL_VIEW_Y above it, so walls on a lower floor of a multi-level board look over that floor,
+   * not over the top one (the view used to slide metres up and leave the ball at the screen edge).
+   */
+  private floorY = 0;
   /** 0 on floors and walls, easing to 1 while on a ceiling (steeper, closer view). */
   private ceil = 0;
   /** 0..1: how far the view has turned to the under-ceiling view (the floor fades with it). */
@@ -91,6 +97,7 @@ export class CameraController {
     this.lead.set(0, 0, 0);
     this.frozen = false;
     this.groundRef.copy(focus);
+    if (frame.down.y < -0.5) this.floorY = focus.y - 0.5;
     this.camDist = -1;
     this.camRaise = 0;
     this.ceil = frame.down.y > 0.5 ? 1 : 0;
@@ -154,6 +161,7 @@ export class CameraController {
     }
 
     if (grounded) this.groundRef.copy(target);
+    if (grounded && frame.down.y < -0.5 && this.t >= 1) this.floorY = target.y - 0.5;
     if (!this.frozen) {
       // Falling into the abyss: keep following, but more lazily and only FALL_FOLLOW metres
       // below where the ball left the course, so it visibly drops away into the void.
@@ -193,7 +201,7 @@ export class CameraController {
     const lookAt = this.focus.clone().addScaledVector(forward, this.cfg.forwardBias ?? this.cfg.lookAhead * 0.35).add(this.lead);
     // Just after shifting onto a wall the ball sits at floor height, so a camera level with it would be
     // inside the maze walls. Slide the view (not tilt it) up to clear them; it centres again as the ball climbs.
-    const wallRaise = onWall ? Math.max(0, WALL_VIEW_Y - lookAt.y) : 0;
+    const wallRaise = onWall ? Math.max(0, this.floorY + WALL_VIEW_Y - lookAt.y) : 0;
     this.wallRaise += (wallRaise - this.wallRaise) * (1 - Math.exp(-dt * 4));
     lookAt.y += this.wallRaise;
 

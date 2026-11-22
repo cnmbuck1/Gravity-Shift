@@ -137,6 +137,7 @@ export class GameManager {
   loadLevel(def: LevelDef): void {
     this.levels.load(def);
     this.features.load(def);
+    this.levels.trackTierExtras(this.levels.group, this.features.group);
     this.view.setTheme(def.theme);
     this.view.setDark(Boolean(def.dark));
     // Compile every shader the level needs now, at load, instead of the first time an object
@@ -386,6 +387,7 @@ export class GameManager {
     this.levels.setGhost(this.camera.ceilingView);
     this.levels.updateTiers(this.ball.mesh.position, dt);
     this.features.update(dt, this.elapsed);
+    this.levels.fadeExtras();
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);
     if (this.view.isDark) this.view.lamp.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 1.2);
     this.view.ballLight.target.position.copy(this.ball.mesh.position);
