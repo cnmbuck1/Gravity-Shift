@@ -56,6 +56,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Pick the version and build number
+        env:
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          # The version is MARKETING_VERSION in the Xcode project (the only place to bump it); the home
+          # screen reads the same value, plus this build number (GRAVITOR_BUILD), at web build time.
+          BUILD="${BUILD_NUMBER:-$((100 + GITHUB_RUN_NUMBER))}"
+          VERSION=$(grep -m1 -oE 'MARKETING_VERSION = [^;]+' ios/App/App.xcodeproj/project.pbxproj | sed 's/.*= //; s/"//g')
+          echo "GRAVITOR_BUILD=$BUILD" >> "$GITHUB_ENV"
+          echo "::notice::Gravitor $VERSION ($BUILD)"
       - name: Build the game and copy it into the Xcode project
         env:
           GRAVITOR_RELEASE: ${{ inputs.app_store == false && '0' || '1' }}
@@ -100,9 +110,8 @@ jobs:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
-          BUILD="${BUILD_NUMBER:-$((100 + GITHUB_RUN_NUMBER))}"
+          BUILD="$GRAVITOR_BUILD"
           echo "Build number $BUILD"
           xcodebuild archive \
             -project ios/App/App.xcodeproj -scheme App -configuration Release \

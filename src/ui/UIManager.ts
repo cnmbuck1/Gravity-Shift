@@ -75,7 +75,7 @@ export class UIManager {
           <button class="btn" data-action="howto">HOW TO PLAY</button>
           <button class="btn" data-action="settings">SETTINGS</button>
         </div>
-        <div class="menu-foot">A CNMBUCK STUDIOS GAME · v1.0.1 · ${this.worlds.length} worlds · ${this.campaign.length} levels</div>
+        <div class="menu-foot">A CNMBUCK STUDIOS GAME · ${__APP_BUILD__ ? `v${__APP_VERSION__} (${__APP_BUILD__})` : `v${__APP_VERSION__}`} · ${this.worlds.length} worlds · ${this.campaign.length} levels</div>
       </section>
 
       <section class="screen panel-screen" data-screen="levels">
