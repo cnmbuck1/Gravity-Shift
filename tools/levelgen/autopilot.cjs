@@ -35,6 +35,9 @@ const SPEED = Number(process.env.SPEED ?? 0.5);
   // Roll toward a point, steering in the current gravity frame. Returns 'ok', 'frame' (gravity changed), 'state', or 'timeout'.
   // Time limits are in game seconds, so a slow machine doesn't fail levels.
   const gameTime = () => page.evaluate(() => window.gravityShift.stats.time);
+  // Tilt (degrees) that cancels a steady push of `a` m/s² (fan wind): the inverse of the tilt response
+  // (1.5° dead zone, full 17 m/s² at 20° more, curve 1.2), so the steering only has to handle the rest.
+  const lean = (a) => (Math.abs(a) < 0.05 ? 0 : Math.sign(a) * (1.5 + 20 * Math.min(1, Math.abs(a) / 17) ** (1 / 1.2)));
   async function go(T, cruise = 3.2, tol = 0.4, maxS = 25, live = null) {
     const t0 = await gameTime();
     const d0 = await downKey();
@@ -51,7 +54,8 @@ const SPEED = Number(process.env.SPEED ?? 0.5);
         const d = (a, b) => a[0] * b.x + a[1] * b.y + a[2] * b.z;
         const e = [T[0] - p.x, T[1] - p.y, T[2] - p.z]; const V = [v.x, v.y, v.z];
         const L = [T[0] - s0[0], T[1] - s0[1], T[2] - s0[2]]; const P = [p.x - s0[0], p.y - s0[1], p.z - s0[2]];
-        return { ef: d(e, f.forward), er: d(e, f.right), vf: d(V, f.forward), vr: d(V, f.right), lf: d(L, f.forward), lr: d(L, f.right), pf: d(P, f.forward), pr: d(P, f.right), falls: gm.stats.falls, warps: window.__warps ?? 0, state: gm.state, down: [f.down.x, f.down.y, f.down.z].map(Math.round).join(',') };
+        const w = f.down.y < -0.5 ? gm.features.windAt(p) : null; const W = w ? [w.x, w.y, w.z] : [0, 0, 0];
+        return { wf: d(W, f.forward), wr: d(W, f.right), ef: d(e, f.forward), er: d(e, f.right), vf: d(V, f.forward), vr: d(V, f.right), lf: d(L, f.forward), lr: d(L, f.right), pf: d(P, f.forward), pr: d(P, f.right), falls: gm.stats.falls, warps: window.__warps ?? 0, state: gm.state, down: [f.down.x, f.down.y, f.down.z].map(Math.round).join(',') };
       }, [T, s0]);
       if (r.state !== 'playing') return 'state';
       if (r.falls > f0) return 'fell';
@@ -79,8 +83,8 @@ const SPEED = Number(process.env.SPEED ?? 0.5);
       }
       // Push harder while stuck (against a conveyor, say).
       const gain = stuck > 20 ? 14 : 7;
-      let tf = Math.max(-20, Math.min(20, (wf - r.vf) * gain));
-      let tr = Math.max(-20, Math.min(20, (wr - r.vr) * gain));
+      let tf = Math.max(-24, Math.min(24, (wf - r.vf) * gain - lean(r.wf)));
+      let tr = Math.max(-24, Math.min(24, (wr - r.vr) * gain - lean(r.wr)));
       if (stuck > 20) forced = true;
       if (forced && !live) { if (Math.abs(wr) > Math.abs(wf)) tr = Math.sign(wr) * 20; else tf = Math.sign(wf) * 20; }
       await tilt(40 - tf, tr);
@@ -188,13 +192,17 @@ const SPEED = Number(process.env.SPEED ?? 0.5);
       // Hold this spot while waiting (on ice the ball would otherwise creep into the beam).
       const here = wait ?? (await st()).pos; if (process.env.DBG) console.log('hold at', here);
       const hold = async () => {
-        const r = await page.evaluate((H) => { const gm = window.gravityShift; const v = gm.ball.body.linvel(); const p = gm.ball.position; const f = gm.frame; const d = (a, b) => a[0] * b.x + a[1] * b.y + a[2] * b.z; const e = [H[0] - p.x, 0, H[2] - p.z]; const V = [v.x, v.y, v.z]; return [d(e, f.forward), d(e, f.right), d(V, f.forward), d(V, f.right)]; }, here);
-        const tf = Math.max(-16, Math.min(16, (r[0] * 2 - r[2]) * 7)), tr = Math.max(-16, Math.min(16, (r[1] * 2 - r[3]) * 7));
+        const r = await page.evaluate((H) => { const gm = window.gravityShift; const v = gm.ball.body.linvel(); const p = gm.ball.position; const f = gm.frame; const d = (a, b) => a[0] * b.x + a[1] * b.y + a[2] * b.z; const e = [H[0] - p.x, 0, H[2] - p.z]; const V = [v.x, v.y, v.z]; const w = f.down.y < -0.5 ? gm.features.windAt(p) : null; const W = w ? [w.x, w.y, w.z] : [0, 0, 0]; return [d(e, f.forward), d(e, f.right), d(V, f.forward), d(V, f.right), d(W, f.forward), d(W, f.right)]; }, here);
+        const tf = Math.max(-24, Math.min(24, (r[0] * 2 - r[2]) * 7 - lean(r[4]))), tr = Math.max(-24, Math.min(24, (r[1] * 2 - r[3]) * 7 - lean(r[5])));
         await tilt(40 - tf, tr);
         await page.waitForTimeout(30);
       };
-      for (let k = 0; k < 200 && !(await on()); k++) await hold();
-      for (let k = 0; k < 200 && (await on()); k++) await hold();
+      // A fan that never stops (World 14) has no lull to wait for: lean into it and go.
+      const always = await page.evaluate(([k, kind]) => (window.gravityShift.features[kind][k].def.on ?? 0) >= 1, [s.laser, s.kind ?? 'lasers']);
+      if (!always) {
+        for (let k = 0; k < 200 && !(await on()); k++) await hold();
+        for (let k = 0; k < 200 && (await on()); k++) await hold();
+      }
       if (process.env.DBG) console.log('after wait', JSON.stringify(await st()), await on());
       if ((await st()).falls > fallsSeen) continue;
       const r = await go(s.far, 4, 0.3);

@@ -10,7 +10,7 @@ const FLOOR = { down: [0, -1, 0] as [number, number, number], forward: [0, 0, -1
 export const BREEZE: LevelDef = {
   id: 'w14-breeze',
   name: 'Breeze',
-  subtitle: 'Fans blow you toward the holes: cross in the lull',
+  subtitle: 'Fans blow you toward the holes: lean into the wind',
   spawn: [-9.5, 0.6, 3.0],
   frame: FLOOR,
   allowShifts: false,
@@ -38,8 +38,8 @@ export const BREEZE: LevelDef = {
   movers: [],
   checkpoints: [],
   fans: [
-    { min: [-0.5, -0.2, 1.5], max: [3.5, 2, 4.5], dir: [0, -1], strength: 10, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-2.5, -0.2, -4.5], max: [1.5, 2, -1.5], dir: [0, -1], strength: 10, period: 3.6, on: 0.4, phase: 0.5 },
+    { min: [-0.5, -0.2, 1.5], max: [3.5, 2, 4.5], dir: [0, -1], strength: 10, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-2.5, -0.2, -4.5], max: [1.5, 2, -1.5], dir: [0, -1], strength: 10, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [-9.0, 0, -3.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
@@ -68,8 +68,8 @@ export const CROSSWIND: LevelDef = {
       '#GGGGG..................#', // 4
       '#####################...#', // 5
       '#####################...#', // 6
-      '###########  ###  ###...#', // 7
-      '#SSSS......  ...  ......#', // 8
+      '##########  ###  ####...#', // 7
+      '#SSSS.....  ...  .......#', // 8
       '#SSSS...................#', // 9
       '#SSSS...................#', // 10
       '#########################', // 11
@@ -79,14 +79,15 @@ export const CROSSWIND: LevelDef = {
   movers: [],
   checkpoints: [],
   fans: [
-    { min: [-1.5, -0.2, 1.5], max: [2.5, 2, 4.5], dir: [0, -1], strength: 10, period: 3.6, on: 0.4, phase: 0 },
-    { min: [1.5, -0.2, -4.5], max: [4.5, 2, -1.5], dir: [0, -1], strength: 10, period: 3.6, on: 0.4, phase: 0.3 },
-    { min: [-4.5, -0.2, -4.5], max: [-0.5, 2, -1.5], dir: [0, -1], strength: 10, period: 3.6, on: 0.4, phase: 0.8 },
+    { min: [-2.5, -0.2, 1.5], max: [0.5, 2, 4.5], dir: [0, -1], strength: 10.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [2.5, -0.2, 1.5], max: [5.5, 2, 4.5], dir: [0, -1], strength: 10.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [1.5, -0.2, -4.5], max: [4.5, 2, -1.5], dir: [0, -1], strength: 10.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-4.5, -0.2, -4.5], max: [-0.5, 2, -1.5], dir: [0, -1], strength: 10.5, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [-9.0, 0, -3.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 40, two: 65 },
+  par: { three: 45, two: 75 },
   fallMargin: 6,
 };
 
@@ -133,8 +134,8 @@ export const WIND_TUNNEL: LevelDef = {
   movers: [],
   checkpoints: [],
   fans: [
-    { min: [-0.5, -0.2, 7.5], max: [3.5, 2, 10.5], dir: [0, -1], strength: 10, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-2.5, -0.2, -10.5], max: [2.5, 2, -7.5], dir: [0, -1], strength: 11, period: 3.6, on: 0.4, phase: 0 },
+    { min: [-0.5, -0.2, 7.5], max: [3.5, 2, 10.5], dir: [0, -1], strength: 11, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-2.5, -0.2, -10.5], max: [2.5, 2, -7.5], dir: [0, -1], strength: 11, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [9.0, 0, -9.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
@@ -146,7 +147,7 @@ export const WIND_TUNNEL: LevelDef = {
 export const GUSTS: LevelDef = {
   id: 'w14-gusts',
   name: 'Gusts',
-  subtitle: 'Shorter lulls, stronger fans',
+  subtitle: 'Stronger fans',
   spawn: [-9.5, 0.6, 6.0],
   frame: FLOOR,
   allowShifts: false,
@@ -162,11 +163,11 @@ export const GUSTS: LevelDef = {
       '#.........  .......GGGGG#', // 3
       '#...######  #############', // 4
       '#...#####################', // 5
-      '#...########  ###########', // 6
-      '#...........  .......CC.#', // 7
+      '#...#########  ##########', // 6
+      '#............  ......CC.#', // 7
       '#....................CC.#', // 8
-      '#.......  ...........CC.#', // 9
-      '########  ###########...#', // 10
+      '#......  ............CC.#', // 9
+      '#######  ############...#', // 10
       '#####################...#', // 11
       '###########  ########...#', // 12
       '#SSSS......  ...........#', // 13
@@ -181,14 +182,15 @@ export const GUSTS: LevelDef = {
   ],
   checkpoints: [{ position: [9.5, 0, 0.0], frame: FLOOR }],
   fans: [
-    { min: [-1.5, -0.2, 4.5], max: [2.5, 2, 7.5], dir: [0, -1], strength: 11, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-0.5, -0.2, -1.5], max: [3.5, 2, 1.5], dir: [0, -1], strength: 11, period: 3.6, on: 0.4, phase: 0.4 },
-    { min: [-2.5, -0.2, -7.5], max: [2.5, 2, -4.5], dir: [0, 1], strength: 11, period: 3.6, on: 0.4, phase: 0 },
+    { min: [-1.5, -0.2, 4.5], max: [2.5, 2, 7.5], dir: [0, -1], strength: 11.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [0.5, -0.2, -1.5], max: [4.5, 2, 1.5], dir: [0, -1], strength: 11.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-5.5, -0.2, -1.5], max: [-1.5, 2, 1.5], dir: [0, 1], strength: 11.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-2.5, -0.2, -7.5], max: [2.5, 2, -4.5], dir: [0, 1], strength: 11.5, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [9.0, 0, -6.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 55, two: 90 },
+  par: { three: 60, two: 95 },
   fallMargin: 6,
 };
 
@@ -208,9 +210,9 @@ export const CALM: LevelDef = {
       '#########################', // 0
       '#GGGGG..................#', // 1
       '#GGGGG..................#', // 2
-      '#GGGGG......  ..........#', // 3
-      '#GGGGG......  ..........#', // 4
-      '#####################...#', // 5
+      '#GGGGG..................#', // 3
+      '#GGGGG....  ............#', // 4
+      '##########  #########...#', // 5
       '#####################...#', // 6
       '############  #######...#', // 7
       '#SSSS.......  ..........#', // 8
@@ -224,12 +226,13 @@ export const CALM: LevelDef = {
   movers: [],
   checkpoints: [],
   fans: [
-    { min: [-0.5, -0.2, 1.5], max: [3.5, 2, 5.5], dir: [0, -1], strength: 8, period: 3.6, on: 0.4, phase: 0 },
+    { min: [-0.5, -0.2, 1.5], max: [3.5, 2, 5.5], dir: [0, -1], strength: 10, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-2.5, -0.2, -5.5], max: [1.5, 2, -1.5], dir: [0, 1], strength: 10, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [-9.0, 0, -3.5], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 30, two: 50 },
+  par: { three: 35, two: 55 },
   fallMargin: 6,
 };
 
@@ -270,8 +273,8 @@ export const UPDRAFT: LevelDef = {
       '#####################   |', // 17
       '#####################PPP|', // 18
       '#####################PPP|', // 19
-      '###########  ###  ###PPP|', // 20
-      '#SSSS......  ...  ......#', // 21
+      '##########  ###  ####PPP|', // 20
+      '#SSSS.....  ...  .......#', // 21
       '#SSSS...................#', // 22
       '#SSSS...................#', // 23
       '#########################', // 24
@@ -286,14 +289,15 @@ export const UPDRAFT: LevelDef = {
   ],
   checkpoints: [{ position: [9.5, 0, -3.0], frame: FLOOR }],
   fans: [
-    { min: [-1.5, -0.2, 8.5], max: [2.5, 2, 11.5], dir: [0, -1], strength: 11, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-1.5, -0.2, -4.5], max: [2.5, 2, -1.5], dir: [0, 1], strength: 11, period: 3.6, on: 0.4, phase: 0.5 },
-    { min: [-3.5, -0.2, -10.5], max: [1.5, 2, -7.5], dir: [0, -1], strength: 11, period: 3.6, on: 0.4, phase: 0 },
+    { min: [-2.5, -0.2, 8.5], max: [0.5, 2, 11.5], dir: [0, -1], strength: 12, period: 4.0, on: 1.0, phase: 0 },
+    { min: [2.5, -0.2, 8.5], max: [5.5, 2, 11.5], dir: [0, -1], strength: 12, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-1.5, -0.2, -4.5], max: [2.5, 2, -1.5], dir: [0, 1], strength: 12, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-3.5, -0.2, -10.5], max: [1.5, 2, -7.5], dir: [0, -1], strength: 12, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [9.0, 0, -9.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 65, two: 100 },
+  par: { three: 70, two: 110 },
   fallMargin: 6,
 };
 
@@ -318,8 +322,8 @@ export const HEADWIND: LevelDef = {
       '########  ###############', // 1
       '#GGGGG..  ..............#', // 2
       '#GGGGG..................#', // 3
-      '#GGGGG......  ..........#', // 4
-      '############  #######...#', // 5
+      '#GGGGG........  ........#', // 4
+      '##############  #####...#', // 5
       '#####################...#', // 6
       '#...........#...........#', // 7
       '#...........#...........#', // 8
@@ -362,14 +366,15 @@ export const HEADWIND: LevelDef = {
     { kind: 'ice', min: [1.5, 14.5], max: [5.5, 17.5], y: 0 },
   ],
   fans: [
-    { min: [-2.5, -0.2, 14.5], max: [0.5, 2, 17.5], dir: [0, -1], strength: 11, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-2.5, -0.2, 1.5], max: [1.5, 2, 4.5], dir: [0, -1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-0.5, -0.2, -16.5], max: [3.5, 2, -13.5], dir: [0, 1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
+    { min: [-2.5, -0.2, 14.5], max: [0.5, 2, 17.5], dir: [0, -1], strength: 12, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-2.5, -0.2, 1.5], max: [1.5, 2, 4.5], dir: [0, -1], strength: 12, period: 4.0, on: 1.0, phase: 0 },
+    { min: [1.5, -0.2, -16.5], max: [4.5, 2, -13.5], dir: [0, 1], strength: 12, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-4.5, -0.2, -16.5], max: [-0.5, 2, -13.5], dir: [0, -1], strength: 12, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [-9.0, 0, -15.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 90, two: 140 },
+  par: { three: 95, two: 150 },
   fallMargin: 6,
 };
 
@@ -431,9 +436,9 @@ export const JET_STREAM: LevelDef = {
     { from: [-1, 0.45, 7.5], to: [-1, 0.45, 10.5], period: 2.3, on: 0.42, phase: 0 },
   ],
   fans: [
-    { min: [1.5, -0.2, 7.5], max: [5.5, 2, 10.5], dir: [0, -1], strength: 11, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-1.5, -0.2, 1.5], max: [2.5, 2, 4.5], dir: [0, 1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-3.5, -0.2, -11.5], max: [1.5, 2, -8.5], dir: [0, 1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
+    { min: [1.5, -0.2, 7.5], max: [5.5, 2, 10.5], dir: [0, -1], strength: 12.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-1.5, -0.2, 1.5], max: [2.5, 2, 4.5], dir: [0, 1], strength: 12.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-3.5, -0.2, -11.5], max: [1.5, 2, -8.5], dir: [0, 1], strength: 12.5, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [9.0, 0, -10.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
@@ -502,8 +507,8 @@ export const CYCLONE: LevelDef = {
       '#####################   #', // 38
       '#####################PPP#', // 39
       '#####################PPP#', // 40
-      '###########  ###  ###PPP#', // 41
-      '#SSSS......  ...  ......#', // 42
+      '##########  ###  ####PPP#', // 41
+      '#SSSS.....  ...  .......#', // 42
       '#SSSS...................#', // 43
       '#SSSS...................#', // 44
       '#########################', // 45
@@ -522,15 +527,16 @@ export const CYCLONE: LevelDef = {
     { from: [3, 0.45, -21.5], to: [3, 0.45, -18.5], period: 2.3, on: 0.42, phase: 0 },
   ],
   fans: [
-    { min: [-1.5, -0.2, 18.5], max: [2.5, 2, 21.5], dir: [0, -1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-4.5, -0.2, -8.5], max: [-0.5, 2, -5.5], dir: [0, -1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
-    { min: [1.5, -0.2, -8.5], max: [5.5, 2, -5.5], dir: [0, 1], strength: 11.5, period: 3.6, on: 0.4, phase: 0.5 },
-    { min: [-4.5, -0.2, -21.5], max: [0.5, 2, -18.5], dir: [0, -1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
+    { min: [-2.5, -0.2, 18.5], max: [0.5, 2, 21.5], dir: [0, -1], strength: 13, period: 4.0, on: 1.0, phase: 0 },
+    { min: [2.5, -0.2, 18.5], max: [5.5, 2, 21.5], dir: [0, -1], strength: 13, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-4.5, -0.2, -8.5], max: [-0.5, 2, -5.5], dir: [0, -1], strength: 13, period: 4.0, on: 1.0, phase: 0 },
+    { min: [1.5, -0.2, -8.5], max: [5.5, 2, -5.5], dir: [0, 1], strength: 13, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-4.5, -0.2, -21.5], max: [0.5, 2, -18.5], dir: [0, -1], strength: 13, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [-9.0, 0, -20.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 100, two: 155 },
+  par: { three: 105, two: 165 },
   fallMargin: 6,
 };
 
@@ -582,8 +588,8 @@ export const STORM_FRONT: LevelDef = {
       '#..............#........#', // 26
       '#..............#........#', // 27
       '#...#####################', // 28
-      '#...####  ##  ###########', // 29
-      '#.......  ..  .......CC.#', // 30
+      '#...###  ####  ##########', // 29
+      '#......  ....  ......CC.#', // 30
       '#....................CC.#', // 31
       '#....................CC.#', // 32
       '#####################PPP|', // 33
@@ -618,15 +624,16 @@ export const STORM_FRONT: LevelDef = {
     { from: [-4, 0.45, -22.5], to: [-4, 0.45, -19.5], period: 2.3, on: 0.42, phase: 0 },
   ],
   fans: [
-    { min: [-1.5, -0.2, 19.5], max: [2.5, 2, 22.5], dir: [0, -1], strength: 11, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-0.5, -0.2, 6.5], max: [3.5, 2, 9.5], dir: [0, -1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
-    { min: [0.5, -0.2, -16.5], max: [4.5, 2, -13.5], dir: [0, 1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
-    { min: [-5.5, -0.2, -16.5], max: [-1.5, 2, -13.5], dir: [0, 1], strength: 11.5, period: 3.6, on: 0.4, phase: 0.45 },
-    { min: [-1.5, -0.2, -22.5], max: [2.5, 2, -19.5], dir: [0, 1], strength: 11.5, period: 3.6, on: 0.4, phase: 0 },
+    { min: [-1.5, -0.2, 19.5], max: [2.5, 2, 22.5], dir: [0, -1], strength: 13.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [0.5, -0.2, 6.5], max: [4.5, 2, 9.5], dir: [0, -1], strength: 13.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-5.5, -0.2, 6.5], max: [-1.5, 2, 9.5], dir: [0, -1], strength: 13.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [0.5, -0.2, -16.5], max: [4.5, 2, -13.5], dir: [0, 1], strength: 13.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-5.5, -0.2, -16.5], max: [-1.5, 2, -13.5], dir: [0, 1], strength: 13.5, period: 4.0, on: 1.0, phase: 0 },
+    { min: [-1.5, -0.2, -22.5], max: [2.5, 2, -19.5], dir: [0, 1], strength: 13.5, period: 4.0, on: 1.0, phase: 0 },
   ],
   goal: { position: [9.0, 0, -21.0], up: [0, 1, 0], facing: [0, 0, 1] },
   camera: MAZE_CAMERA,
   killY: -6,
-  par: { three: 125, two: 195 },
+  par: { three: 130, two: 205 },
   fallMargin: 6,
 };

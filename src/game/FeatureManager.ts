@@ -5,7 +5,7 @@ import type RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsManager } from '../physics/PhysicsManager';
 import type { CrumbleDef, DoorDef, FanDef, GravityWellDef, KeyDef, LaserDef, LevelDef, PadDef, PortalDef, PulseDef, RotatorDef, SwitchDef } from '../levels/LevelTypes';
 import { DROP_COLOR } from './MazeBuilder';
-import { COLORS, mazeFloorMaterial, trimMaterial } from '../render/Materials';
+import { COLORS, mazeFloorMaterial, mazeWallMaterial, trimMaterial } from '../render/Materials';
 import { BALL_RADIUS } from './BallController';
 
 /** How a floor pad changes the ball's handling this step (see BallController.applyInput). */
@@ -28,8 +28,10 @@ const JUMP_SPEED = 6;
 export const DOOR_OPEN_SECONDS = 5;
 /** The last seconds of a switch's timer: the switch blinks fast and ticks to warn the door is about to shut. */
 const DOOR_WARN_SECONDS = 1.5;
-/** How fast a door sinks and rises (fraction of its height per second). */
+/** How fast a door slides open and shut (fraction of its length per second). */
 const DOOR_SPEED = 2.2;
+/** How much of an open door stays in the doorway, as a stub against one side wall. */
+const DOOR_STUB = 0.14;
 /** Pull (m/s²) toward a hole when the sphere hangs over its edge, so holes catch it instead of letting it skim past. */
 const HOLE_PULL = 10;
 /** How far (m) the sphere must hang over a hole's edge before the pull starts. */
@@ -40,7 +42,11 @@ const RING_SEGMENTS = 48;
 
 interface CrumbleRt { def: CrumbleDef; collider: RAPIER.Collider; mesh: THREE.Mesh; timer: number; gone: boolean; drop: number }
 interface LaserRt { def: LaserDef; beam: THREE.Mesh; a: THREE.Vector3; b: THREE.Vector3; on: boolean }
-interface DoorRt { def: DoorDef; collider: RAPIER.Collider; mesh: THREE.Mesh; open: boolean; sink: number }
+/**
+ * A timed door slides sideways into a short stub at one end of its doorway (`sink` 0 shut .. 1 open), so
+ * you can still see the wall, and its glowing leading edge, while the switch counts down.
+ */
+interface DoorRt { def: DoorDef; collider: RAPIER.Collider; mesh: THREE.Object3D; body: THREE.Mesh; edge: THREE.Mesh; open: boolean; sink: number }
 /** `left` counts down the seconds the switch's doors have left (0 when not pressed). */
 interface SwitchRt { def: SwitchDef; mesh: THREE.Mesh; pressed: boolean; left: number; occupied: boolean }
 interface RotatorRt { def: RotatorDef; body: RAPIER.RigidBody; mesh: THREE.Object3D }
@@ -75,6 +81,10 @@ export class FeatureManager {
   private pads: { def: PadDef; mat: THREE.MeshBasicMaterial | null }[] = [];
   private portals: PortalRt[] = [];
   private keys: KeyRt[] = [];
+  /** Key pickups (they stay lit on dark levels). */
+  get keyObjects(): THREE.Object3D[] {
+    return this.keys.map((k) => k.mesh);
+  }
   private fans: FanRt[] = [];
   private pulses: PulseRt[] = [];
   private def: LevelDef | null = null;
@@ -272,9 +282,7 @@ export class FeatureManager {
     for (const d of this.doors) {
       d.open = false;
       d.sink = 0;
-      d.collider.setEnabled(true);
-      d.mesh.position.fromArray(d.def.position);
-      d.mesh.visible = true;
+      this.placeDoor(d);
     }
     for (const s of this.switches) {
       s.pressed = false;
@@ -511,7 +519,6 @@ export class FeatureManager {
         const held = this.switches.some((o) => o !== s && o.pressed && o.left > 0 && o.def.doors.includes(this.doors.indexOf(d)));
         if (held) continue;
         d.open = false;
-        d.collider.setEnabled(true);
       }
       s.pressed = false;
     }
@@ -549,7 +556,6 @@ export class FeatureManager {
           const door = this.doors[i];
           if (door && !door.open) {
             door.open = true;
-            door.collider.setEnabled(false);
           }
         }
       }
@@ -591,15 +597,9 @@ export class FeatureManager {
     }
     for (const d of this.doors) {
       const target = d.open ? 1 : 0;
-      if (d.sink === target) {
-        d.mesh.visible = d.sink < 1;
-        continue;
-      }
+      if (d.sink === target) continue;
       d.sink = d.open ? Math.min(1, d.sink + dt * DOOR_SPEED) : Math.max(0, d.sink - dt * DOOR_SPEED);
-      // Sink a little past the floor and then hide: a door top resting exactly at floor height
-      // z-fights with the floor and flickers (the "flashing" open door from the playtest).
-      d.mesh.position.set(d.def.position[0], d.def.position[1] - (d.def.size[1] + 0.08) * d.sink, d.def.position[2]);
-      d.mesh.visible = d.sink < 1;
+      this.placeDoor(d);
     }
     for (const s of this.switches) {
       const m = s.mesh.material as THREE.MeshStandardMaterial;
@@ -755,6 +755,10 @@ export class FeatureManager {
     this.lasers.push({ def, beam, a, b, on: true });
   }
 
+  /**
+   * A timed door: a wall panel (yellow trim, bright leading edge) over a yellow track across the doorway.
+   * Opening slides it along its length into a stub at the far end; the track shows where it will close.
+   */
   private addDoor(def: DoorDef): void {
     const R = this.physics.rapier;
     const [x, y, z] = def.position;
@@ -762,14 +766,63 @@ export class FeatureManager {
       R.ColliderDesc.cuboid(def.size[0] / 2, def.size[1] / 2, def.size[2] / 2).setTranslation(x, y, z).setFriction(0.6),
       this.body!,
     );
-    const geo = new RoundedBoxGeometry(def.size[0], def.size[1], def.size[2], 2, 0.06);
-    const mat = new THREE.MeshStandardMaterial({ color: '#3a3410', metalness: 0.8, roughness: 0.35, emissive: '#ffe14d', emissiveIntensity: 0.35 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    this.group.add(mesh);
-    this.disposables.push(geo, mat);
-    this.doors.push({ def, collider, mesh, open: false, sink: 0 });
+    const along = def.size[0] > def.size[2] ? 0 : 2;
+    const L = def.size[along];
+    const thick = def.size[2 - along];
+    const holder = new THREE.Group();
+    holder.position.set(x, y, z);
+    // Built along x, then turned to lie along z when the doorway runs that way.
+    if (along === 2) holder.rotation.y = Math.PI / 2;
+    const bodyGeo = new RoundedBoxGeometry(1, def.size[1], thick * 0.7, 2, 0.05);
+    const bodyMat = mazeWallMaterial();
+    bodyMat.emissive = new THREE.Color('#ffe14d');
+    bodyMat.emissiveIntensity = 0.07;
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.castShadow = true;
+    holder.add(body);
+    // Thin yellow trim along both top edges so it still reads as a timed door, not a plain wall.
+    const trimGeo = new THREE.BoxGeometry(1, 0.06, 0.07);
+    const glowMat = new THREE.MeshStandardMaterial({ color: '#3a3410', emissive: '#ffe14d', emissiveIntensity: 1.4, metalness: 0.5, roughness: 0.4 });
+    for (const side of [-1, 1]) {
+      const trim = new THREE.Mesh(trimGeo, glowMat);
+      trim.position.set(0, def.size[1] / 2 + 0.01, side * (thick * 0.35 - 0.035));
+      body.add(trim);
+    }
+    // The leading edge: a bright post at the end that closes across the doorway.
+    const edgeGeo = new THREE.BoxGeometry(0.12, def.size[1] + 0.12, thick * 0.8);
+    const edge = new THREE.Mesh(edgeGeo, glowMat);
+    holder.add(edge);
+    // Track on the floor across the whole doorway: where the door runs and where it shuts.
+    const trackGeo = new THREE.PlaneGeometry(L, thick * 0.32);
+    trackGeo.rotateX(-Math.PI / 2);
+    const trackMat = new THREE.MeshBasicMaterial({ color: '#ffe14d', transparent: true, opacity: 0.35, depthWrite: false });
+    const track = new THREE.Mesh(trackGeo, trackMat);
+    track.position.y = -def.size[1] / 2 + 0.015;
+    holder.add(track);
+    this.group.add(holder);
+    this.disposables.push(bodyGeo, bodyMat, trimGeo, glowMat, edgeGeo, trackGeo, trackMat);
+    const d: DoorRt = { def, collider, mesh: holder, body, edge, open: false, sink: 0 };
+    this.placeDoor(d);
+    this.doors.push(d);
+  }
+
+  /** Lays out a door for how far open it is: the panel shrinks toward its far end, the collider with it. */
+  private placeDoor(d: DoorRt): void {
+    const along = d.def.size[0] > d.def.size[2] ? 0 : 2;
+    const L = d.def.size[along];
+    const len = L * (1 - (1 - DOOR_STUB) * d.sink);
+    // Local x runs along the doorway; the door stays anchored at the +x end.
+    const cx = L / 2 - len / 2;
+    d.body.scale.x = len;
+    d.body.position.x = cx;
+    d.edge.position.x = L / 2 - len;
+    const [x, y, z] = d.def.position;
+    // Local +x is world +x, or world -z when turned a quarter turn about y.
+    const wx = along === 0 ? x + cx : x;
+    const wz = along === 0 ? z : z - cx;
+    const half = along === 0 ? [len / 2, d.def.size[1] / 2, d.def.size[2] / 2] : [d.def.size[0] / 2, d.def.size[1] / 2, len / 2];
+    d.collider.setHalfExtents({ x: half[0], y: half[1], z: half[2] });
+    d.collider.setTranslationWrtParent({ x: wx, y, z: wz });
   }
 
   private addSwitch(def: SwitchDef): void {
@@ -877,20 +930,44 @@ export class FeatureManager {
   }
 
   /** A floating golden key core. */
+  /** A gold key (ring, shaft, teeth) leaning back and spinning over a glowing ring on the floor. */
   private addKey(def: KeyDef): void {
     const holder = new THREE.Group();
-    const coreGeo = new THREE.OctahedronGeometry(0.32, 0);
-    const coreMat = new THREE.MeshStandardMaterial({ color: KEY_COLOR, emissive: KEY_COLOR, emissiveIntensity: 1.8, metalness: 0.6, roughness: 0.25 });
-    holder.add(new THREE.Mesh(coreGeo, coreMat));
-    const haloGeo = new THREE.TorusGeometry(0.5, 0.035, 8, 40);
-    const halo = new THREE.Mesh(haloGeo, coreMat);
+    const mat = new THREE.MeshStandardMaterial({ color: KEY_COLOR, emissive: KEY_COLOR, emissiveIntensity: 0.55, metalness: 0.9, roughness: 0.2 });
+    const key = new THREE.Group();
+    const geos: THREE.BufferGeometry[] = [];
+    const part = (geo: THREE.BufferGeometry, x: number, y: number) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, 0);
+      key.add(m);
+      geos.push(geo);
+      return m;
+    };
+    // Bow: the ring you hold, with a small gem in the middle.
+    part(new THREE.TorusGeometry(0.17, 0.055, 12, 32), 0, 0.27);
+    part(new THREE.OctahedronGeometry(0.06, 0), 0, 0.27);
+    // Collar where the bow meets the shaft, then the shaft.
+    part(new THREE.CylinderGeometry(0.075, 0.075, 0.05, 16), 0, 0.075);
+    part(new THREE.CylinderGeometry(0.045, 0.045, 0.56, 12), 0, -0.2);
+    // Bit: two teeth sticking out to one side near the tip.
+    part(new THREE.BoxGeometry(0.17, 0.075, 0.07), 0.1, -0.43);
+    part(new THREE.BoxGeometry(0.12, 0.06, 0.07), 0.075, -0.29);
+    // Big enough to read at a glance, and leaning back so the camera above sees its face as it spins.
+    key.scale.setScalar(1.45);
+    key.rotation.x = -1.0;
+    holder.add(key);
+    // A soft ring on the floor under the key so it reads as a pickup from above.
+    const haloGeo = new THREE.TorusGeometry(0.42, 0.025, 8, 40);
+    const haloMat = new THREE.MeshBasicMaterial({ color: KEY_COLOR, transparent: true, opacity: 0.55, depthWrite: false });
+    const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.rotation.x = Math.PI / 2;
+    halo.position.y = -0.52;
     holder.add(halo);
     const light = new THREE.PointLight(KEY_COLOR, 3, 3.5, 1.8);
     holder.add(light);
     holder.position.fromArray(def.position);
     this.group.add(holder);
-    this.disposables.push(coreGeo, coreMat, haloGeo);
+    this.disposables.push(mat, haloGeo, haloMat, ...geos);
     this.keys.push({ def, mesh: holder, got: false, fly: 0 });
   }
 
