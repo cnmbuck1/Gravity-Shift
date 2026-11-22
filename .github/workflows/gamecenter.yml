@@ -1,0 +1,39 @@
+# Creates Gravitor's Game Center leaderboards, sets and achievements in App Store Connect from
+# tools/gamecenter/catalog.json. Run it by hand: GitHub → Actions → "Set up Game Center" → Run workflow.
+# Leave "apply" unticked for a dry run that only lists what it would create. Safe to run again:
+# anything that already exists is skipped. Uses the same App Store Connect API key secrets as
+# "Upload to TestFlight" (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8).
+name: Set up Game Center
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Create them for real (unticked = dry run, nothing changes)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  gamecenter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Write the App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+      - name: Create leaderboards and achievements
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLY: ${{ inputs.apply && '--apply' || '' }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pyjwt cryptography
+          "$RUNNER_TEMP/venv/bin/python" tools/gamecenter/setup.py "$RUNNER_TEMP/keys/AuthKey.p8" "$KEY_ID" "$ISSUER_ID" $APPLY
+      - name: Remove the key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

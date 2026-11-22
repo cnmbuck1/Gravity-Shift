@@ -1,0 +1,1832 @@
+{
+  "boards": [
+    {
+      "id": "gravitor.total_stars",
+      "name": "Total Stars",
+      "format": "INTEGER",
+      "sort": "DESC"
+    },
+    {
+      "id": "gravitor.levels_completed",
+      "name": "Levels Completed",
+      "format": "INTEGER",
+      "sort": "DESC"
+    },
+    {
+      "id": "gravitor.weekly_challenge",
+      "name": "Weekly Challenge",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC",
+      "recurring": {
+        "start": "2026-11-23T00:00:00Z",
+        "days": 7
+      }
+    },
+    {
+      "id": "gravitor.time.l1_first_roll",
+      "name": "1-1 First Roll",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w1_wide_turns",
+      "name": "1-2 Wide Turns",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.l2_corners",
+      "name": "1-3 Corners",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w1_first_maze",
+      "name": "1-4 First Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w1_hole_punch",
+      "name": "1-5 Hole Punch",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w1_branches",
+      "name": "1-6 Branches",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w1_narrow_ways",
+      "name": "1-7 Narrow Ways",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w1_labyrinth",
+      "name": "1-8 Labyrinth",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.l3_mind_the_gap",
+      "name": "1-9 Mind the Gap",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w1_launch_finale",
+      "name": "1-10 Launch Deck",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.l4_moving_parts",
+      "name": "2-1 Moving Parts",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_piston_alley",
+      "name": "2-2 Piston Alley",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_hot_floor",
+      "name": "2-3 Hot Floor",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_overpass",
+      "name": "2-4 Overpass",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_coffee_break",
+      "name": "2-5 Coffee Break",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_switchback",
+      "name": "2-6 Switchback",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_gears",
+      "name": "2-7 Gears",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_red_line",
+      "name": "2-8 Red Line",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_crossfire",
+      "name": "2-9 Crossfire",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w2_piston_works",
+      "name": "2-10 Piston Works",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.l6_wall_walk",
+      "name": "3-1 Wall Walk",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w3_side_step",
+      "name": "3-2 Side Step",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w3_wall_run",
+      "name": "3-3 Wall Run",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w3_both_ways",
+      "name": "3-4 Both Ways",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w3_easy_rider",
+      "name": "3-5 Easy Rider",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w3_wall_maze",
+      "name": "3-6 Wall Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w3_twin_walls",
+      "name": "3-7 Twin Walls",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w3_high_wire",
+      "name": "3-8 High Wire",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w3_event_horizon",
+      "name": "3-9 Event Horizon",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.orbital_labyrinth",
+      "name": "3-10 Orbital Labyrinth",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_soft_ground",
+      "name": "4-1 Soft Ground",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_ferry",
+      "name": "4-2 Ferry",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_falling_floor",
+      "name": "4-3 Falling Floor",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_crossing",
+      "name": "4-4 Crossing",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_rest_stop",
+      "name": "4-5 Rest Stop",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_crumble_maze",
+      "name": "4-6 Crumble Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_ferry_lines",
+      "name": "4-7 Ferry Lines",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_quick_feet",
+      "name": "4-8 Quick Feet",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_breakaway",
+      "name": "4-9 Breakaway",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w4_crumble_belt",
+      "name": "4-10 Crumble Belt",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_boost_lane",
+      "name": "5-1 Boost Lane",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_ice_rink",
+      "name": "5-2 Ice Rink",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_conveyor",
+      "name": "5-3 Conveyor",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_side_wind",
+      "name": "5-4 Side Wind",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_glide",
+      "name": "5-5 Glide",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_slippery_maze",
+      "name": "5-6 Slippery Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_thin_ice",
+      "name": "5-7 Thin Ice",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_fast_lane",
+      "name": "5-8 Fast Lane",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_rails",
+      "name": "5-9 Rails",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w5_flux_rails",
+      "name": "5-10 Flux Rails",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_upside_down",
+      "name": "6-1 Upside Down",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_ceiling_walk",
+      "name": "6-2 Ceiling Walk",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_flip_maze",
+      "name": "6-3 Flip Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_auto_flip",
+      "name": "6-4 Auto Flip",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_skylight",
+      "name": "6-5 Skylight",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_flip_and_wall",
+      "name": "6-6 Flip and Wall",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_high_ceiling",
+      "name": "6-7 High Ceiling",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_topsy",
+      "name": "6-8 Topsy Turvy",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_sky_maze",
+      "name": "6-9 Sky Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w6_skyward",
+      "name": "6-10 Skyward",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_switch_on",
+      "name": "7-1 Switch On",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_laser_gate",
+      "name": "7-2 Laser Gate",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_locked_maze",
+      "name": "7-3 Locked Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_red_lights",
+      "name": "7-4 Red Lights",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_power_nap",
+      "name": "7-5 Power Nap",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_double_lock",
+      "name": "7-6 Double Lock",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_wiring",
+      "name": "7-7 Wiring",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_short_circuit",
+      "name": "7-8 Short Circuit",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_overload",
+      "name": "7-9 Overload",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w7_circuit",
+      "name": "7-10 Circuit",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_hop",
+      "name": "8-1 Hop",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_low_gravity",
+      "name": "8-2 Low Gravity",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_autopilot",
+      "name": "8-3 Autopilot",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_moon_maze",
+      "name": "8-4 Moon Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_orbit_rest",
+      "name": "8-5 Free Float",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_long_jump",
+      "name": "8-6 Long Jump",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_slingshot",
+      "name": "8-7 Slingshot",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_zero_g",
+      "name": "8-8 Zero G",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_escape_velocity",
+      "name": "8-9 Escape Velocity",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w8_low_orbit",
+      "name": "8-10 Low Orbit",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_sweeper",
+      "name": "9-1 Sweeper",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_turntable",
+      "name": "9-2 Turntable",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_spin_doctor",
+      "name": "9-3 Spin Doctor",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_roundabout",
+      "name": "9-4 Roundabout",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_merry_go_round",
+      "name": "9-5 Merry-Go-Round",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_windmill",
+      "name": "9-6 Windmill",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_gearbox",
+      "name": "9-7 Gearbox",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_centrifuge",
+      "name": "9-8 Centrifuge",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_vortex",
+      "name": "9-9 Vortex",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w9_spin_cycle",
+      "name": "9-10 Spin Cycle",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_horizon_line",
+      "name": "10-1 Horizon Line",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_mixed_signals",
+      "name": "10-2 Mixed Signals",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_dark_matter",
+      "name": "10-3 Dark Matter",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_gravity_well",
+      "name": "10-4 Gravity Well",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_quiet_orbit",
+      "name": "10-5 Quiet Orbit",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_singularity",
+      "name": "10-6 Singularity",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_accretion",
+      "name": "10-7 Accretion",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_redshift",
+      "name": "10-8 Redshift",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_point_of_no_return",
+      "name": "10-9 Point of No Return",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w10_event_horizon",
+      "name": "10-10 Beyond the Horizon",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_first_drop",
+      "name": "11-1 First Drop",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_basement",
+      "name": "11-2 Basement",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_glide_path",
+      "name": "11-3 Glide Path",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_three_floors",
+      "name": "11-4 Three Floors",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_stairwell",
+      "name": "11-5 Stairwell",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_sinkhole",
+      "name": "11-6 Sinkhole",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_free_fall",
+      "name": "11-7 Free Fall",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_undercroft",
+      "name": "11-8 Undercroft",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_abyss",
+      "name": "11-9 Abyss",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w11_depths",
+      "name": "11-10 The Depths",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_warp_gate",
+      "name": "12-1 Warp Gate",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_jump_cut",
+      "name": "12-2 Jump Cut",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_wrong_ring",
+      "name": "12-3 Wrong Ring",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_relay",
+      "name": "12-4 Relay",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_shortcut",
+      "name": "12-5 Shortcut",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_phase_shift",
+      "name": "12-6 Phase Shift",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_mirror_hall",
+      "name": "12-7 Mirror Hall",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_teleporter",
+      "name": "12-8 Teleporter",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_wormhole",
+      "name": "12-9 Wormhole",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w12_warp_core",
+      "name": "12-10 Warp Core",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_first_key",
+      "name": "13-1 First Key",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_key_ring",
+      "name": "13-2 Key Ring",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_locksmith",
+      "name": "13-3 Locksmith",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_strongroom",
+      "name": "13-4 Strongroom",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_spare_key",
+      "name": "13-5 Spare Key",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_deposit_box",
+      "name": "13-6 Deposit Box",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_master_key",
+      "name": "13-7 Master Key",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_safe_cracker",
+      "name": "13-8 Safe Cracker",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_bank_job",
+      "name": "13-9 Bank Job",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w13_vault",
+      "name": "13-10 The Vault",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_breeze",
+      "name": "14-1 Breeze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_crosswind",
+      "name": "14-2 Crosswind",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_wind_tunnel",
+      "name": "14-3 Wind Tunnel",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_gusts",
+      "name": "14-4 Gusts",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_calm",
+      "name": "14-5 Eye of the Storm",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_updraft",
+      "name": "14-6 Updraft",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_headwind",
+      "name": "14-7 Gale Force",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_jet_stream",
+      "name": "14-8 Jet Stream",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_cyclone",
+      "name": "14-9 Cyclone",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w14_storm_front",
+      "name": "14-10 Storm Front",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_lights_out",
+      "name": "15-1 Lights Out",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_night_maze",
+      "name": "15-2 Night Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_blind_corner",
+      "name": "15-3 Blind Corner",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_glowworm",
+      "name": "15-4 Glowworm",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_night_light",
+      "name": "15-5 Night Light",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_dark_side",
+      "name": "15-6 Dark Side",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_eclipse",
+      "name": "15-7 Eclipse",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_new_moon",
+      "name": "15-8 New Moon",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_pitch_black",
+      "name": "15-9 Pitch Black",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w15_blackout",
+      "name": "15-10 Blackout",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_heartbeat",
+      "name": "16-1 Heartbeat",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_rhythm",
+      "name": "16-2 Rhythm",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_pulse_maze",
+      "name": "16-3 Pulse Maze",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_syncopation",
+      "name": "16-4 Syncopation",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_resting_rate",
+      "name": "16-5 Resting Rate",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_tempo",
+      "name": "16-6 Tempo",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_double_time",
+      "name": "16-7 Double Time",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_arrhythmia",
+      "name": "16-8 Arrhythmia",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_flatline",
+      "name": "16-9 Flatline",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w16_pulse",
+      "name": "16-10 Pulse",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_key_drop",
+      "name": "17-1 Key Drop",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_cellar_door",
+      "name": "17-2 Cellar Door",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_deep_storage",
+      "name": "17-3 Deep Storage",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_locker_room",
+      "name": "17-4 Locker Room",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_dumbwaiter",
+      "name": "17-5 Dumbwaiter",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_safe_deposit",
+      "name": "17-6 Safe Deposit",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_undervault",
+      "name": "17-7 Undervault",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_treasury",
+      "name": "17-8 Treasury",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_bottomless",
+      "name": "17-9 Bottomless",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w17_deep_vault",
+      "name": "17-10 Deep Vault",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_warp_wind",
+      "name": "18-1 Warp Wind",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_static",
+      "name": "18-2 Static",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_thunderclap",
+      "name": "18-3 Thunderclap",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_lightning",
+      "name": "18-4 Lightning Rod",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_drizzle",
+      "name": "18-5 Drizzle",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_supercell",
+      "name": "18-6 Supercell",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_monsoon",
+      "name": "18-7 Monsoon",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_hailstorm",
+      "name": "18-8 Hailstorm",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_typhoon",
+      "name": "18-9 Typhoon",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w18_warp_storm",
+      "name": "18-10 Warp Storm",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_night_drop",
+      "name": "19-1 Night Drop",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_moonlight",
+      "name": "19-2 Moonlight",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_nocturne",
+      "name": "19-3 Nocturne",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_graveyard_shift",
+      "name": "19-4 Graveyard Shift",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_stargazer",
+      "name": "19-5 Stargazer",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_midnight",
+      "name": "19-6 Midnight",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_dead_of_night",
+      "name": "19-7 Dead of Night",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_witching_hour",
+      "name": "19-8 Witching Hour",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_nightfall",
+      "name": "19-9 Nightfall",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w19_night_shift",
+      "name": "19-10 Night Shift",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_event_zero",
+      "name": "20-1 Event Zero",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_graviton",
+      "name": "20-2 Graviton",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_tidal_force",
+      "name": "20-3 Tidal Force",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_spaghettify",
+      "name": "20-4 Spaghettification",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_quiet_zone",
+      "name": "20-5 Quiet Zone",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_hawking",
+      "name": "20-6 Hawking Radiation",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_dark_energy",
+      "name": "20-7 Dark Energy",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_perihelion",
+      "name": "20-8 Perihelion",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_last_light",
+      "name": "20-9 Last Light",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    },
+    {
+      "id": "gravitor.time.w20_singularity",
+      "name": "20-10 Singularity",
+      "format": "ELAPSED_TIME_CENTISECOND",
+      "sort": "ASC"
+    }
+  ],
+  "sets": [
+    {
+      "id": "gravitor.set.overall",
+      "name": "Overall",
+      "boards": [
+        "gravitor.total_stars",
+        "gravitor.levels_completed",
+        "gravitor.weekly_challenge"
+      ]
+    },
+    {
+      "id": "gravitor.set.w1",
+      "name": "World 1 · Launch Deck",
+      "boards": [
+        "gravitor.time.l1_first_roll",
+        "gravitor.time.w1_wide_turns",
+        "gravitor.time.l2_corners",
+        "gravitor.time.w1_first_maze",
+        "gravitor.time.w1_hole_punch",
+        "gravitor.time.w1_branches",
+        "gravitor.time.w1_narrow_ways",
+        "gravitor.time.w1_labyrinth",
+        "gravitor.time.l3_mind_the_gap",
+        "gravitor.time.w1_launch_finale"
+      ]
+    },
+    {
+      "id": "gravitor.set.w2",
+      "name": "World 2 · Piston Works",
+      "boards": [
+        "gravitor.time.l4_moving_parts",
+        "gravitor.time.w2_piston_alley",
+        "gravitor.time.w2_hot_floor",
+        "gravitor.time.w2_overpass",
+        "gravitor.time.w2_coffee_break",
+        "gravitor.time.w2_switchback",
+        "gravitor.time.w2_gears",
+        "gravitor.time.w2_red_line",
+        "gravitor.time.w2_crossfire",
+        "gravitor.time.w2_piston_works"
+      ]
+    },
+    {
+      "id": "gravitor.set.w3",
+      "name": "World 3 · Wall Walk",
+      "boards": [
+        "gravitor.time.l6_wall_walk",
+        "gravitor.time.w3_side_step",
+        "gravitor.time.w3_wall_run",
+        "gravitor.time.w3_both_ways",
+        "gravitor.time.w3_easy_rider",
+        "gravitor.time.w3_wall_maze",
+        "gravitor.time.w3_twin_walls",
+        "gravitor.time.w3_high_wire",
+        "gravitor.time.w3_event_horizon",
+        "gravitor.time.orbital_labyrinth"
+      ]
+    },
+    {
+      "id": "gravitor.set.w4",
+      "name": "World 4 · Crumble Belt",
+      "boards": [
+        "gravitor.time.w4_soft_ground",
+        "gravitor.time.w4_ferry",
+        "gravitor.time.w4_falling_floor",
+        "gravitor.time.w4_crossing",
+        "gravitor.time.w4_rest_stop",
+        "gravitor.time.w4_crumble_maze",
+        "gravitor.time.w4_ferry_lines",
+        "gravitor.time.w4_quick_feet",
+        "gravitor.time.w4_breakaway",
+        "gravitor.time.w4_crumble_belt"
+      ]
+    },
+    {
+      "id": "gravitor.set.w5",
+      "name": "World 5 · Flux Rails",
+      "boards": [
+        "gravitor.time.w5_boost_lane",
+        "gravitor.time.w5_ice_rink",
+        "gravitor.time.w5_conveyor",
+        "gravitor.time.w5_side_wind",
+        "gravitor.time.w5_glide",
+        "gravitor.time.w5_slippery_maze",
+        "gravitor.time.w5_thin_ice",
+        "gravitor.time.w5_fast_lane",
+        "gravitor.time.w5_rails",
+        "gravitor.time.w5_flux_rails"
+      ]
+    },
+    {
+      "id": "gravitor.set.w6",
+      "name": "World 6 · Skyward",
+      "boards": [
+        "gravitor.time.w6_upside_down",
+        "gravitor.time.w6_ceiling_walk",
+        "gravitor.time.w6_flip_maze",
+        "gravitor.time.w6_auto_flip",
+        "gravitor.time.w6_skylight",
+        "gravitor.time.w6_flip_and_wall",
+        "gravitor.time.w6_high_ceiling",
+        "gravitor.time.w6_topsy",
+        "gravitor.time.w6_sky_maze",
+        "gravitor.time.w6_skyward"
+      ]
+    },
+    {
+      "id": "gravitor.set.w7",
+      "name": "World 7 · Circuit",
+      "boards": [
+        "gravitor.time.w7_switch_on",
+        "gravitor.time.w7_laser_gate",
+        "gravitor.time.w7_locked_maze",
+        "gravitor.time.w7_red_lights",
+        "gravitor.time.w7_power_nap",
+        "gravitor.time.w7_double_lock",
+        "gravitor.time.w7_wiring",
+        "gravitor.time.w7_short_circuit",
+        "gravitor.time.w7_overload",
+        "gravitor.time.w7_circuit"
+      ]
+    },
+    {
+      "id": "gravitor.set.w8",
+      "name": "World 8 · Low Orbit",
+      "boards": [
+        "gravitor.time.w8_hop",
+        "gravitor.time.w8_low_gravity",
+        "gravitor.time.w8_autopilot",
+        "gravitor.time.w8_moon_maze",
+        "gravitor.time.w8_orbit_rest",
+        "gravitor.time.w8_long_jump",
+        "gravitor.time.w8_slingshot",
+        "gravitor.time.w8_zero_g",
+        "gravitor.time.w8_escape_velocity",
+        "gravitor.time.w8_low_orbit"
+      ]
+    },
+    {
+      "id": "gravitor.set.w9",
+      "name": "World 9 · Spin Cycle",
+      "boards": [
+        "gravitor.time.w9_sweeper",
+        "gravitor.time.w9_turntable",
+        "gravitor.time.w9_spin_doctor",
+        "gravitor.time.w9_roundabout",
+        "gravitor.time.w9_merry_go_round",
+        "gravitor.time.w9_windmill",
+        "gravitor.time.w9_gearbox",
+        "gravitor.time.w9_centrifuge",
+        "gravitor.time.w9_vortex",
+        "gravitor.time.w9_spin_cycle"
+      ]
+    },
+    {
+      "id": "gravitor.set.w10",
+      "name": "World 10 · Event Horizon",
+      "boards": [
+        "gravitor.time.w10_horizon_line",
+        "gravitor.time.w10_mixed_signals",
+        "gravitor.time.w10_dark_matter",
+        "gravitor.time.w10_gravity_well",
+        "gravitor.time.w10_quiet_orbit",
+        "gravitor.time.w10_singularity",
+        "gravitor.time.w10_accretion",
+        "gravitor.time.w10_redshift",
+        "gravitor.time.w10_point_of_no_return",
+        "gravitor.time.w10_event_horizon"
+      ]
+    },
+    {
+      "id": "gravitor.set.w11",
+      "name": "World 11 · Depths",
+      "boards": [
+        "gravitor.time.w11_first_drop",
+        "gravitor.time.w11_basement",
+        "gravitor.time.w11_glide_path",
+        "gravitor.time.w11_three_floors",
+        "gravitor.time.w11_stairwell",
+        "gravitor.time.w11_sinkhole",
+        "gravitor.time.w11_free_fall",
+        "gravitor.time.w11_undercroft",
+        "gravitor.time.w11_abyss",
+        "gravitor.time.w11_depths"
+      ]
+    },
+    {
+      "id": "gravitor.set.w12",
+      "name": "World 12 · Warp Gate",
+      "boards": [
+        "gravitor.time.w12_warp_gate",
+        "gravitor.time.w12_jump_cut",
+        "gravitor.time.w12_wrong_ring",
+        "gravitor.time.w12_relay",
+        "gravitor.time.w12_shortcut",
+        "gravitor.time.w12_phase_shift",
+        "gravitor.time.w12_mirror_hall",
+        "gravitor.time.w12_teleporter",
+        "gravitor.time.w12_wormhole",
+        "gravitor.time.w12_warp_core"
+      ]
+    },
+    {
+      "id": "gravitor.set.w13",
+      "name": "World 13 · Vault",
+      "boards": [
+        "gravitor.time.w13_first_key",
+        "gravitor.time.w13_key_ring",
+        "gravitor.time.w13_locksmith",
+        "gravitor.time.w13_strongroom",
+        "gravitor.time.w13_spare_key",
+        "gravitor.time.w13_deposit_box",
+        "gravitor.time.w13_master_key",
+        "gravitor.time.w13_safe_cracker",
+        "gravitor.time.w13_bank_job",
+        "gravitor.time.w13_vault"
+      ]
+    },
+    {
+      "id": "gravitor.set.w14",
+      "name": "World 14 · Storm Front",
+      "boards": [
+        "gravitor.time.w14_breeze",
+        "gravitor.time.w14_crosswind",
+        "gravitor.time.w14_wind_tunnel",
+        "gravitor.time.w14_gusts",
+        "gravitor.time.w14_calm",
+        "gravitor.time.w14_updraft",
+        "gravitor.time.w14_headwind",
+        "gravitor.time.w14_jet_stream",
+        "gravitor.time.w14_cyclone",
+        "gravitor.time.w14_storm_front"
+      ]
+    },
+    {
+      "id": "gravitor.set.w15",
+      "name": "World 15 · Blackout",
+      "boards": [
+        "gravitor.time.w15_lights_out",
+        "gravitor.time.w15_night_maze",
+        "gravitor.time.w15_blind_corner",
+        "gravitor.time.w15_glowworm",
+        "gravitor.time.w15_night_light",
+        "gravitor.time.w15_dark_side",
+        "gravitor.time.w15_eclipse",
+        "gravitor.time.w15_new_moon",
+        "gravitor.time.w15_pitch_black",
+        "gravitor.time.w15_blackout"
+      ]
+    },
+    {
+      "id": "gravitor.set.w16",
+      "name": "World 16 · Pulse",
+      "boards": [
+        "gravitor.time.w16_heartbeat",
+        "gravitor.time.w16_rhythm",
+        "gravitor.time.w16_pulse_maze",
+        "gravitor.time.w16_syncopation",
+        "gravitor.time.w16_resting_rate",
+        "gravitor.time.w16_tempo",
+        "gravitor.time.w16_double_time",
+        "gravitor.time.w16_arrhythmia",
+        "gravitor.time.w16_flatline",
+        "gravitor.time.w16_pulse"
+      ]
+    },
+    {
+      "id": "gravitor.set.w17",
+      "name": "World 17 · Deep Vault",
+      "boards": [
+        "gravitor.time.w17_key_drop",
+        "gravitor.time.w17_cellar_door",
+        "gravitor.time.w17_deep_storage",
+        "gravitor.time.w17_locker_room",
+        "gravitor.time.w17_dumbwaiter",
+        "gravitor.time.w17_safe_deposit",
+        "gravitor.time.w17_undervault",
+        "gravitor.time.w17_treasury",
+        "gravitor.time.w17_bottomless",
+        "gravitor.time.w17_deep_vault"
+      ]
+    },
+    {
+      "id": "gravitor.set.w18",
+      "name": "World 18 · Warp Storm",
+      "boards": [
+        "gravitor.time.w18_warp_wind",
+        "gravitor.time.w18_static",
+        "gravitor.time.w18_thunderclap",
+        "gravitor.time.w18_lightning",
+        "gravitor.time.w18_drizzle",
+        "gravitor.time.w18_supercell",
+        "gravitor.time.w18_monsoon",
+        "gravitor.time.w18_hailstorm",
+        "gravitor.time.w18_typhoon",
+        "gravitor.time.w18_warp_storm"
+      ]
+    },
+    {
+      "id": "gravitor.set.w19",
+      "name": "World 19 · Night Shift",
+      "boards": [
+        "gravitor.time.w19_night_drop",
+        "gravitor.time.w19_moonlight",
+        "gravitor.time.w19_nocturne",
+        "gravitor.time.w19_graveyard_shift",
+        "gravitor.time.w19_stargazer",
+        "gravitor.time.w19_midnight",
+        "gravitor.time.w19_dead_of_night",
+        "gravitor.time.w19_witching_hour",
+        "gravitor.time.w19_nightfall",
+        "gravitor.time.w19_night_shift"
+      ]
+    },
+    {
+      "id": "gravitor.set.w20",
+      "name": "World 20 · Singularity",
+      "boards": [
+        "gravitor.time.w20_event_zero",
+        "gravitor.time.w20_graviton",
+        "gravitor.time.w20_tidal_force",
+        "gravitor.time.w20_spaghettify",
+        "gravitor.time.w20_quiet_zone",
+        "gravitor.time.w20_hawking",
+        "gravitor.time.w20_dark_energy",
+        "gravitor.time.w20_perihelion",
+        "gravitor.time.w20_last_light",
+        "gravitor.time.w20_singularity"
+      ]
+    }
+  ],
+  "achievements": [
+    {
+      "id": "gravitor.ach.first_clear",
+      "name": "Lift-Off",
+      "points": 10,
+      "goal": "Finish your first level.",
+      "earned": "You finished your first level."
+    },
+    {
+      "id": "gravitor.ach.clean_1",
+      "name": "Clean Orbit",
+      "points": 10,
+      "goal": "Finish a level without falling.",
+      "earned": "You finished a level without a single fall."
+    },
+    {
+      "id": "gravitor.ach.clean_25",
+      "name": "Steady Hands",
+      "points": 25,
+      "goal": "Finish 25 levels without falling.",
+      "earned": "You finished 25 levels without falling."
+    },
+    {
+      "id": "gravitor.ach.clean_100",
+      "name": "Untouchable",
+      "points": 50,
+      "goal": "Finish 100 levels without falling.",
+      "earned": "You finished 100 levels without falling."
+    },
+    {
+      "id": "gravitor.ach.first_try_10",
+      "name": "Natural Talent",
+      "points": 25,
+      "goal": "Finish 10 levels on your first try without falling.",
+      "earned": "Ten levels, first try, no falls."
+    },
+    {
+      "id": "gravitor.ach.streak_5",
+      "name": "In the Zone",
+      "points": 25,
+      "goal": "Finish 5 levels in a row without falling.",
+      "earned": "Five flawless levels in a row."
+    },
+    {
+      "id": "gravitor.ach.stars3_1",
+      "name": "Triple Star",
+      "points": 10,
+      "goal": "Earn 3 stars on a level.",
+      "earned": "You earned 3 stars on a level."
+    },
+    {
+      "id": "gravitor.ach.stars_150",
+      "name": "Star Collector",
+      "points": 25,
+      "goal": "Earn 150 stars.",
+      "earned": "You collected 150 stars."
+    },
+    {
+      "id": "gravitor.ach.stars_300",
+      "name": "Constellation",
+      "points": 50,
+      "goal": "Earn 300 stars.",
+      "earned": "You collected 300 stars."
+    },
+    {
+      "id": "gravitor.ach.stars_all",
+      "name": "Supernova",
+      "points": 100,
+      "goal": "Earn every star in the game.",
+      "earned": "Every star in the game is yours."
+    },
+    {
+      "id": "gravitor.ach.perfect_world",
+      "name": "Perfect World",
+      "points": 50,
+      "goal": "Earn 3 stars on every level of a world.",
+      "earned": "A whole world, all 3 stars."
+    },
+    {
+      "id": "gravitor.ach.levels_100",
+      "name": "Centurion",
+      "points": 25,
+      "goal": "Finish 100 levels.",
+      "earned": "You finished 100 levels."
+    },
+    {
+      "id": "gravitor.ach.levels_all",
+      "name": "Gravitor Legend",
+      "points": 75,
+      "goal": "Finish every level.",
+      "earned": "You finished every level in Gravitor."
+    },
+    {
+      "id": "gravitor.ach.dark_clean",
+      "name": "Night Vision",
+      "points": 75,
+      "goal": "Finish every World 15 level in the dark without falling.",
+      "earned": "You beat World 15 in the dark without a single fall."
+    },
+    {
+      "id": "gravitor.ach.shifts_250",
+      "name": "Gravity Bender",
+      "points": 25,
+      "goal": "Shift gravity 250 times.",
+      "earned": "You bent gravity 250 times."
+    },
+    {
+      "id": "gravitor.ach.pb_25",
+      "name": "Always Faster",
+      "points": 25,
+      "goal": "Beat your own best time 25 times.",
+      "earned": "You beat your own best 25 times."
+    },
+    {
+      "id": "gravitor.ach.comeback",
+      "name": "Never Give Up",
+      "points": 10,
+      "goal": "Finish a level after falling 5 times in it.",
+      "earned": "Five falls, and you still made it."
+    },
+    {
+      "id": "gravitor.ach.weekly_1",
+      "name": "Weekly Contender",
+      "points": 15,
+      "goal": "Finish a Weekly Challenge.",
+      "earned": "You took on the Weekly Challenge."
+    },
+    {
+      "id": "gravitor.ach.weekly_4",
+      "name": "Weekly Regular",
+      "points": 25,
+      "goal": "Finish 4 different Weekly Challenges.",
+      "earned": "Four Weekly Challenges finished."
+    },
+    {
+      "id": "gravitor.ach.world_01",
+      "name": "Cleared for Launch",
+      "points": 10,
+      "goal": "Finish every level of World 1, Launch Deck.",
+      "earned": "You cleared World 1, Launch Deck."
+    },
+    {
+      "id": "gravitor.ach.world_02",
+      "name": "Piston Proof",
+      "points": 10,
+      "goal": "Finish every level of World 2, Piston Works.",
+      "earned": "You cleared World 2, Piston Works."
+    },
+    {
+      "id": "gravitor.ach.world_03",
+      "name": "Wall Walker",
+      "points": 10,
+      "goal": "Finish every level of World 3, Wall Walk.",
+      "earned": "You cleared World 3, Wall Walk."
+    },
+    {
+      "id": "gravitor.ach.world_04",
+      "name": "Solid Ground",
+      "points": 10,
+      "goal": "Finish every level of World 4, Crumble Belt.",
+      "earned": "You cleared World 4, Crumble Belt."
+    },
+    {
+      "id": "gravitor.ach.world_05",
+      "name": "Rail Rider",
+      "points": 10,
+      "goal": "Finish every level of World 5, Flux Rails.",
+      "earned": "You cleared World 5, Flux Rails."
+    },
+    {
+      "id": "gravitor.ach.world_06",
+      "name": "Sky Walker",
+      "points": 10,
+      "goal": "Finish every level of World 6, Skyward.",
+      "earned": "You cleared World 6, Skyward."
+    },
+    {
+      "id": "gravitor.ach.world_07",
+      "name": "Short Circuit",
+      "points": 10,
+      "goal": "Finish every level of World 7, Circuit.",
+      "earned": "You cleared World 7, Circuit."
+    },
+    {
+      "id": "gravitor.ach.world_08",
+      "name": "Escape Velocity",
+      "points": 10,
+      "goal": "Finish every level of World 8, Low Orbit.",
+      "earned": "You cleared World 8, Low Orbit."
+    },
+    {
+      "id": "gravitor.ach.world_09",
+      "name": "Spin Doctor",
+      "points": 10,
+      "goal": "Finish every level of World 9, Spin Cycle.",
+      "earned": "You cleared World 9, Spin Cycle."
+    },
+    {
+      "id": "gravitor.ach.world_10",
+      "name": "Beyond the Horizon",
+      "points": 10,
+      "goal": "Finish every level of World 10, Event Horizon.",
+      "earned": "You cleared World 10, Event Horizon."
+    },
+    {
+      "id": "gravitor.ach.world_11",
+      "name": "Deep Diver",
+      "points": 15,
+      "goal": "Finish every level of World 11, Depths.",
+      "earned": "You cleared World 11, Depths."
+    },
+    {
+      "id": "gravitor.ach.world_12",
+      "name": "Gatekeeper",
+      "points": 15,
+      "goal": "Finish every level of World 12, Warp Gate.",
+      "earned": "You cleared World 12, Warp Gate."
+    },
+    {
+      "id": "gravitor.ach.world_13",
+      "name": "Vault Breaker",
+      "points": 15,
+      "goal": "Finish every level of World 13, Vault.",
+      "earned": "You cleared World 13, Vault."
+    },
+    {
+      "id": "gravitor.ach.world_14",
+      "name": "Storm Chaser",
+      "points": 15,
+      "goal": "Finish every level of World 14, Storm Front.",
+      "earned": "You cleared World 14, Storm Front."
+    },
+    {
+      "id": "gravitor.ach.world_15",
+      "name": "Lights Out",
+      "points": 15,
+      "goal": "Finish every level of World 15, Blackout.",
+      "earned": "You cleared World 15, Blackout."
+    },
+    {
+      "id": "gravitor.ach.world_16",
+      "name": "In the Rhythm",
+      "points": 15,
+      "goal": "Finish every level of World 16, Pulse.",
+      "earned": "You cleared World 16, Pulse."
+    },
+    {
+      "id": "gravitor.ach.world_17",
+      "name": "Treasure Hunter",
+      "points": 15,
+      "goal": "Finish every level of World 17, Deep Vault.",
+      "earned": "You cleared World 17, Deep Vault."
+    },
+    {
+      "id": "gravitor.ach.world_18",
+      "name": "Eye of the Storm",
+      "points": 15,
+      "goal": "Finish every level of World 18, Warp Storm.",
+      "earned": "You cleared World 18, Warp Storm."
+    },
+    {
+      "id": "gravitor.ach.world_19",
+      "name": "Night Owl",
+      "points": 15,
+      "goal": "Finish every level of World 19, Night Shift.",
+      "earned": "You cleared World 19, Night Shift."
+    },
+    {
+      "id": "gravitor.ach.world_20",
+      "name": "Singularity",
+      "points": 15,
+      "goal": "Finish every level of World 20, Singularity.",
+      "earned": "You cleared World 20, Singularity."
+    }
+  ]
+}
