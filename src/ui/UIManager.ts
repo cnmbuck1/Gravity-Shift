@@ -7,6 +7,7 @@ import type { LevelDef } from '../levels/LevelTypes';
 import type { WorldDef } from '../levels/worldTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
 import { drawOrbIcon } from '../brand/cnmbuck-orb';
+import { BUNDLE, bundleWorthOffering, packFor } from '../monetization/packs';
 
 /** Falls in one level (across restarts) before the Skip Level button is offered. */
 const SKIP_AFTER_FALLS = 3;
@@ -38,6 +39,13 @@ export class UIManager {
   private advancing = false;
   /** World shown in the level list (-1: the world list). */
   private openWorld = -1;
+  /** World whose pack the paywall is selling, and the level to start once it's bought (-1: none). */
+  private paywallWorld = -1;
+  private paywallLevel = -1;
+  /** Where the paywall's NOT NOW goes. */
+  private paywallReturn: 'levels' | 'menu' = 'menu';
+  /** Set while a purchase sheet is open, so a double tap can't start a second one. */
+  private buying = false;
 
   /** Campaign levels (all worlds, in order) unlock one after another; `extras` (test courses) are always available. */
   constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private worlds: WorldDef[], private extras: LevelDef[], private money: Monetization, private analytics: Analytics) {
@@ -89,6 +97,19 @@ export class UIManager {
             </div>
           </div>
           <button class="btn" data-action="levels-back">BACK</button>
+        </div>
+      </section>
+
+      <section class="screen panel-screen" data-screen="paywall">
+        <div class="panel paywall">
+          <div class="pw-kicker" data-bind="pw-kicker"></div>
+          <h2 data-bind="pw-title"></h2>
+          <div class="pw-worlds" data-bind-html="pw-worlds"></div>
+          <button class="btn primary" data-action="buy-pack" data-bind-show="pw-pack"><b data-bind="pw-pack-name"></b><small data-bind="pw-pack-sub"></small></button>
+          <button class="btn pw-best" data-action="buy-bundle" data-bind-show="pw-bundle"><span class="pw-badge">BEST VALUE</span><b>ALL WORLDS 12-20</b><small data-bind="pw-bundle-sub"></small></button>
+          <div class="note pw-note" data-bind="pw-note"></div>
+          <button class="btn btn-small" data-action="restore">RESTORE PURCHASES</button>
+          <button class="btn link-btn" data-action="paywall-back">NOT NOW</button>
         </div>
       </section>
 
@@ -230,6 +251,7 @@ export class UIManager {
       const t = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
       if (!t) return;
       if (t.dataset.level) this.startLevel(Number(t.dataset.level));
+      else if (t.dataset.paywall) this.openPaywall(Number(t.dataset.paywall), -1, 'levels');
       else if (t.dataset.world) {
         this.openWorld = Number(t.dataset.world);
         this.refreshMenu();
@@ -348,6 +370,12 @@ export class UIManager {
   // ---------- flow ----------
 
   private async startLevel(index: number): Promise<void> {
+    // A level in a world pack the player doesn't own opens the paywall instead (Play, Next Level
+    // into World 12, a skip from 11-10, ...). Buying it starts this level.
+    if (this.paidLocked(index)) {
+      this.openPaywall(this.worldOf(index), index, 'menu');
+      return;
+    }
     // Must run synchronously inside the tap so iOS will show the motion permission prompt.
     const permission = this.settings.get().controlMode === 'tilt' ? this.ensureTilt() : Promise.resolve(true);
     const def = this.levels[index];
@@ -480,7 +508,24 @@ export class UIManager {
         void this.money.testAd().then((msg) => { this.toast(msg, 3200); this.syncStore(); });
         break;
       case 'restore':
-        void this.money.restore().then((ok) => this.toast(ok ? '✓ Remove Ads restored' : 'No purchases to restore', 2200));
+        void this.money.restore().then((owned) => {
+          this.toast(owned.length ? '✓ Purchases restored' : 'No purchases to restore', 2200);
+          this.syncStore();
+          this.afterPurchase();
+        });
+        break;
+      case 'buy-pack': {
+        const pack = packFor(this.worlds[this.paywallWorld]?.id ?? '');
+        if (pack) void this.purchase(pack.productId);
+        break;
+      }
+      case 'buy-bundle':
+        void this.purchase(BUNDLE.productId);
+        break;
+      case 'paywall-back':
+        this.paywallWorld = this.paywallLevel = -1;
+        this.refreshMenu();
+        this.show(this.paywallReturn);
         break;
     }
   }
@@ -492,6 +537,15 @@ export class UIManager {
       void btn.offsetWidth;
       btn.classList.add('denied');
     }
+  }
+
+  /**
+   * Campaign level `i` is in a paid world the player hasn't bought. The testing switch
+   * "Unlock all levels" opens paid worlds too (never on in App Store builds).
+   */
+  private paidLocked(i: number): boolean {
+    if (i < 0 || i >= this.campaign.length || this.settings.get().unlockAll) return false;
+    return !this.money.ownsWorld(this.worlds[this.worldOf(i)].id);
   }
 
   private unlocked(i: number): boolean {
@@ -577,7 +631,7 @@ export class UIManager {
 
   private refreshMenu(): void {
     const n = this.nextUnplayed();
-    this.bind('play-sub', `Level ${this.levelLabel(n)} · ${this.campaign[n].name}`);
+    this.bind('play-sub', `Level ${this.levelLabel(n)} · ${this.campaign[n].name}${this.paidLocked(n) ? ' · 🔒' : ''}`);
     const list = this.root.querySelector<HTMLElement>('[data-bind-html="level-list"]')!;
     const extras = this.root.querySelector<HTMLElement>('.extras-block')!;
     extras.style.display = this.openWorld < 0 && this.extras.length ? '' : 'none';
@@ -589,6 +643,15 @@ export class UIManager {
           const recs = w.levels.map((l) => this.game.recordFor(l.id));
           const stars = recs.reduce((a, r) => a + r.bestStars, 0);
           const done = recs.filter((r) => r.bestTime !== null).length;
+          const pack = this.paidLocked(start) ? packFor(w.id) : null;
+          if (pack) {
+            // Not bought: the row opens the paywall, whether or not the player has got this far.
+            return `<button class="level-row world-row pack-locked" data-paywall="${wi}" style="--accent:${w.theme.accent}">
+              <span class="lv-num">${wi + 1}</span>
+              <span class="lv-name">${w.name}<small>${w.idea}</small></span>
+              <span class="lv-stats"><span class="lv-pack">🔒 ${this.money.priceOf(pack.productId)}</span><small>${pack.name.replace(' Pack', '')} pack</small></span>
+            </button>`;
+          }
           const open = this.unlocked(start);
           return `<button class="level-row world-row ${open ? '' : 'locked'}" ${open ? `data-world="${wi}"` : 'disabled'} style="--accent:${w.theme.accent}">
             <span class="lv-num">${wi + 1}</span>
@@ -623,10 +686,88 @@ export class UIManager {
     show('store', this.money.native);
     show('can-buy', this.money.native && !this.money.adFree);
     if (this.money.price) this.bind('ads-price', `${this.money.price} · one-time · also unlocks the Cnmbuck Orb`);
-    this.bind('ads-note', this.money.adFree ? '✓ Ads between levels removed. Thank you for supporting Cnmbuck Studios. (Skip Level still plays a short ad.)' : '');
+    const packs = this.worlds.filter((w) => packFor(w.id) && this.money.ownsWorld(w.id)).map((w) => this.worlds.indexOf(w) + 1);
+    this.bind('ads-note', [
+      this.money.adFree ? '✓ Ads between levels removed. Thank you for supporting Cnmbuck Studios. (Skip Level still plays a short ad.)' : '',
+      packs.length ? `✓ Worlds ${packs.join(', ')} unlocked.` : '',
+    ].filter(Boolean).join(' '));
     // With Debug readout on, Settings shows why ads/store are or aren't working, plus a test-ad button.
     show('store-debug', this.money.native && this.settings.get().showDebug);
     this.bind('store-debug', this.money.status());
+  }
+
+  /** Shows the paywall for world `w`'s pack. `level`: the level to start once bought (-1: open the world). */
+  private openPaywall(w: number, level: number, back: 'levels' | 'menu'): void {
+    const pack = packFor(this.worlds[w].id);
+    if (!pack) return;
+    if (this.game.state !== 'menu') {
+      this.analytics.levelQuit('menu', this.game.stats.time);
+      this.game.toMenu();
+    }
+    this.paywallWorld = w;
+    this.paywallLevel = level;
+    this.paywallReturn = back;
+    this.syncPaywall();
+    this.show('paywall');
+  }
+
+  private syncPaywall(): void {
+    const w = this.paywallWorld;
+    const pack = w >= 0 ? packFor(this.worlds[w].id) : null;
+    if (!pack) return;
+    const owned = this.money.owned;
+    const packWorlds = this.worlds.filter((x) => pack.worlds.includes(x.id));
+    const levels = (ids: readonly string[]) => this.worlds.filter((x) => ids.includes(x.id)).reduce((n, x) => n + x.levels.length, 0);
+    const show = (key: string, on: boolean) => this.root.querySelectorAll<HTMLElement>(`[data-bind-show="${key}"]`).forEach((el) => (el.style.display = on ? '' : 'none'));
+    this.bind('pw-kicker', `WORLD ${w + 1} · ${this.worlds[w].name.toUpperCase()}`);
+    this.bind('pw-title', `UNLOCK ${pack.name.replace(' Pack', '').toUpperCase()}`);
+    this.root.querySelector<HTMLElement>('[data-bind-html="pw-worlds"]')!.innerHTML = packWorlds
+      .map((x) => {
+        const wi = this.worlds.indexOf(x);
+        return `<div class="pw-world ${wi === w ? 'here' : ''}" style="--accent:${x.theme.accent}"><span class="lv-num">${wi + 1}</span><span class="lv-name">${x.name}<small>${x.idea}</small></span></div>`;
+      })
+      .join('');
+    this.bind('pw-pack-name', pack.name.toUpperCase());
+    this.bind('pw-pack-sub', `${this.money.priceOf(pack.productId)} · ${levels(pack.worlds)} levels · one-time purchase`);
+    show('pw-pack', !owned.includes(pack.productId));
+    const bundle = bundleWorthOffering(owned);
+    show('pw-bundle', bundle);
+    this.bind('pw-bundle-sub', `${this.money.priceOf(BUNDLE.productId)} · all ${levels(BUNDLE.worlds)} levels${this.money.adFree ? '' : ' + Remove Ads'} · one-time`);
+    this.bind('pw-note', this.money.native
+      ? 'Retries are always free. Remove Ads (in the bundle) turns off the ads between levels; Skip Level still plays a short ad.'
+      : 'World packs are bought in the iPhone app.');
+    this.root.querySelectorAll<HTMLButtonElement>('[data-action="buy-pack"], [data-action="buy-bundle"]').forEach((b) => (b.disabled = this.buying));
+  }
+
+  private async purchase(productId: string): Promise<void> {
+    if (this.buying) return;
+    this.buying = true;
+    this.syncPaywall();
+    const { owned, error } = await this.money.buy(productId);
+    this.buying = false;
+    this.syncStore();
+    if (owned) this.toast(productId === BUNDLE.productId ? '✓ Worlds 12-20 unlocked · ads removed' : '✓ Worlds unlocked · thank you!', 2600);
+    else if (error) this.toast(error, 3200);
+    this.syncPaywall();
+    if (owned) this.afterPurchase();
+  }
+
+  /** Once the paywall's world is owned, carry on into it: the level that was waiting, else the world's level list. */
+  private afterPurchase(): void {
+    const w = this.paywallWorld;
+    if (w < 0 || !this.screens.paywall.classList.contains('visible') || this.paidLocked(this.worldStart(w))) {
+      this.refreshMenu();
+      return;
+    }
+    const level = this.paywallLevel;
+    this.paywallWorld = this.paywallLevel = -1;
+    if (level >= 0) {
+      void this.startLevel(level);
+      return;
+    }
+    this.openWorld = w;
+    this.refreshMenu();
+    this.show('levels');
   }
 
   private showComplete(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void {
