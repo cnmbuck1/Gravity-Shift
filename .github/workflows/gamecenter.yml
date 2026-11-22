@@ -10,7 +10,7 @@ on:
       task:
         description: setup = create items; review-probe = read-only API check; review-add = add items to the draft review submission
         type: choice
-        options: [setup, review-probe, review-add]
+        options: [setup, review-probe, review-add, review-swap]
         default: setup
       apply:
         description: Do it for real (unticked = dry run, nothing changes)
@@ -45,11 +45,11 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install --quiet pyjwt cryptography
           "$RUNNER_TEMP/venv/bin/python" -u tools/gamecenter/setup.py "$RUNNER_TEMP/keys/AuthKey.p8" "$KEY_ID" "$ISSUER_ID" $APPLY
       - name: Add to App Review submission
-        if: inputs.task == 'review-probe' || inputs.task == 'review-add'
+        if: startsWith(inputs.task, 'review-')
         env:
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          MODE: ${{ inputs.task == 'review-probe' && 'probe' || 'add' }}
+          MODE: ${{ inputs.task == 'review-probe' && 'probe' || inputs.task == 'review-swap' && 'swap' || 'add' }}
           EXTRA: ${{ inputs.extra }}
           APPLY: ${{ inputs.apply && '--apply' || '' }}
         run: |

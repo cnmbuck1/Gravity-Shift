@@ -75,6 +75,36 @@ def main() -> int:
             show(f"v2 {label} versions", lambda: versions(asc, v2_kind, x["id"]))
         return 0
 
+    if mode == "swap":
+        # swap --out <leaderboard vendorId> --in <leaderboard vendorId>: frees a slot in a full draft.
+        out_vid = sys.argv[sys.argv.index("--out") + 1]
+        in_vid = sys.argv[sys.argv.index("--in") + 1]
+        sub_id = [s for s in subs if s["attributes"].get("state") == "READY_FOR_REVIEW"][0]["id"]
+        boards = {x["attributes"]["vendorIdentifier"]: x["id"] for x in asc.all(f"/gameCenterDetails/{detail_id}/gameCenterLeaderboards?limit=200")}
+        out_ver = versions(asc, "gameCenterLeaderboards", boards[out_vid])["data"][0]["id"]
+        in_ver = versions(asc, "gameCenterLeaderboards", boards[in_vid])["data"][0]["id"]
+        url = f"/reviewSubmissions/{sub_id}/items?limit=200&include=gameCenterLeaderboardVersion"
+        item = None
+        while url and not item:
+            page = asc.call("GET", url)
+            for it in page["data"]:
+                d = (it.get("relationships", {}).get("gameCenterLeaderboardVersion") or {}).get("data")
+                if d and d["id"] == out_ver:
+                    item = it["id"]
+            url = page.get("links", {}).get("next")
+        if not item:
+            print(f"::error::{out_vid} is not in submission {sub_id}")
+            return 1
+        print(f"Removing {out_vid} (item {item}), adding {in_vid}" + ("" if apply else " (dry run)"))
+        if apply:
+            asc.call("DELETE", f"/reviewSubmissionItems/{item}")
+            asc.call("POST", "/reviewSubmissionItems", {"data": {
+                "type": "reviewSubmissionItems",
+                "relationships": {"reviewSubmission": rel("reviewSubmissions", sub_id),
+                                  "gameCenterLeaderboardVersion": rel("gameCenterLeaderboardVersions", in_ver)}}})
+            print("Done")
+        return 0
+
     if mode != "add":
         print(f"::error::Unknown mode {mode}")
         return 1
