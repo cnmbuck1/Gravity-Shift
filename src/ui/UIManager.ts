@@ -561,9 +561,17 @@ export class UIManager {
     return `${w + 1}-${i - this.worldStart(w) + 1}`;
   }
 
-  /** First campaign level not yet completed (or the last one once everything is done). */
+  /** Where Play goes: the next unfinished level after the furthest one reached. */
   private nextUnplayed(): number {
-    const i = this.campaign.findIndex((l) => this.game.recordFor(l.id).bestTime === null);
+    // Carry on after the furthest level reached (finished or skipped): a level skipped or left behind
+    // earlier (11-10 in Chris's 1.1.0 playtest) must not pull Play back to it.
+    const done = (i: number) => this.game.recordFor(this.campaign[i].id).bestTime !== null;
+    const reached = (i: number) => done(i) || this.game.wasSkipped(this.campaign[i].id);
+    let last = -1;
+    for (let i = 0; i < this.campaign.length; i++) if (reached(i)) last = i;
+    for (let i = last + 1; i < this.campaign.length; i++) if (!done(i)) return i;
+    // Everything from there on is done: go back for anything left unfinished, else the last level.
+    const i = this.campaign.findIndex((_, k) => !reached(k));
     return i === -1 ? this.campaign.length - 1 : i;
   }
 
