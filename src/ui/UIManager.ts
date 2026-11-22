@@ -259,6 +259,7 @@ export class UIManager {
           </div>
           <label class="row" data-testing>Debug readout <input type="checkbox" data-setting="showDebug" /></label>
           <label class="row" data-testing>Unlock all levels (testing) <input type="checkbox" data-setting="unlockAll" /></label>
+          <label class="row" data-testing>Act as if nothing is bought (testing) <input type="checkbox" data-setting="ignorePurchases" /></label>
           <div class="note" data-testing>Physics: REFINED is the new tuning; CLASSIC is the previous build, kept for comparison. Music arrives later; its toggle is saved now.</div>
           <button class="btn primary" data-action="close-settings">DONE</button>
         </div>

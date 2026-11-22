@@ -70,7 +70,8 @@ export class Monetization {
   constructor(private settings: SettingsManager) {}
 
   get adFree(): boolean {
-    return this.settings.get().adFree;
+    const s = this.settings.get();
+    return s.adFree && !s.ignorePurchases;
   }
 
   /** Localised Remove Ads price, once the store answers. */
@@ -80,7 +81,9 @@ export class Monetization {
 
   /** Products the player owns (cached; refreshed from the App Store at launch and on restore). */
   get owned(): readonly string[] {
-    return this.settings.get().owned;
+    const s = this.settings.get();
+    // Testing switch (tester builds only): behave like a player who bought nothing.
+    return s.ignorePurchases ? [] : s.owned;
   }
 
   /** Whether this world is free or bought. Doesn't look at the testing "unlock all" switch. */
@@ -339,7 +342,7 @@ export class Monetization {
 
   /** Adds newly bought products to what's owned. */
   private grant(ids: readonly string[]): void {
-    this.setOwned([...new Set([...this.owned, ...ids])]);
+    this.setOwned([...new Set([...this.settings.get().owned, ...ids])]);
   }
 
   private setOwned(owned: string[]): void {
