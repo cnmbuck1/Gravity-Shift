@@ -7,6 +7,11 @@ import type { LevelDef } from '../levels/LevelTypes';
 import type { WorldDef } from '../levels/worldTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
 import { drawOrbIcon } from '../brand/cnmbuck-orb';
+import { SaveManager } from '../settings/SaveManager';
+import { Competition, type RankNews } from '../gamecenter/Competition';
+import { BOARDS, centiseconds, levelBoardId } from '../gamecenter/catalog';
+import { timeLeft } from '../gamecenter/weekly';
+import { Affirmations, celebrate, type Cheer } from './affirmations';
 
 /** Falls in one level (across restarts) before the Skip Level button is offered. */
 const SKIP_AFTER_FALLS = 3;
@@ -27,6 +32,17 @@ export class UIManager {
   private shiftKey = '';
   private previewDone: (() => void) | null = null;
   private settingsReturn: 'menu' | 'game' = 'menu';
+  /** Leaderboards, achievements and the Weekly Challenge (Game Center in the iPhone app). */
+  readonly competition: Competition;
+  private cheers = new Affirmations(new SaveManager());
+  /** Restarts of the current level since it was opened (a flawless first try has none). */
+  private restarts = 0;
+  /** Slot in `levels` holding this week's challenge, and the week it is for. */
+  private weeklyIndex = -1;
+  private weeklyWeek = -1;
+  /** Bumped on each finish, so a late Game Center answer can't land on a later result screen. */
+  private resultToken = 0;
+  private cheerPop!: HTMLElement;
 
   private levels: LevelDef[];
   private campaign: LevelDef[];
@@ -43,6 +59,9 @@ export class UIManager {
   constructor(root: HTMLElement, private game: GameManager, private settings: SettingsManager, private worlds: WorldDef[], private extras: LevelDef[], private money: Monetization, private analytics: Analytics) {
     this.campaign = worlds.flatMap((w) => w.levels);
     this.levels = [...this.campaign, ...extras];
+    this.competition = new Competition(new SaveManager(), worlds, (id) => game.recordFor(id));
+    this.weeklyIndex = this.levels.length;
+    this.loadWeekly();
     this.root = root;
     this.build();
     // The O in the GRAVITOR logo is the Cnmbuck Orb, drawn by the brand kit.
@@ -52,6 +71,8 @@ export class UIManager {
     this.bindGameEvents();
     this.refreshMenu();
     this.show('menu');
+    // Game Center sign-in (iPhone app); the menu shows the leaderboard buttons once it answers.
+    void this.competition.init().then(() => this.refreshMenu());
     requestAnimationFrame(this.tick);
 
     document.addEventListener('visibilitychange', () => {
@@ -71,6 +92,11 @@ export class UIManager {
         <div class="tagline">Tilt Your World. Defy Gravity.</div>
         <div class="menu-buttons">
           <button class="btn primary" data-action="play"><b>PLAY</b><small data-bind="play-sub"></small></button>
+          <button class="btn weekly-btn" data-action="weekly"><b>WEEKLY CHALLENGE</b><small data-bind="weekly-sub"></small></button>
+          <div class="menu-row" data-bind-show="gc">
+            <button class="btn" data-action="leaderboards">LEADERBOARDS</button>
+            <button class="btn" data-action="achievements">ACHIEVEMENTS</button>
+          </div>
           <button class="btn" data-action="levels">LEVELS</button>
           <button class="btn" data-action="howto">HOW TO PLAY</button>
           <button class="btn" data-action="settings">SETTINGS</button>
@@ -134,6 +160,7 @@ export class UIManager {
         </div>
         <div class="shift-flash"></div>
         <div class="flyover-skip">TAP TO SKIP PREVIEW</div>
+        <div class="cheer-pop"></div>
       </section>
 
       <section class="screen panel-screen" data-screen="pause">
@@ -148,7 +175,12 @@ export class UIManager {
 
       <section class="screen panel-screen" data-screen="complete">
         <div class="panel">
-          <h2>LEVEL COMPLETE</h2>
+          <h2 data-bind="complete-title">LEVEL COMPLETE</h2>
+          <div class="cheer">
+            <div class="cheer-kicker" data-bind="cheer-kicker"></div>
+            <div class="cheer-line" data-bind="cheer-line"></div>
+            <div class="cheer-chips" data-bind-html="cheer-chips"></div>
+          </div>
           <div class="stars" data-bind="stars"></div>
           <div class="result-grid">
             <small>TIME</small><b data-bind="r-time"></b>
@@ -156,6 +188,7 @@ export class UIManager {
             <small>SHIFTS</small><b data-bind="r-shifts"></b>
             <small>BEST</small><b data-bind="r-best"></b>
           </div>
+          <button class="rank-line" data-action="level-board" data-bind-show="rank"><b data-bind="rank-main"></b><small data-bind="rank-next"></small></button>
           <button class="btn primary" data-action="next" data-bind-show="has-next">NEXT LEVEL</button>
           <button class="btn" data-action="restart">RETRY</button>
           <button class="btn" data-action="menu">MAIN MENU</button>
@@ -220,6 +253,7 @@ export class UIManager {
     this.debugEl = this.root.querySelector('.debug')!;
     this.shiftFlash = this.root.querySelector('.shift-flash')!;
     this.shiftPad = this.root.querySelector('.shift-pad')!;
+    this.cheerPop = this.root.querySelector('.cheer-pop')!;
 
     // iOS only allows audio to start from a user gesture. Any tap also skips the preview.
     window.addEventListener('pointerdown', () => {
@@ -327,10 +361,11 @@ export class UIManager {
         this.levelFalls++;
         this.analytics.levelFail(this.game.stats.time);
         const offer = this.levelFalls === SKIP_AFTER_FALLS && this.canSkip();
-        this.toast(offer ? 'STUCK? YOU CAN SKIP THIS LEVEL' : 'FELL INTO THE VOID', offer ? 2400 : 1600);
+        this.toast(offer ? 'STUCK? YOU CAN SKIP THIS LEVEL' : this.levelFalls === 1 ? 'FELL INTO THE VOID' : this.cheers.line('fall'), offer ? 2400 : 1600);
         this.syncSkip();
       },
-      onCheckpoint: () => this.toast('CHECKPOINT'),
+      // A checkpoint reached without a fall gets a word of encouragement.
+      onCheckpoint: () => this.toast(this.levelFalls === 0 ? this.cheers.line('checkpointClean') : 'CHECKPOINT', 1400),
       onSwitch: () => this.toast(`SWITCH · DOOR OPEN FOR ${Math.round(this.game.features.doorTimeLeft())} SECONDS`),
       onKey: (left, total) => this.toast(left ? `KEY ${total - left} OF ${total}` : 'ALL KEYS · THE GOAL IS OPEN', 1600),
       onGoalLocked: (left) => this.toast(`LOCKED · FIND ${left} MORE KEY${left === 1 ? '' : 'S'}`, 2000),
@@ -341,7 +376,10 @@ export class UIManager {
         this.previewDone?.();
         this.previewDone = null;
       },
-      onComplete: (stats, stars, record, newBest) => this.showComplete(stats, stars, record, newBest),
+      onComplete: (stats, stars, record, newBest, prev) => {
+        this.showComplete(stats, stars, record, newBest);
+        this.celebrateRun(stats, stars, record, newBest, prev);
+      },
     };
   }
 
@@ -353,6 +391,7 @@ export class UIManager {
     const def = this.levels[index];
     this.current = index;
     this.levelFalls = 0;
+    this.restarts = 0;
     this.syncSkip();
     this.game.loadLevel(def);
     this.analytics.levelStart(this.levelInfo(index));
@@ -360,7 +399,7 @@ export class UIManager {
     this.show('hud');
     const previewing = this.game.startPreview(this.settings.get().preview);
     this.hud.classList.toggle('flyover', previewing);
-    this.toast(index < this.campaign.length ? `${this.levelLabel(index)} · ${def.name.toUpperCase()}` : def.name.toUpperCase(), previewing ? 3000 : 1600);
+    this.toast(index < this.campaign.length ? `${this.levelLabel(index)} · ${def.name.toUpperCase()}` : index === this.weeklyIndex ? `WEEKLY CHALLENGE · ${def.name.toUpperCase()}` : def.name.toUpperCase(), previewing ? 3000 : 1600);
     const tiltOk = await permission;
     // Calibrate after the preview, once the player has settled into a grip.
     if (previewing) await new Promise<void>((r) => (this.previewDone = r));
@@ -411,6 +450,7 @@ export class UIManager {
         break;
       case 'restart':
         this.analytics.levelQuit('restart', this.game.stats.time);
+        this.restarts++;
         this.game.restart();
         this.analytics.levelStart(this.levelInfo(this.current));
         this.show('hud');
@@ -452,6 +492,22 @@ export class UIManager {
       case 'howto':
         this.show('howto');
         break;
+      case 'weekly':
+        // The week may have rolled over while the app was open.
+        this.loadWeekly();
+        void this.startLevel(this.weeklyIndex);
+        break;
+      case 'leaderboards':
+        this.competition.showLeaderboards();
+        break;
+      case 'achievements':
+        this.competition.showAchievements();
+        break;
+      case 'level-board': {
+        const board = this.boardFor(this.current);
+        if (board) this.competition.showLeaderboards(board);
+        break;
+      }
       case 'skip-level':
         void this.skipLevel();
         break;
@@ -529,6 +585,7 @@ export class UIManager {
     }
     this.analytics.levelSkip(this.game.stats.time, this.levelFalls);
     this.game.markSkipped(this.campaign[this.current].id);
+    this.competition.breakStreak();
     this.toast('LEVEL SKIPPED', 1400);
     void this.startLevel(this.current + 1);
   }
@@ -576,6 +633,7 @@ export class UIManager {
   }
 
   private refreshMenu(): void {
+    this.syncWeekly();
     const n = this.nextUnplayed();
     this.bind('play-sub', `Level ${this.levelLabel(n)} · ${this.campaign[n].name}`);
     const list = this.root.querySelector<HTMLElement>('[data-bind-html="level-list"]')!;
@@ -647,6 +705,134 @@ export class UIManager {
       this.settings.update({ orbWon: true, ball: 'orb' });
       window.setTimeout(() => this.toast('🏆 You won the Cnmbuck Orb! Change ball in Settings', 3600), 1200);
     }
+  }
+
+  // ---------- competition and affirmations ----------
+
+  /** Puts this week's challenge level in its slot (a copy with its own id, so it keeps its own best and never touches campaign progress). */
+  private loadWeekly(): void {
+    const week = this.competition.week;
+    if (week === this.weeklyWeek) return;
+    this.weeklyWeek = week;
+    const def = this.competition.weeklyLevel(week);
+    this.levels[this.weeklyIndex] = { ...def, id: `weekly-${week}` };
+  }
+
+  /** The Game Center board for level slot `i` (null for test courses). */
+  private boardFor(i: number): string | null {
+    if (i < this.campaign.length) return levelBoardId(this.campaign[i].id);
+    return i === this.weeklyIndex ? BOARDS.weekly : null;
+  }
+
+  /** Weekly button text, and Game Center buttons once signed in. */
+  private syncWeekly(): void {
+    this.loadWeekly();
+    const original = this.competition.weeklyLevel(this.weeklyWeek);
+    const label = this.levelLabel(this.campaign.findIndex((l) => l.id === original.id));
+    const best = this.game.recordFor(`weekly-${this.weeklyWeek}`).bestTime;
+    const ends = timeLeft(this.competition.weekEnds(this.weeklyWeek));
+    this.bind('weekly-sub', `${label} · ${original.name} · ${best !== null ? `best ${best.toFixed(2)}s · ` : ''}ends in ${ends}`);
+    this.root.querySelectorAll<HTMLElement>('[data-bind-show="gc"]').forEach((el) => (el.style.display = this.competition.gc.supported ? '' : 'none'));
+  }
+
+  /**
+   * The result screen's affirmation: the biggest thing that went well as a headline, the rest as
+   * chips, then (from Game Center, a moment later) the player's rank and the next friend to beat.
+   */
+  private celebrateRun(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean, prev: LevelRecord): void {
+    const token = ++this.resultToken;
+    const i = this.current;
+    const weekly = i === this.weeklyIndex;
+    let earned: string[] = [];
+    let worldCleared: string | null = null;
+    let streak = 0;
+    if (i < this.campaign.length) {
+      const w = this.worlds[this.worldOf(i)];
+      earned = this.competition.campaignFinished({
+        levelId: this.campaign[i].id,
+        time: stats.time,
+        falls: stats.falls,
+        fallsInLevel: this.levelFalls,
+        restarts: this.restarts,
+        shifts: stats.shifts,
+        stars,
+        prevBest: prev.bestTime,
+        prevStars: prev.bestStars,
+      });
+      if (prev.bestTime === null && w.levels.every((l) => this.game.recordFor(l.id).bestTime !== null)) worldCleared = w.name;
+      streak = this.competition.streak;
+    } else if (weekly) {
+      earned = this.competition.weeklyFinished(this.weeklyWeek, stats.time).achievements;
+    }
+    const cheer = celebrate({
+      falls: stats.falls,
+      firstTry: stats.falls === 0 && this.levelFalls === 0 && this.restarts === 0 && prev.bestTime === null,
+      newBest,
+      gain: prev.bestTime !== null && newBest ? prev.bestTime - stats.time : 0,
+      stars,
+      firstThreeStars: stars === 3 && prev.bestStars < 3,
+      worldCleared,
+      streak,
+      fallsInLevel: this.levelFalls,
+      weekly,
+      achievements: earned,
+    }, this.cheers);
+    this.bind('complete-title', weekly ? 'WEEKLY CHALLENGE' : worldCleared ? 'WORLD COMPLETE' : 'LEVEL COMPLETE');
+    this.renderCheer(cheer);
+    this.popCheer(cheer.kicker);
+    this.root.querySelectorAll<HTMLElement>('[data-bind-show="rank"]').forEach((el) => (el.style.display = 'none'));
+
+    const board = this.boardFor(i);
+    if (!board || record.bestTime === null) return;
+    void this.competition.rankNews(board, centiseconds(record.bestTime), true).then((news) => {
+      if (!news || token !== this.resultToken) return;
+      this.showRank(news, cheer);
+    });
+  }
+
+  private renderCheer(c: Cheer): void {
+    this.bind('cheer-kicker', c.kicker);
+    this.bind('cheer-line', c.line);
+    const chips = this.root.querySelector<HTMLElement>('[data-bind-html="cheer-chips"]')!;
+    chips.innerHTML = c.chips.map((t) => `<span class="chip">${escapeHtml(t)}</span>`).join('');
+    const box = this.root.querySelector<HTMLElement>('.cheer')!;
+    box.classList.remove('go');
+    void box.offsetWidth;
+    box.classList.add('go');
+  }
+
+  /** The headline flashes big over the course the moment the sphere reaches the goal. */
+  private popCheer(text: string): void {
+    const p = this.cheerPop;
+    p.textContent = text;
+    p.classList.remove('go');
+    void p.offsetWidth;
+    p.classList.add('go');
+  }
+
+  private showRank(news: RankNews, cheer: Cheer): void {
+    const gap = (n: number) => (news.timed ? `${n.toFixed(2)}s faster` : `${n} ahead`);
+    this.bind('rank-main', `#${news.rank.toLocaleString()} of ${news.total.toLocaleString()} worldwide`);
+    this.bind('rank-next', news.rank === 1
+      ? 'You hold the world record. ›'
+      : news.next ? `Next: ${news.next.name}${news.next.friend ? ' (friend)' : ''}, ${gap(news.next.gap)} ›` : 'See the leaderboard ›');
+    this.root.querySelectorAll<HTMLElement>('[data-bind-show="rank"]').forEach((el) => (el.style.display = ''));
+    // Climbing the board (or passing a friend) is worth celebrating too.
+    const climbed = news.before !== undefined && news.rank < news.before;
+    const extra: string[] = [];
+    let { kicker, line } = cheer;
+    const quiet = ['COMPLETE', 'CLEAN RUN', 'ON THE BOARD'].includes(kicker);
+    if (news.passed.length) {
+      extra.push(`PASSED ${news.passed[0].toUpperCase()}`);
+      if (quiet) ({ kicker, line } = { kicker: 'OVERTAKE', line: this.cheers.line('passedFriend', { name: news.passed[0] }) });
+    }
+    if (news.rank === 1 && (climbed || news.before === undefined)) extra.unshift('WORLD RECORD');
+    else if (climbed) {
+      extra.push(news.rank <= 10 ? `TOP 10 · #${news.rank}` : `RANK UP · #${news.rank}`);
+      if (quiet && !news.passed.length) ({ kicker, line } = { kicker: 'RANK UP', line: this.cheers.line('rankUp', { n: news.rank.toLocaleString() }) });
+    }
+    if (!extra.length) return;
+    this.renderCheer({ kicker, line, chips: [...extra, ...cheer.chips.filter((c) => c !== kicker)] });
   }
 
   // ---------- helpers ----------
@@ -736,4 +922,8 @@ function dragRange(input: HTMLInputElement): void {
   const end = (e: PointerEvent) => { if (input.hasPointerCapture(e.pointerId)) input.releasePointerCapture(e.pointerId); };
   input.addEventListener('pointerup', end);
   input.addEventListener('pointercancel', end);
+}
+
+function escapeHtml(t: string): string {
+  return t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
