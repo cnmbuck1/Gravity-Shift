@@ -1,3 +1,4 @@
+import { applyDarkReveal, darkReveal } from '../render/darkReveal';
 import * as THREE from 'three';
 import { PhysicsManager } from '../physics/PhysicsManager';
 import { SceneRenderer } from '../render/SceneRenderer';
@@ -138,6 +139,9 @@ export class GameManager {
     this.levels.load(def);
     this.features.load(def);
     this.levels.trackTierExtras(this.levels.group, this.features.group);
+    // Pitch-black levels: walls, traps and hazards only show inside the sphere's glow (the goal and keys stay lit).
+    darkReveal.on.value = def.dark ? 1 : 0;
+    if (def.dark) applyDarkReveal([this.levels.group, this.features.group], [this.levels.goal?.object, ...this.features.keyObjects]);
     this.view.setTheme(def.theme);
     this.view.setDark(Boolean(def.dark));
     // Compile every shader the level needs now, at load, instead of the first time an object
@@ -390,6 +394,11 @@ export class GameManager {
     this.levels.fadeExtras();
     this.view.ballLight.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 6);
     if (this.view.isDark) this.view.lamp.position.copy(this.ball.mesh.position).addScaledVector(this.frame.up, 1.2);
+    if (this.view.isDark) {
+      darkReveal.centre.value.copy(this.ball.mesh.position);
+      // The course preview shows the whole board once; after that only the glow around the sphere.
+      darkReveal.on.value = this.camera.inFlyover ? 0 : 1;
+    }
     this.view.ballLight.target.position.copy(this.ball.mesh.position);
     this.view.update(dt, this.ball.mesh.position);
     if (this.render) this.view.render();

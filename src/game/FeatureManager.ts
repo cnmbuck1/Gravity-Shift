@@ -75,6 +75,10 @@ export class FeatureManager {
   private pads: { def: PadDef; mat: THREE.MeshBasicMaterial | null }[] = [];
   private portals: PortalRt[] = [];
   private keys: KeyRt[] = [];
+  /** Key pickups (they stay lit on dark levels). */
+  get keyObjects(): THREE.Object3D[] {
+    return this.keys.map((k) => k.mesh);
+  }
   private fans: FanRt[] = [];
   private pulses: PulseRt[] = [];
   private def: LevelDef | null = null;
