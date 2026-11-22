@@ -35,6 +35,11 @@ export type SkipResult = 'rewarded' | 'free' | 'cancelled' | 'unavailable';
 const EVERY_N_LEVELS = 3;
 /** Saved so quitting the app doesn't reset the count. */
 const COUNT_KEY = 'gravitor:levelsSinceAd';
+/** After a failed ad load, try again after this long, doubling each time up to RETRY_MAX_MS. */
+const RETRY_FIRST_MS = 20_000;
+const RETRY_MAX_MS = 5 * 60_000;
+/** When a between-level ad is due but still loading, wait this long for it before moving on. */
+const DUE_WAIT_MS = 2500;
 
 type AdMobApi = typeof import('@capacitor-community/admob').AdMob;
 type PurchasesApi = typeof import('@capgo/native-purchases').NativePurchases;
@@ -48,6 +53,9 @@ export class Monetization {
   /** TestFlight or Xcode install: use Google's test ad units, which always fill. */
   private testAds = false;
   private finishedSinceAd = loadCount();
+  /** Current back-off for each ad type's next reload, and its pending timer. */
+  private retryMs = { interstitial: RETRY_FIRST_MS, rewarded: RETRY_FIRST_MS };
+  private retryTimer: { interstitial?: ReturnType<typeof setTimeout>; rewarded?: ReturnType<typeof setTimeout> } = {};
   /** Localised price for the Remove Ads button, once the store answers. */
   price: string | null = null;
   /** Whether the App Store returned the Remove Ads product (false: not set up in App Store Connect). */
@@ -107,9 +115,11 @@ export class Monetization {
       // npa: non-personalised ads only, so the app needs no tracking prompt.
       await this.admob.prepareInterstitial({ adId: this.testAds ? TEST_AD_UNIT_ID : AD_UNIT_ID, isTesting: this.testAds, npa: true });
       this.adReady = true;
+      this.retryMs.interstitial = RETRY_FIRST_MS;
     } catch (e) {
       this.adReady = false;
       this.lastError = `Ad load: ${errorText(e)}`;
+      this.scheduleRetry('interstitial');
     }
   }
 
@@ -118,10 +128,27 @@ export class Monetization {
     try {
       await this.admob.prepareRewardVideoAd({ adId: this.testAds ? TEST_REWARDED_UNIT_ID : REWARDED_UNIT_ID, isTesting: this.testAds, npa: true });
       this.rewardedReady = true;
+      this.retryMs.rewarded = RETRY_FIRST_MS;
     } catch (e) {
       this.rewardedReady = false;
       this.lastError = `Rewarded load: ${errorText(e)}`;
+      this.scheduleRetry('rewarded');
     }
+  }
+
+  /**
+   * Reloads an ad that failed to load (usually "no fill") after a back-off of 20 s, 40 s, ...
+   * up to 5 minutes, so one is ready as soon as AdMob has one instead of only on the next
+   * level break or skip.
+   */
+  private scheduleRetry(kind: 'interstitial' | 'rewarded'): void {
+    if (this.retryTimer[kind]) return;
+    const wait = this.retryMs[kind];
+    this.retryMs[kind] = Math.min(wait * 2, RETRY_MAX_MS);
+    this.retryTimer[kind] = setTimeout(() => {
+      this.retryTimer[kind] = undefined;
+      void (kind === 'interstitial' ? this.prepare() : this.prepareRewarded());
+    }, wait);
   }
 
   /**
@@ -167,8 +194,9 @@ export class Monetization {
     if (!this.admob || this.adFree) return;
     if (this.finishedSinceAd < EVERY_N_LEVELS) return;
     if (!this.adReady) {
-      void this.prepare();
-      return;
+      // Due but not loaded yet: give it a moment, then move on (it shows at the next level instead).
+      await Promise.race([this.prepare(), new Promise((r) => setTimeout(r, DUE_WAIT_MS))]);
+      if (!this.adReady) return;
     }
     this.adReady = false;
     try {
