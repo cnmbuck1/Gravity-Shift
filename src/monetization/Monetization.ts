@@ -108,7 +108,9 @@ export class Monetization {
       void this.store.addListener('transactionUpdated', () => {
         void this.refreshEntitlement().then(() => this.onOwnedChange?.()).catch(() => {});
       });
-      await this.refreshEntitlement();
+      // A failed entitlement check keeps the saved list (see refreshEntitlement) and must not stop
+      // the prices loading.
+      await this.refreshEntitlement().catch((e) => (this.lastError = `Entitlements: ${errorText(e)}`));
       const { products } = await this.store.getProducts({ productIdentifiers: [...ALL_PRODUCT_IDS] });
       for (const p of products) this.prices[p.identifier] = p.priceString;
       this.productFound = REMOVE_ADS_ID in this.prices;
