@@ -953,11 +953,11 @@ export class FeatureManager {
     part(new THREE.BoxGeometry(0.17, 0.075, 0.07), 0.1, -0.43);
     part(new THREE.BoxGeometry(0.12, 0.06, 0.07), 0.075, -0.29);
     // Big enough to read at a glance, and leaning back so the camera above sees its face as it spins.
-    key.scale.setScalar(1.45);
+    key.scale.setScalar(1.09);
     key.rotation.x = -1.0;
     holder.add(key);
     // A soft ring on the floor under the key so it reads as a pickup from above.
-    const haloGeo = new THREE.TorusGeometry(0.42, 0.025, 8, 40);
+    const haloGeo = new THREE.TorusGeometry(0.32, 0.02, 8, 40);
     const haloMat = new THREE.MeshBasicMaterial({ color: KEY_COLOR, transparent: true, opacity: 0.55, depthWrite: false });
     const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.rotation.x = Math.PI / 2;
