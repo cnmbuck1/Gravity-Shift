@@ -16,6 +16,10 @@ on:
         description: Do it for real (unticked = dry run, nothing changes)
         type: boolean
         default: false
+      extra:
+        description: Extra arguments for review-add (e.g. --waiting --limit 1)
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -46,11 +50,12 @@ jobs:
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           MODE: ${{ inputs.task == 'review-probe' && 'probe' || 'add' }}
+          EXTRA: ${{ inputs.extra }}
           APPLY: ${{ inputs.apply && '--apply' || '' }}
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install --quiet pyjwt cryptography
-          "$RUNNER_TEMP/venv/bin/python" -u tools/gamecenter/submit.py "$RUNNER_TEMP/keys/AuthKey.p8" "$KEY_ID" "$ISSUER_ID" "$MODE" $APPLY
+          "$RUNNER_TEMP/venv/bin/python" -u tools/gamecenter/submit.py "$RUNNER_TEMP/keys/AuthKey.p8" "$KEY_ID" "$ISSUER_ID" "$MODE" $APPLY $EXTRA
       - name: Remove the key
         if: always()
         run: rm -rf "$RUNNER_TEMP/keys"

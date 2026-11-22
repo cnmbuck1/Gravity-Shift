@@ -9,6 +9,7 @@ Modes:
                  set, leaderboard and achievement, so we can see the shapes before changing anything
   add            dry run: lists what it would add
   add --apply    adds them (at most --limit, default 200: Apple's per-submission cap)
+  --waiting      also allow a submission that is already Waiting for Review
 
 Usage: python submit.py <AuthKey.p8> <key id> <issuer id> <mode> [--apply] [--limit N]
 Run from GitHub: Actions -> "Submit Game Center for review".
@@ -78,7 +79,8 @@ def main() -> int:
         print(f"::error::Unknown mode {mode}")
         return 1
 
-    drafts = [s for s in subs if s["attributes"].get("state") == "READY_FOR_REVIEW"]
+    ok_states = ("READY_FOR_REVIEW", "WAITING_FOR_REVIEW") if "--waiting" in sys.argv else ("READY_FOR_REVIEW",)
+    drafts = [s for s in subs if s["attributes"].get("state") in ok_states]
     if not drafts:
         print("::error::No draft (not yet submitted) iOS review submission. Remove 1.1.0 from review in App Store Connect first.")
         return 1
