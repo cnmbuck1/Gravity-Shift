@@ -208,6 +208,54 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font: 10px/1.4 ui-monospace, Menlo, monospace; background: rgba(0, 0, 0, 0.55); color: #9ff; display: none;
 }
 
+/* ---------- competition: weekly challenge, Game Center, affirmations ---------- */
+.weekly-btn { border-color: rgba(162, 75, 255, 0.7); box-shadow: 0 0 18px rgba(162, 75, 255, 0.22), inset 0 0 14px rgba(162, 75, 255, 0.1); }
+.weekly-btn b { color: #d9b8ff; }
+.menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.menu-row .btn { padding-left: 8px; padding-right: 8px; font-size: 12px; letter-spacing: 0.1em; }
+
+.cheer { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; margin: -2px 0 2px; }
+.cheer-kicker {
+  font-size: 22px; font-weight: 900; letter-spacing: 0.16em; color: var(--cyan);
+  text-shadow: 0 0 14px rgba(46, 230, 255, 0.7), 0 0 34px rgba(162, 75, 255, 0.45);
+}
+.cheer-line { font-size: 14px; color: var(--ink); letter-spacing: 0.02em; }
+.cheer-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 4px; }
+.cheer-chips:empty { display: none; }
+.chip {
+  padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
+  color: var(--amber); border: 1px solid rgba(255, 176, 46, 0.55); background: rgba(255, 176, 46, 0.08);
+}
+.cheer.go .cheer-kicker { animation: cheer-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.cheer.go .cheer-line { animation: cheer-fade 0.5s 0.15s both; }
+.cheer.go .chip { animation: cheer-fade 0.4s both; }
+.cheer.go .chip:nth-child(2) { animation-delay: 0.08s; }
+.cheer.go .chip:nth-child(3) { animation-delay: 0.16s; }
+.cheer.go .chip:nth-child(n+4) { animation-delay: 0.24s; }
+@keyframes cheer-in { from { opacity: 0; transform: scale(0.6); letter-spacing: 0.5em; } to { opacity: 1; transform: none; } }
+@keyframes cheer-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.rank-line {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; margin: 0 0 8px; padding: 8px 10px;
+  border-radius: 12px; border: 1px solid var(--line); background: rgba(46, 230, 255, 0.06);
+}
+.rank-line b { font-size: 13px; letter-spacing: 0.08em; color: var(--cyan); }
+.rank-line small { font-size: 11px; color: var(--muted); }
+
+.cheer-pop {
+  position: absolute; left: 0; right: 0; top: 38%; text-align: center; pointer-events: none; opacity: 0;
+  font-size: 34px; font-weight: 900; letter-spacing: 0.18em; color: #fff;
+  text-shadow: 0 0 18px rgba(46, 230, 255, 0.9), 0 0 42px rgba(162, 75, 255, 0.7);
+}
+.cheer-pop.go { animation: cheer-pop 1s ease-out both; }
+@keyframes cheer-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  18% { opacity: 1; transform: scale(1.08); }
+  30% { transform: scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-24px) scale(1.04); }
+}
+
 /* ---------- level select ---------- */
 .levels-panel, .howto { width: min(400px, 100%); }
 .level-list { display: flex; flex-direction: column; gap: 8px; }

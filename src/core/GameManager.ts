@@ -57,7 +57,8 @@ export interface GameEvents {
   onWarp?(decoy: boolean): void;
   onZoneEnter?(zone: ShiftZoneDef): void;
   onPreviewEnd?(): void;
-  onComplete?(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean): void;
+  /** `prev`: the level's record before this run. */
+  onComplete?(stats: RunStats, stars: number, record: LevelRecord, newBest: boolean, prev: LevelRecord): void;
 }
 
 /**
@@ -517,6 +518,6 @@ export class GameManager {
     const newBest = prev.bestTime === null || time < prev.bestTime;
     const record: LevelRecord = { bestTime: newBest ? time : prev.bestTime, bestStars: Math.max(prev.bestStars, stars) };
     this.save.save(key, record);
-    this.events.onComplete?.({ ...this.stats }, stars, record, newBest);
+    this.events.onComplete?.({ ...this.stats }, stars, record, newBest, prev);
   }
 }
