@@ -78,6 +78,8 @@ export class GameManager {
   private respawnFrame: GravityFrameDef = this.frame.toDef();
   private respawnPoint = new THREE.Vector3();
   private respawnTimer = -1;
+  /** The ball has dropped clear of the whole level (it can't land), and the phone already buzzed. */
+  private doomBuzzed = false;
   private lastTime = performance.now();
   private elapsed = 0;
   private fpsFrames = 0;
@@ -228,6 +230,7 @@ export class GameManager {
   /** Back to the latest checkpoint, without counting a fall (the RESET button). */
   respawn(): void {
     this.respawnTimer = -1;
+    this.doomBuzzed = false;
     this.zone = null;
     this.features.respawn();
     this.camera.lean = null;
@@ -300,6 +303,7 @@ export class GameManager {
     this.input.tilt.shape.curve = tuning.tiltCurve;
     this.view.setQuality(s.graphics);
     this.audio.enabled = s.sfx;
+    this.audio.setMusic(s.music);
     this.haptics.enabled = s.haptics;
   }
 
@@ -417,10 +421,18 @@ export class GameManager {
       this.stats.falls++;
       this.respawnTimer = 0;
       this.audio.fall();
-      this.haptics.warning();
+      // Every mistake ends here. Buzz now unless the drop already buzzed (see below).
+      if (!this.doomBuzzed) this.haptics.fail();
+      this.doomBuzzed = false;
       this.events.onFall?.();
       return;
     }
+
+    // A void fall is only counted once the ball is far below the level, which takes a moment.
+    // Buzz as soon as it has dropped past all the geometry, so the miss is felt right away.
+    const doomed = this.levels.droppedPastLevel(p, this.frame.down);
+    if (doomed && !this.doomBuzzed) this.haptics.fail();
+    this.doomBuzzed = doomed;
 
     const zone = this.levels.shiftZoneAt(p, this.frame.down);
     if (zone !== this.zone) {

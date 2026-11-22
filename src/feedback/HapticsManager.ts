@@ -8,6 +8,7 @@ import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 export class HapticsManager {
   enabled = true;
   private lastImpact = 0;
+  private lastFail = -Infinity;
 
   impact(strength: number): void {
     const now = performance.now();
@@ -21,8 +22,19 @@ export class HapticsManager {
     if (this.enabled) Haptics.notification({ type: NotificationType.Success }).catch(() => {});
   }
 
-  warning(): void {
-    if (this.enabled) Haptics.notification({ type: NotificationType.Error }).catch(() => {});
+  /**
+   * A mistake (void, hazard, laser, pulse...): one firm buzz, clearly different from the light
+   * wall taps, so a miss is felt before the respawn. Wall taps are held off while it plays.
+   */
+  fail(): void {
+    if (!this.enabled) return;
+    const now = performance.now();
+    if (now - this.lastFail < 600) return;
+    this.lastFail = now;
+    this.lastImpact = now + 250;
+    Haptics.vibrate({ duration: 280 }).catch(() => {
+      Haptics.notification({ type: NotificationType.Error }).catch(() => {});
+    });
   }
 
   shift(): void {
