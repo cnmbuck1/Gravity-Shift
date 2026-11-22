@@ -1,15 +1,16 @@
 import { Capacitor } from '@capacitor/core';
 import type { SettingsManager } from '../settings/SettingsManager';
+import { ALL_PRODUCT_IDS, BUNDLE, REMOVE_ADS_ID, WORLD_PACKS, adFreeOwned, worldOwned } from './packs';
+
+export { REMOVE_ADS_ID } from './packs';
 
 /**
- * Ads between levels and the one-time Remove Ads purchase (iPhone app only).
+ * Ads between levels and the one-time purchases (iPhone app only): Remove Ads, the world packs
+ * and the all-worlds bundle (see packs.ts).
  *
  * On the web build (GitHub Pages, test links) everything here is a no-op: no ads, no store.
  * The native plugins are loaded lazily so the web bundle never touches them.
  */
-
-/** App Store Connect product for Remove Ads (non-consumable). */
-export const REMOVE_ADS_ID = 'com.cnmbuckstudios.gravitor.removeads';
 
 /**
  * AdMob interstitial unit. Until Chris's real unit is filled in, Google's public test unit is
@@ -56,8 +57,8 @@ export class Monetization {
   /** Current back-off for each ad type's next reload, and its pending timer. */
   private retryMs = { interstitial: RETRY_FIRST_MS, rewarded: RETRY_FIRST_MS };
   private retryTimer: { interstitial?: ReturnType<typeof setTimeout>; rewarded?: ReturnType<typeof setTimeout> } = {};
-  /** Localised price for the Remove Ads button, once the store answers. */
-  price: string | null = null;
+  /** Localised price for each product the App Store returned, by product ID. */
+  private prices: Record<string, string> = {};
   /** Whether the App Store returned the Remove Ads product (false: not set up in App Store Connect). */
   productFound = false;
   /** Last store/ads problem, shown in Settings when Debug readout is on. */
@@ -69,15 +70,42 @@ export class Monetization {
     return this.settings.get().adFree;
   }
 
+  /** Localised Remove Ads price, once the store answers. */
+  get price(): string | null {
+    return this.prices[REMOVE_ADS_ID] ?? null;
+  }
+
+  /** Products the player owns (cached; refreshed from the App Store at launch and on restore). */
+  get owned(): readonly string[] {
+    return this.settings.get().owned;
+  }
+
+  /** Whether this world is free or bought. Doesn't look at the testing "unlock all" switch. */
+  ownsWorld(worldId: string): boolean {
+    return worldOwned(worldId, this.owned);
+  }
+
+  /** The App Store's localised price for a product, or the planned US price until it answers. */
+  priceOf(productId: string): string {
+    const fallback = [...WORLD_PACKS, BUNDLE].find((p) => p.productId === productId)?.fallbackPrice ?? '';
+    return this.prices[productId] ?? fallback;
+  }
+
+  /** Whether the App Store knows this product (false: not created in App Store Connect yet). */
+  hasProduct(productId: string): boolean {
+    return productId in this.prices;
+  }
+
   async init(): Promise<void> {
     if (!this.native) return;
     try {
       this.store = (await import('@capgo/native-purchases')).NativePurchases;
       await this.refreshEntitlement();
-      const { products } = await this.store.getProducts({ productIdentifiers: [REMOVE_ADS_ID] });
-      this.productFound = products.length > 0;
-      this.price = products[0]?.priceString ?? null;
-      if (!this.productFound) this.lastError = `App Store returned no product ${REMOVE_ADS_ID}`;
+      const { products } = await this.store.getProducts({ productIdentifiers: [...ALL_PRODUCT_IDS] });
+      for (const p of products) this.prices[p.identifier] = p.priceString;
+      this.productFound = REMOVE_ADS_ID in this.prices;
+      const missing = ALL_PRODUCT_IDS.filter((id) => !(id in this.prices));
+      if (missing.length) this.lastError = `App Store returned no product ${missing.join(', ')}`;
     } catch (e) {
       console.warn('Store unavailable', e);
       this.lastError = `Store: ${errorText(e)}`;
@@ -209,24 +237,31 @@ export class Monetization {
     void this.prepare();
   }
 
+  /** Buy Remove Ads (see buy). */
+  buyRemoveAds(): Promise<{ owned: boolean; error?: string }> {
+    return this.buy(REMOVE_ADS_ID);
+  }
+
   /**
-   * Buy Remove Ads. Resolves with `owned` when the player now owns it, or with an `error` the
-   * player should see (a cancelled purchase has neither).
+   * Buy one of the products (Remove Ads, a world pack or the bundle). Resolves with `owned`
+   * when the player now owns it, or with an `error` the player should see (a cancelled
+   * purchase has neither).
    */
-  async buyRemoveAds(): Promise<{ owned: boolean; error?: string }> {
-    if (!this.store) return { owned: false, error: 'The App Store isn\'t available right now.' };
+  async buy(productId: string): Promise<{ owned: boolean; error?: string }> {
+    const has = () => this.owned.includes(productId);
+    if (!this.store) return { owned: false, error: this.native ? 'The App Store isn\'t available right now.' : 'Purchases are only in the iPhone app.' };
     try {
       const { PURCHASE_TYPE } = await import('@capgo/native-purchases');
-      const t = await this.store.purchaseProduct({ productIdentifier: REMOVE_ADS_ID, productType: PURCHASE_TYPE.INAPP, quantity: 1 });
-      if (t?.productIdentifier === REMOVE_ADS_ID) this.grant();
-      return { owned: this.adFree };
+      const t = await this.store.purchaseProduct({ productIdentifier: productId, productType: PURCHASE_TYPE.INAPP, quantity: 1 });
+      if (t?.productIdentifier === productId) this.grant([productId]);
+      return { owned: has() };
     } catch (e) {
       const msg = errorText(e);
       console.warn('Purchase failed or cancelled', e);
-      if (/cancel/i.test(msg)) return { owned: this.adFree };
+      if (/cancel/i.test(msg)) return { owned: has() };
       this.lastError = `Purchase: ${msg}`;
-      const notSetUp = /cannot find product|product not found/i.test(msg) || !this.productFound;
-      return { owned: false, error: notSetUp ? 'Remove Ads isn\'t available from the App Store yet.' : `Purchase failed: ${msg}` };
+      const notSetUp = /cannot find product|product not found/i.test(msg) || !this.hasProduct(productId);
+      return { owned: false, error: notSetUp ? 'This isn\'t available from the App Store yet.' : `Purchase failed: ${msg}` };
     }
   }
 
@@ -253,14 +288,15 @@ export class Monetization {
   /** One line for the debug readout: why the next ad will or won't show. */
   status(): string {
     if (!this.native) return 'web build: no ads or store';
-    const store = this.store ? (this.productFound ? `store ok ${this.price ?? ''}` : 'store: product missing') : 'store: not started';
+    const found = ALL_PRODUCT_IDS.filter((id) => id in this.prices).length;
+    const store = this.store ? `store ${found}/${ALL_PRODUCT_IDS.length} products, owned ${this.owned.length ? this.owned.map((id) => id.split('.').pop()).join('+') : 'none'}` : 'store: not started';
     const ads = (this.testAds ? 'TEST ads, ' : '') + (this.adFree ? 'interstitials off (owned)' : `ads ${this.admob ? (this.adReady ? 'loaded' : 'loading') : 'not started'}, ${this.finishedSinceAd}/${EVERY_N_LEVELS} levels`);
     return `${store} · ${ads}${this.lastError ? ' · ' + this.lastError : ''}`;
   }
 
-  /** Restore Purchases (required by Apple). Returns true when Remove Ads is owned. */
-  async restore(): Promise<boolean> {
-    if (!this.store) return false;
+  /** Restore Purchases (required by Apple). Returns the products owned afterwards. */
+  async restore(): Promise<readonly string[]> {
+    if (!this.store) return this.owned;
     try {
       await this.store.restorePurchases();
       await this.refreshEntitlement();
@@ -268,25 +304,32 @@ export class Monetization {
     } catch (e) {
       console.warn('Restore failed', e);
     }
-    return this.adFree;
+    return this.owned;
   }
 
   /**
-   * The App Store is the source of truth for Remove Ads. The saved flag is only a cache: a
+   * The App Store is the source of truth for every purchase. The saved list is only a cache: a
    * TestFlight (sandbox) purchase stays in the saved settings when the App Store version is
-   * installed over it, and would otherwise turn ads off for good. If the store can't be asked
-   * (throws), the cached flag is kept.
+   * installed over it, and would otherwise turn ads off or keep packs unlocked for good. If the
+   * store can't be asked (throws), the cache is kept, so a player offline keeps what they bought.
    */
   private async refreshEntitlement(): Promise<void> {
     if (!this.store) return;
     const { purchases } = await this.store.getPurchases({ onlyCurrentEntitlements: true });
-    if (purchases.some((p) => p.productIdentifier === REMOVE_ADS_ID)) this.grant();
-    else if (this.settings.get().adFree) this.settings.update({ adFree: false });
+    const owned = ALL_PRODUCT_IDS.filter((id) => purchases.some((p) => p.productIdentifier === id));
+    this.setOwned(owned);
   }
 
-  private grant(): void {
-    if (!this.settings.get().adFree) this.settings.update({ adFree: true });
-    this.adReady = false;
+  /** Adds newly bought products to what's owned. */
+  private grant(ids: readonly string[]): void {
+    this.setOwned([...new Set([...this.owned, ...ids])]);
+  }
+
+  private setOwned(owned: string[]): void {
+    const adFree = adFreeOwned(owned);
+    const s = this.settings.get();
+    if (adFree !== s.adFree || owned.join() !== s.owned.join()) this.settings.update({ owned, adFree });
+    if (adFree) this.adReady = false;
   }
 }
 
