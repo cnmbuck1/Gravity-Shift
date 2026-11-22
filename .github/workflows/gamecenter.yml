@@ -7,8 +7,13 @@ name: Set up Game Center
 on:
   workflow_dispatch:
     inputs:
+      task:
+        description: setup = create items; review-probe = read-only API check; review-add = add items to the draft review submission
+        type: choice
+        options: [setup, review-probe, review-add]
+        default: setup
       apply:
-        description: Create them for real (unticked = dry run, nothing changes)
+        description: Do it for real (unticked = dry run, nothing changes)
         type: boolean
         default: false
 permissions:
@@ -26,6 +31,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
       - name: Create leaderboards and achievements
+        if: inputs.task == 'setup' || inputs.task == ''
         env:
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -34,6 +40,17 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install --quiet pyjwt cryptography
           "$RUNNER_TEMP/venv/bin/python" -u tools/gamecenter/setup.py "$RUNNER_TEMP/keys/AuthKey.p8" "$KEY_ID" "$ISSUER_ID" $APPLY
+      - name: Add to App Review submission
+        if: inputs.task == 'review-probe' || inputs.task == 'review-add'
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          MODE: ${{ inputs.task == 'review-probe' && 'probe' || 'add' }}
+          APPLY: ${{ inputs.apply && '--apply' || '' }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pyjwt cryptography
+          "$RUNNER_TEMP/venv/bin/python" -u tools/gamecenter/submit.py "$RUNNER_TEMP/keys/AuthKey.p8" "$KEY_ID" "$ISSUER_ID" "$MODE" $APPLY
       - name: Remove the key
         if: always()
         run: rm -rf "$RUNNER_TEMP/keys"
