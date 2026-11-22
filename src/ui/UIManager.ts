@@ -743,7 +743,7 @@ export class UIManager {
             return `<button class="level-row world-row pack-locked" data-paywall="${wi}" style="--accent:${w.theme.accent}">
               <span class="lv-num">${wi + 1}</span>
               <span class="lv-name">${w.name}<small>${w.idea}</small></span>
-              <span class="lv-stats"><span class="lv-pack">🔒 ${this.money.priceOf(pack.productId)}</span><small>${pack.name.replace(' Pack', '')} pack</small></span>
+              <span class="lv-stats"><span class="lv-pack">🔒 ${this.money.priceOf(pack.productId)}</span><small>${pack.name.replace('Worlds ', '').replace(' Pack', '')} pack</small></span>
             </button>`;
           }
           const open = this.unlocked(start);
