@@ -877,20 +877,44 @@ export class FeatureManager {
   }
 
   /** A floating golden key core. */
+  /** A gold key (ring, shaft, teeth) leaning back and spinning over a glowing ring on the floor. */
   private addKey(def: KeyDef): void {
     const holder = new THREE.Group();
-    const coreGeo = new THREE.OctahedronGeometry(0.32, 0);
-    const coreMat = new THREE.MeshStandardMaterial({ color: KEY_COLOR, emissive: KEY_COLOR, emissiveIntensity: 1.8, metalness: 0.6, roughness: 0.25 });
-    holder.add(new THREE.Mesh(coreGeo, coreMat));
-    const haloGeo = new THREE.TorusGeometry(0.5, 0.035, 8, 40);
-    const halo = new THREE.Mesh(haloGeo, coreMat);
+    const mat = new THREE.MeshStandardMaterial({ color: KEY_COLOR, emissive: KEY_COLOR, emissiveIntensity: 0.55, metalness: 0.9, roughness: 0.2 });
+    const key = new THREE.Group();
+    const geos: THREE.BufferGeometry[] = [];
+    const part = (geo: THREE.BufferGeometry, x: number, y: number) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, 0);
+      key.add(m);
+      geos.push(geo);
+      return m;
+    };
+    // Bow: the ring you hold, with a small gem in the middle.
+    part(new THREE.TorusGeometry(0.17, 0.055, 12, 32), 0, 0.27);
+    part(new THREE.OctahedronGeometry(0.06, 0), 0, 0.27);
+    // Collar where the bow meets the shaft, then the shaft.
+    part(new THREE.CylinderGeometry(0.075, 0.075, 0.05, 16), 0, 0.075);
+    part(new THREE.CylinderGeometry(0.045, 0.045, 0.56, 12), 0, -0.2);
+    // Bit: two teeth sticking out to one side near the tip.
+    part(new THREE.BoxGeometry(0.17, 0.075, 0.07), 0.1, -0.43);
+    part(new THREE.BoxGeometry(0.12, 0.06, 0.07), 0.075, -0.29);
+    // Big enough to read at a glance, and leaning back so the camera above sees its face as it spins.
+    key.scale.setScalar(1.45);
+    key.rotation.x = -1.0;
+    holder.add(key);
+    // A soft ring on the floor under the key so it reads as a pickup from above.
+    const haloGeo = new THREE.TorusGeometry(0.42, 0.025, 8, 40);
+    const haloMat = new THREE.MeshBasicMaterial({ color: KEY_COLOR, transparent: true, opacity: 0.55, depthWrite: false });
+    const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.rotation.x = Math.PI / 2;
+    halo.position.y = -0.52;
     holder.add(halo);
     const light = new THREE.PointLight(KEY_COLOR, 3, 3.5, 1.8);
     holder.add(light);
     holder.position.fromArray(def.position);
     this.group.add(holder);
-    this.disposables.push(coreGeo, coreMat, haloGeo);
+    this.disposables.push(mat, haloGeo, haloMat, ...geos);
     this.keys.push({ def, mesh: holder, got: false, fly: 0 });
   }
 
