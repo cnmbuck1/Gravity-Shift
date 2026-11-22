@@ -45,6 +45,9 @@ disc = lambda speed=0.9: ('disc', {'speed': speed})
 # Fans stay weaker than full tilt (16 m/s²), so a gust can be fought; spec strength/period are the intent, capped
 # for fairness: at most 12.5 m/s², a lull of at least 2.1 s.
 fan = lambda n=4, strength=11, period=3.6, on=0.4, phase=0, **k: ('fan', dict(len=n, strength=min(strength, 12.5) - 1, period=max(period, 3.6), on=on, phase=phase, **k))
+# World 14 (Chris, 2026-11-22): a fan right in front of every trap, always on, blowing hard toward the void.
+# Full tilt is 17 m/s², so the strongest gale still leaves a little to steer with.
+gale = lambda n=4, strength=11, **k: ('fan', dict(len=n, strength=strength, period=4.0, on=1.0, phase=0, **k))
 # Pulse floors: dark for at least 1.9 s of each cycle.
 pulse = lambda n=3, period=3.0, on=0.35, phase=0: ('pulse', {'len': n, 'period': max(period, 2.9), 'on': on, 'phase': phase})
 key = lambda **k: ('key', k)
@@ -155,33 +158,33 @@ W13 = [
 ]
 
 W14 = [
-    lvl('BREEZE', 'w14-breeze', 'Breeze', 'Fans blow you toward the holes: cross in the lull', 141,
-        R(cw=3, feats=[fan(4)]), C(len=3), R(cw=3, feats=[fan(4, phase=0.5)])),
+    lvl('BREEZE', 'w14-breeze', 'Breeze', 'Fans blow you toward the holes: lean into the wind', 141,
+        R(cw=3, feats=[gale(4, 10)]), C(len=3), R(cw=3, feats=[gale(4, 10)])),
     lvl('CROSSWIND', 'w14-crosswind', 'Crosswind', 'Fans back to back', 142,
-        R(cw=3, feats=[fan(4), holes()]), C(len=3), R(cw=3, feats=[fan(4, phase=0.3), fan(4, phase=0.8)])),
+        R(cw=3, feats=[gale(4, 10.5), gale(4, 10.5)]), C(len=3), R(cw=3, feats=[gale(4, 10.5), gale(4, 10.5)])),
     lvl('WIND_TUNNEL', 'w14-wind-tunnel', 'Wind Tunnel', 'Fans and a maze', 143,
-        R(cw=3, feats=[fan(4)]), C(len=2), M(mw=3, ny=3, feats=[dead(2)]), C(len=2), R(cw=3, feats=[fan(5, strength=12)])),
-    lvl('GUSTS', 'w14-gusts', 'Gusts', 'Shorter lulls, stronger fans', 144,
-        R(cw=3, feats=[fan(4, strength=12, period=3.3), piston()]), C(len=3), R(cw=3, checkpoint=True, feats=[fan(4, strength=12, period=3.3, phase=0.4), holes()]), C(len=3),
-        R(cw=3, feats=[fan(5, strength=12, period=3.3)])),
+        R(cw=3, feats=[gale(4, 11)]), C(len=2), M(mw=3, ny=3, feats=[dead(2)]), C(len=2), R(cw=3, feats=[gale(5, 11)])),
+    lvl('GUSTS', 'w14-gusts', 'Gusts', 'Stronger fans', 144,
+        R(cw=3, feats=[gale(4, 11.5), piston()]), C(len=3), R(cw=3, checkpoint=True, feats=[gale(4, 11.5), gale(4, 11.5)]), C(len=3),
+        R(cw=3, feats=[gale(5, 11.5)])),
     lvl('CALM', 'w14-calm', 'Eye of the Storm', 'A breather', 145,
-        R(cw=4, feats=[fan(4, strength=9)]), C(len=3), R(cw=4, feats=[holes()])),
+        R(cw=4, feats=[gale(4, 10)]), C(len=3), R(cw=4, feats=[gale(4, 10)])),
     lvl('UPDRAFT', 'w14-updraft', 'Updraft', 'Fans and a gravity wall', 146,
-        R(cw=3, feats=[fan(4, strength=12), holes()]), C(len=10, feat='wall'), R(cw=3, checkpoint=True, feats=[fan(4, strength=12, phase=0.5), piston(2.6)]), C(len=3),
-        R(cw=3, feats=[fan(5, strength=12), strips()])),
+        R(cw=3, feats=[gale(4, 12), gale(4, 12)]), C(len=10, feat='wall'), R(cw=3, checkpoint=True, feats=[gale(4, 12), piston(2.6)]), C(len=3),
+        R(cw=3, feats=[gale(5, 12), strips()])),
     lvl('HEADWIND', 'w14-headwind', 'Gale Force', 'Ice and wind do not mix', 147,
-        R(cw=3, feats=[fan(4, strength=12), ice(4)]), C(len=10, feat='flip'), R(cw=3, checkpoint=True, feats=[fan(4, strength=13, period=3.4)]), C(len=2),
-        M(mw=3, ny=3, feats=[dead(2)]), C(len=2), R(cw=3, feats=[fan(4, strength=13, period=3.4), holes()])),
+        R(cw=3, feats=[gale(4, 12), ice(4)]), C(len=10, feat='flip'), R(cw=3, checkpoint=True, feats=[gale(4, 12)]), C(len=2),
+        M(mw=3, ny=3, feats=[dead(2)]), C(len=2), R(cw=3, feats=[gale(4, 12), gale(4, 12)])),
     lvl('JET_STREAM', 'w14-jet-stream', 'Jet Stream', 'Fans, lasers and pistons', 148,
-        R(cw=3, feats=[laser(2.0), fan(4, strength=12)]), C(len=3, feat='pistonX'), R(cw=3, checkpoint=True, feats=[fan(4, strength=13, period=3.3), piston(2.4)]), C(len=10, feat='wall', notches=['high']),
-        R(cw=3, feats=[fan(5, strength=13, period=3.3), strips()])),
+        R(cw=3, feats=[laser(2.0), gale(4, 12.5)]), C(len=3, feat='pistonX'), R(cw=3, checkpoint=True, feats=[gale(4, 12.5), piston(2.4)]), C(len=10, feat='wall', notches=['high']),
+        R(cw=3, feats=[gale(5, 12.5), strips()])),
     lvl('CYCLONE', 'w14-cyclone', 'Cyclone', 'The storm gets worse', 149,
-        R(cw=3, feats=[fan(4, strength=13, period=3.3), holes()]), C(len=10, feat='flip'), M(mw=3, ny=3, checkpoint=True, feats=[dead(2)]), C(len=3),
-        R(cw=3, feats=[fan(4, strength=13, period=3.2), fan(4, strength=13, period=3.2, phase=0.5)]), C(len=10, feat='wall', wpistons=1), R(cw=3, checkpoint=True, feats=[laser(2.0), fan(5, strength=13, period=3.2)])),
+        R(cw=3, feats=[gale(4, 13), gale(4, 13)]), C(len=10, feat='flip'), M(mw=3, ny=3, checkpoint=True, feats=[dead(2)]), C(len=3),
+        R(cw=3, feats=[gale(4, 13), gale(4, 13)]), C(len=10, feat='wall', wpistons=1), R(cw=3, checkpoint=True, feats=[laser(2.0), gale(5, 13)])),
     lvl('STORM_FRONT', 'w14-storm-front', 'Storm Front', 'World 14 finale', 140,
-        R(cw=3, feats=[fan(4, strength=12), piston(2.4)]), C(len=10, feat='wall', notches=['low']), R(cw=3, checkpoint=True, feats=[fan(4, strength=13, period=3.2), holes()]), C(len=2),
-        M(mw=2, ny=3, feats=[dead(2)]), C(len=10, feat='flip'), R(cw=3, checkpoint=True, feats=[fan(4, strength=13, period=3.2), fan(4, strength=13, period=3.2, phase=0.45)]), C(len=3, feat='pistonX'),
-        R(cw=3, feats=[laser(1.9), fan(5, strength=14, period=3.2), strips()])),
+        R(cw=3, feats=[gale(4, 13.5), piston(2.4)]), C(len=10, feat='wall', notches=['low']), R(cw=3, checkpoint=True, feats=[gale(4, 13.5), gale(4, 13.5)]), C(len=2),
+        M(mw=2, ny=3, feats=[dead(2)]), C(len=10, feat='flip'), R(cw=3, checkpoint=True, feats=[gale(4, 13.5), gale(4, 13.5)]), C(len=3, feat='pistonX'),
+        R(cw=3, feats=[laser(1.9), gale(5, 13.5), strips()])),
 ]
 
 W15 = [
