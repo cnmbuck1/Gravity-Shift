@@ -1,10 +1,16 @@
+import { MusicPlayer } from './MusicPlayer';
+
 /**
  * All sound is synthesised with Web Audio (no asset files, nothing to license):
- * a continuous rolling layer driven by ball speed, plus short one-shots for impacts and events.
+ * a continuous rolling layer driven by ball speed, plus short one-shots for impacts and events,
+ * and a generative ambient soundtrack (MusicPlayer) on its own volume bus.
  * The context is created on the first user gesture, as iOS requires.
  */
 export class AudioManager {
+  /** Sound effects on/off (Settings > Sound). */
   enabled = true;
+  private musicOn = true;
+  private music: MusicPlayer | null = null;
   private ctx: AudioContext | null = null;
   private master!: GainNode;
   private rollGain!: GainNode;
@@ -16,7 +22,8 @@ export class AudioManager {
   /** Call from a tap handler. Safe to call repeatedly. */
   unlock(): void {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') void this.ctx.resume();
+      // 'interrupted' is iOS-only: a phone call, Siri or a full-screen ad took the audio.
+      if ((this.ctx.state as string) !== 'running') void this.ctx.resume();
       return;
     }
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -55,6 +62,15 @@ export class AudioManager {
     this.humGain.gain.value = 0;
     this.hum.connect(this.humGain).connect(this.master);
     this.hum.start();
+
+    this.music = new MusicPlayer(ctx);
+    this.music.setEnabled(this.musicOn);
+  }
+
+  /** Music on/off (Settings > Music). Takes effect once audio is unlocked by the first tap. */
+  setMusic(on: boolean): void {
+    this.musicOn = on;
+    this.music?.setEnabled(on);
   }
 
   /** Called every frame. */

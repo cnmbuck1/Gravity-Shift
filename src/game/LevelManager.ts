@@ -356,6 +356,18 @@ export class LevelManager {
     return null;
   }
 
+  /**
+   * True once `p` is more than `margin` metres past every part of the level in the direction of
+   * gravity: nothing is left below the ball to land on, so it is falling into the void.
+   */
+  droppedPastLevel(p: THREE.Vector3, down: THREE.Vector3, margin = 1.5): boolean {
+    const b = this.bounds;
+    if (b.isEmpty()) return false;
+    // The furthest corner of the level along `down`.
+    const far = Math.max(b.min.x * down.x, b.max.x * down.x) + Math.max(b.min.y * down.y, b.max.y * down.y) + Math.max(b.min.z * down.z, b.max.z * down.z);
+    return p.dot(down) > far + margin;
+  }
+
   isOutOfBounds(p: THREE.Vector3): boolean {
     if (this.level?.killY !== undefined && p.y < this.level.killY) return true;
     const m = this.level?.fallMargin ?? 10;

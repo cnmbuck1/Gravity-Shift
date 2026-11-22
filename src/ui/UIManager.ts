@@ -187,7 +187,7 @@ export class UIManager {
           </div>
           <label class="row">Sound effects <input type="checkbox" data-setting="sfx" /></label>
           <label class="row">Music <input type="checkbox" data-setting="music" /></label>
-          <label class="row">Haptics <input type="checkbox" data-setting="haptics" /></label>
+          <label class="row">Vibration <input type="checkbox" data-setting="haptics" /></label>
           <label class="row">Course preview <input type="checkbox" data-setting="preview" /></label>
           <div class="row">Ball
             <span class="seg" data-setting="ball"><button data-value="chrome">CHROME</button><button data-value="orb" class="orb-choice">CNMBUCK ORB</button></span>
