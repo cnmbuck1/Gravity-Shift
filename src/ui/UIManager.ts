@@ -1,3 +1,8 @@
+import { SaveManager } from '../settings/SaveManager';
+import { Competition, type RankNews } from '../gamecenter/Competition';
+import { BOARDS, centiseconds, levelBoardId } from '../gamecenter/catalog';
+import { timeLeft } from '../gamecenter/weekly';
+import { Affirmations, celebrate, type Cheer } from './affirmations';
 import type { GameManager, LevelRecord, RunStats } from '../core/GameManager';
 import type { SettingsManager } from '../settings/SettingsManager';
 import { DEFAULT_SETTINGS, orbAvailable, ORB_LEVELS } from '../settings/SettingsManager';
@@ -7,11 +12,6 @@ import type { LevelDef } from '../levels/LevelTypes';
 import type { WorldDef } from '../levels/worldTypes';
 import type { ShiftDirection } from '../game/GravityFrame';
 import { drawOrbIcon } from '../brand/cnmbuck-orb';
-import { SaveManager } from '../settings/SaveManager';
-import { Competition, type RankNews } from '../gamecenter/Competition';
-import { BOARDS, centiseconds, levelBoardId } from '../gamecenter/catalog';
-import { timeLeft } from '../gamecenter/weekly';
-import { Affirmations, celebrate, type Cheer } from './affirmations';
 
 /** Falls in one level (across restarts) before the Skip Level button is offered. */
 const SKIP_AFTER_FALLS = 3;
