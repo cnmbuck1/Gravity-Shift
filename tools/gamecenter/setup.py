@@ -131,9 +131,54 @@ def main() -> int:
 
     failures = 0
 
+    # Leaderboard sets come first: an app may only have 100 leaderboards until it uses sets, and
+    # with sets every leaderboard is created inside its set (up to 500).
+    have = existing("gameCenterLeaderboardSets")
+    set_ids = dict(have)
+    todo = [s for s in catalog["sets"] if s["id"] not in have]
+    print(f"Leaderboard sets: {len(have)} exist, {len(todo)} to create")
+    for s in todo:
+        print(f"  + {s['id']}  {s['name']}  ({len(s['boards'])} leaderboards)")
+        if not apply:
+            continue
+        try:
+            st = asc.call("POST", "/gameCenterLeaderboardSets", {"data": {
+                "type": "gameCenterLeaderboardSets",
+                "attributes": {"referenceName": s["name"][:64], "vendorIdentifier": s["id"]},
+                "relationships": {"gameCenterDetail": rel("gameCenterDetails", detail_id)}}})["data"]
+            set_ids[s["id"]] = st["id"]
+            asc.call("POST", "/gameCenterLeaderboardSetLocalizations", {"data": {
+                "type": "gameCenterLeaderboardSetLocalizations", "attributes": {"locale": LOCALE, "name": s["name"][:64]},
+                "relationships": {"gameCenterLeaderboardSet": rel("gameCenterLeaderboardSets", st["id"])}}})
+        except RuntimeError as e:
+            failures += 1
+            print(f"::warning::{s['id']}: {e}")
+    set_of = {b: s["id"] for s in catalog["sets"] for b in s["boards"]}
+
     # Leaderboards
     have = existing("gameCenterLeaderboards")
     board_ids = dict(have)
+
+    # Leaderboards made before their set existed join it first, so the 100-leaderboard limit
+    # for apps without sets no longer applies when the rest are created.
+    for s in catalog["sets"]:
+        sid = set_ids.get(s["id"])
+        if not sid:
+            continue
+        inside = {x["id"] for x in asc.all(f"/gameCenterLeaderboardSets/{sid}/relationships/gameCenterLeaderboards?limit=200")}
+        missing = [board_ids[i] for i in s["boards"] if i in board_ids and board_ids[i] not in inside]
+        if not missing:
+            continue
+        print(f"  {s['id']}: adding {len(missing)} existing leaderboard(s)")
+        if not apply:
+            continue
+        try:
+            asc.call("POST", f"/gameCenterLeaderboardSets/{sid}/relationships/gameCenterLeaderboards",
+                     {"data": [{"type": "gameCenterLeaderboards", "id": i} for i in missing]})
+        except RuntimeError as e:
+            failures += 1
+            print(f"::warning::{s['id']} members: {e}")
+
     todo = [b for b in catalog["boards"] if b["id"] not in have]
     print(f"Leaderboards: {len(have)} exist, {len(todo)} to create")
     for b in todo:
@@ -143,14 +188,24 @@ def main() -> int:
         }
         if b.get("recurring"):
             attrs.update({"recurrenceStartDate": next_monday(b["recurring"]["start"]),
-                          "recurrenceDuration": f"P{b['recurring']['days']}D", "recurrenceRule": "FREQ=WEEKLY;INTERVAL=1"})
+                          "recurrenceDuration": f"P{b['recurring']['days']}DT0H0M0S", "recurrenceRule": "FREQ=WEEKLY;INTERVAL=1"})
         print(f"  + {b['id']}  {b['name']}" + (f"  (restarts weekly from {attrs['recurrenceStartDate']})" if b.get("recurring") else ""))
         if not apply:
             continue
+        home = set_ids.get(set_of.get(b["id"], ""))
         try:
-            lb = asc.call("POST", "/gameCenterLeaderboards", {"data": {
-                "type": "gameCenterLeaderboards", "attributes": attrs,
-                "relationships": {"gameCenterDetail": rel("gameCenterDetails", detail_id)}}})["data"]
+            # Inside its set, the leaderboard takes the app's Game Center from the set.
+            relationships = ({"gameCenterLeaderboardSets": {"data": [{"type": "gameCenterLeaderboardSets", "id": home}]}}
+                             if home else {"gameCenterDetail": rel("gameCenterDetails", detail_id)})
+            try:
+                lb = asc.call("POST", "/gameCenterLeaderboards", {"data": {
+                    "type": "gameCenterLeaderboards", "attributes": attrs, "relationships": relationships}})["data"]
+            except RuntimeError as e:
+                if not home or "RELATIONSHIP" not in str(e):
+                    raise
+                relationships["gameCenterDetail"] = rel("gameCenterDetails", detail_id)
+                lb = asc.call("POST", "/gameCenterLeaderboards", {"data": {
+                    "type": "gameCenterLeaderboards", "attributes": attrs, "relationships": relationships}})["data"]
             board_ids[b["id"]] = lb["id"]
             asc.call("POST", "/gameCenterLeaderboardLocalizations", {"data": {
                 "type": "gameCenterLeaderboardLocalizations", "attributes": {"locale": LOCALE, "name": b["name"][:64]},
@@ -158,28 +213,6 @@ def main() -> int:
         except RuntimeError as e:
             failures += 1
             print(f"::warning::{b['id']}: {e}")
-
-    # Leaderboard sets
-    have = existing("gameCenterLeaderboardSets")
-    todo = [s for s in catalog["sets"] if s["id"] not in have]
-    print(f"Leaderboard sets: {len(have)} exist, {len(todo)} to create")
-    for s in todo:
-        print(f"  + {s['id']}  {s['name']}  ({len(s['boards'])} leaderboards)")
-        if not apply:
-            continue
-        members = [{"type": "gameCenterLeaderboards", "id": board_ids[i]} for i in s["boards"] if i in board_ids]
-        try:
-            st = asc.call("POST", "/gameCenterLeaderboardSets", {"data": {
-                "type": "gameCenterLeaderboardSets",
-                "attributes": {"referenceName": s["name"][:64], "vendorIdentifier": s["id"]},
-                "relationships": {"gameCenterDetail": rel("gameCenterDetails", detail_id),
-                                  "gameCenterLeaderboards": {"data": members}}}})["data"]
-            asc.call("POST", "/gameCenterLeaderboardSetLocalizations", {"data": {
-                "type": "gameCenterLeaderboardSetLocalizations", "attributes": {"locale": LOCALE, "name": s["name"][:64]},
-                "relationships": {"gameCenterLeaderboardSet": rel("gameCenterLeaderboardSets", st["id"])}}})
-        except RuntimeError as e:
-            failures += 1
-            print(f"::warning::{s['id']}: {e}")
 
     # Achievements
     have = existing("gameCenterAchievements")
