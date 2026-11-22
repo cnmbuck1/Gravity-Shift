@@ -19,6 +19,8 @@ public class GameCenterPlugin: CAPPlugin, CAPBridgedPlugin {
     /// Calls waiting for the first answer from Game Center's sign-in.
     private var pendingAuth: [CAPPluginCall] = []
     private var authStarted = false
+    /** Game Center has answered the sign-in at least once. */
+    private var authAnswered = false
 
     private func playerInfo(_ error: Error? = nil) -> [String: Any] {
         let player = GKLocalPlayer.local
@@ -34,8 +36,14 @@ public class GameCenterPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve(self.playerInfo())
                 return
             }
+            // Game Center calls the handler once per sign-in change, so it is set only once. After the
+            // first answer, a player who isn't signed in gets that answer straight away: the handler
+            // won't run again until they sign in from the Settings app, and waiting would hang the call.
+            if self.authStarted && self.pendingAuth.isEmpty && self.authAnswered {
+                call.resolve(self.playerInfo())
+                return
+            }
             self.pendingAuth.append(call)
-            // Game Center calls the handler once per sign-in change, so it is set only once.
             if self.authStarted { return }
             self.authStarted = true
             GKLocalPlayer.local.authenticateHandler = { [weak self] viewController, error in
@@ -46,6 +54,7 @@ public class GameCenterPlugin: CAPPlugin, CAPBridgedPlugin {
                         self.bridge?.viewController?.present(viewController, animated: true)
                         return
                     }
+                    self.authAnswered = true
                     let info = self.playerInfo(error)
                     let waiting = self.pendingAuth
                     self.pendingAuth = []

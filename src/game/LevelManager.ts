@@ -117,6 +117,7 @@ export class LevelManager {
       const beam = Number.isFinite(above) ? Math.min(7, above - gy - 1) : 7;
       this.goal = new GoalPortal(def.goal.position, def.goal.up, def.goal.facing, beam);
       this.group.add(this.goal.object);
+      this.disposables.push(this.goal);
     }
     this.collectGhost();
   }

@@ -64,6 +64,9 @@ export class Monetization {
   /** Last store/ads problem, shown in Settings when Debug readout is on. */
   lastError = '';
 
+  /** Called when owned products change outside buy()/restore() (see the transactionUpdated listener). */
+  onOwnedChange: (() => void) | null = null;
+
   constructor(private settings: SettingsManager) {}
 
   get adFree(): boolean {
@@ -100,6 +103,11 @@ export class Monetization {
     if (!this.native) return;
     try {
       this.store = (await import('@capgo/native-purchases')).NativePurchases;
+      // Purchases that finish outside a purchase sheet (Ask to Buy approved later, a purchase on
+      // another device, a refund) arrive here: re-read what's owned and let the menus update.
+      void this.store.addListener('transactionUpdated', () => {
+        void this.refreshEntitlement().then(() => this.onOwnedChange?.()).catch(() => {});
+      });
       await this.refreshEntitlement();
       const { products } = await this.store.getProducts({ productIdentifiers: [...ALL_PRODUCT_IDS] });
       for (const p of products) this.prices[p.identifier] = p.priceString;
@@ -213,6 +221,11 @@ export class Monetization {
     saveCount(this.finishedSinceAd);
   }
 
+  /** A between-level ad is due (checked synchronously, so a tap that needs no ad stays a user gesture). */
+  get adDue(): boolean {
+    return this.native && !this.adFree && this.finishedSinceAd >= EVERY_N_LEVELS;
+  }
+
   /**
    * Called when the player leaves the level-complete screen for the next level. Shows an ad
    * if one is due and loaded; never throws and never blocks the game for long.
@@ -259,6 +272,8 @@ export class Monetization {
       const msg = errorText(e);
       console.warn('Purchase failed or cancelled', e);
       if (/cancel/i.test(msg)) return { owned: has() };
+      // Ask to Buy: a parent has to approve it. The listener in init() unlocks it once they do.
+      if (/pending/i.test(msg)) return { owned: has(), error: 'Waiting for approval · it unlocks as soon as it\'s approved' };
       this.lastError = `Purchase: ${msg}`;
       const notSetUp = /cannot find product|product not found/i.test(msg) || !this.hasProduct(productId);
       return { owned: false, error: notSetUp ? 'This isn\'t available from the App Store yet.' : `Purchase failed: ${msg}` };

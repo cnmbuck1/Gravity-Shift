@@ -52,16 +52,29 @@ export class Competition {
 
   /** Signs in to Game Center and brings its boards and achievements up to date with this device. */
   async init(): Promise<void> {
-    if (!(await this.gc.authenticate())) return;
+    this.gc.onSignIn = () => this.sync();
+    if (await this.gc.authenticate()) this.sync();
+  }
+
+  /** Sends this device's totals, level times not yet sent, and achievement progress. */
+  private sync(): void {
     const t = totals(this.worlds, this.best);
     void this.gc.submit([BOARDS.totalStars], t.stars);
     void this.gc.submit([BOARDS.levelsCompleted], t.levels);
     // Level times set before Game Center was added (or while offline) go up once.
     const synced = this.save.load<{ ids: string[] }>('competition:synced', { ids: [] });
     const toSync = this.worlds.flatMap((w) => w.levels).filter((l) => this.best(l.id).bestTime !== null && !synced.ids.includes(l.id));
-    for (const l of toSync) void this.gc.submit([levelBoardId(l.id)], centiseconds(this.best(l.id).bestTime!));
-    if (toSync.length) this.save.save('competition:synced', { ids: [...synced.ids, ...toSync.map((l) => l.id)] });
+    // One at a time (a full save is 200 boards), and only marked as sent once Game Center took it,
+    // so a time that fails to send (offline) goes up next launch.
+    void (async () => {
+      for (const l of toSync) if (await this.gc.submit([levelBoardId(l.id)], centiseconds(this.best(l.id).bestTime!))) this.markSynced(l.id);
+    })();
     this.reportAchievements();
+  }
+
+  private markSynced(levelId: string): void {
+    const synced = this.save.load<{ ids: string[] }>('competition:synced', { ids: [] });
+    if (!synced.ids.includes(levelId)) this.save.save('competition:synced', { ids: [...synced.ids, levelId] });
   }
 
   /**
@@ -73,11 +86,7 @@ export class Competition {
     this.save.save('competition', this.stats);
     const best = this.best(run.levelId).bestTime;
     if (best !== null && this.gc.available) {
-      void this.gc.submit([levelBoardId(run.levelId)], centiseconds(best)).then((ok) => {
-        if (!ok) return;
-        const synced = this.save.load<{ ids: string[] }>('competition:synced', { ids: [] });
-        if (!synced.ids.includes(run.levelId)) this.save.save('competition:synced', { ids: [...synced.ids, run.levelId] });
-      });
+      void this.gc.submit([levelBoardId(run.levelId)], centiseconds(best)).then((ok) => ok && this.markSynced(run.levelId));
       const t = totals(this.worlds, this.best);
       void this.gc.submit([BOARDS.totalStars], t.stars);
       void this.gc.submit([BOARDS.levelsCompleted], t.levels);
@@ -153,12 +162,13 @@ export class Competition {
     };
   }
 
-  showLeaderboards(boardId?: string): void {
-    void this.gc.show(boardId ? { leaderboardID: boardId } : { state: 'leaderboards' });
+  /** False when Game Center couldn't open (not signed in). */
+  showLeaderboards(boardId?: string): Promise<boolean> {
+    return this.gc.show(boardId ? { leaderboardID: boardId } : { state: 'leaderboards' });
   }
 
-  showAchievements(): void {
-    void this.gc.show({ state: 'achievements' });
+  showAchievements(): Promise<boolean> {
+    return this.gc.show({ state: 'achievements' });
   }
 
   // ---------- achievements ----------
