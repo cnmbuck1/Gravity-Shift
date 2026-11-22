@@ -197,15 +197,31 @@ def main() -> int:
             # Inside its set, the leaderboard takes the app's Game Center from the set.
             relationships = ({"gameCenterLeaderboardSets": {"data": [{"type": "gameCenterLeaderboardSets", "id": home}]}}
                              if home else {"gameCenterDetail": rel("gameCenterDetails", detail_id)})
-            try:
-                lb = asc.call("POST", "/gameCenterLeaderboards", {"data": {
-                    "type": "gameCenterLeaderboards", "attributes": attrs, "relationships": relationships}})["data"]
-            except RuntimeError as e:
-                if not home or "RELATIONSHIP" not in str(e):
-                    raise
-                relationships["gameCenterDetail"] = rel("gameCenterDetails", detail_id)
-                lb = asc.call("POST", "/gameCenterLeaderboards", {"data": {
-                    "type": "gameCenterLeaderboards", "attributes": attrs, "relationships": relationships}})["data"]
+            # Apple's API turned down "P7D" and "P7DT0H0M0S" for a recurring board's duration, so try
+            # the other ISO 8601 spellings of a week (and of the weekly rule) until one is accepted.
+            variants = [{}]
+            if b.get("recurring"):
+                days = b["recurring"]["days"]
+                variants = [{"recurrenceDuration": d, "recurrenceRule": r}
+                            for d in (f"PT{days * 24}H", f"PT{days * 24}H0M0S", f"PT{days * 86400}S", f"P{days}DT0H", f"P{days}D")
+                            for r in ("FREQ=WEEKLY;INTERVAL=1", "FREQ=WEEKLY", f"FREQ=DAILY;INTERVAL={days}")]
+            lb = None
+            for i, v in enumerate(variants):
+                try:
+                    lb = asc.call("POST", "/gameCenterLeaderboards", {"data": {
+                        "type": "gameCenterLeaderboards", "attributes": {**attrs, **v}, "relationships": relationships}})["data"]
+                    if v:
+                        print(f"    accepted {v}")
+                    break
+                except RuntimeError as e:
+                    if home and "RELATIONSHIP" in str(e) and "gameCenterDetail" not in relationships:
+                        relationships["gameCenterDetail"] = rel("gameCenterDetails", detail_id)
+                        lb = asc.call("POST", "/gameCenterLeaderboards", {"data": {
+                            "type": "gameCenterLeaderboards", "attributes": {**attrs, **v}, "relationships": relationships}})["data"]
+                        break
+                    if i == len(variants) - 1 or "recurrence" not in str(e):
+                        raise
+                    print(f"    {v} refused: {str(e).split('detail')[-1][:160]}")
             board_ids[b["id"]] = lb["id"]
             asc.call("POST", "/gameCenterLeaderboardLocalizations", {"data": {
                 "type": "gameCenterLeaderboardLocalizations", "attributes": {"locale": LOCALE, "name": b["name"][:64]},
