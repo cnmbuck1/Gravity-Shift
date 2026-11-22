@@ -96,6 +96,17 @@ export class GoalPortal {
     this.object.add(light);
   }
 
+  /** Frees the portal's geometries and materials (it builds its own each level). */
+  dispose(): void {
+    const mats = new Set<THREE.Material>();
+    this.object.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.geometry) m.geometry.dispose();
+      if (m.material) (Array.isArray(m.material) ? m.material : [m.material]).forEach((x) => mats.add(x));
+    });
+    mats.forEach((m) => m.dispose());
+  }
+
   /** Plays a short burst when the level is completed. */
   celebrate(): void {
     this.completed = 1;

@@ -259,6 +259,7 @@ export class UIManager {
           </div>
           <label class="row" data-testing>Debug readout <input type="checkbox" data-setting="showDebug" /></label>
           <label class="row" data-testing>Unlock all levels (testing) <input type="checkbox" data-setting="unlockAll" /></label>
+          <label class="row" data-testing>Act as if nothing is bought (testing) <input type="checkbox" data-setting="ignorePurchases" /></label>
           <div class="note" data-testing>Physics: REFINED is the new tuning; CLASSIC is the previous build, kept for comparison. Music arrives later; its toggle is saved now.</div>
           <button class="btn primary" data-action="close-settings">DONE</button>
         </div>
@@ -284,7 +285,7 @@ export class UIManager {
     this.root.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest('button') as HTMLButtonElement | null;
       if (!t) return;
-      if (t.dataset.level) this.startLevel(Number(t.dataset.level));
+      if (t.dataset.level) this.startFromMenu(Number(t.dataset.level));
       else if (t.dataset.paywall) this.openPaywall(Number(t.dataset.paywall), -1, 'levels');
       else if (t.dataset.world) {
         this.openWorld = Number(t.dataset.world);
@@ -342,6 +343,12 @@ export class UIManager {
       });
     });
     this.settings.onChange(() => this.syncSettings());
+    // A purchase that completes later (Ask to Buy) or elsewhere: unlock it where the player is.
+    this.money.onOwnedChange = () => {
+      this.syncStore();
+      this.syncPaywall();
+      this.afterPurchase();
+    };
     this.syncSettings();
   }
 
@@ -434,6 +441,25 @@ export class UIManager {
     if (tiltOk) await this.calibrate();
   }
 
+  /**
+   * Starts a level picked from the menu (Play or the level list). A between-level ad that is due
+   * shows first, as it would from Next Level, so going back to the menu and pressing Play doesn't
+   * skip the every-3-levels ad. With no ad due the level starts inside the tap (iOS needs that
+   * for the motion permission prompt).
+   */
+  private startFromMenu(index: number): void {
+    if (this.advancing) return;
+    if (!this.money.adDue || this.paidLocked(index)) {
+      void this.startLevel(index);
+      return;
+    }
+    this.advancing = true;
+    void this.money.maybeShowAd().finally(() => {
+      this.advancing = false;
+      void this.startLevel(index);
+    });
+  }
+
   /** Requests motion permission; falls back to touch controls when unavailable. */
   private async ensureTilt(): Promise<boolean> {
     const input = this.game.input;
@@ -503,7 +529,7 @@ export class UIManager {
         this.show('menu');
         break;
       case 'play':
-        void this.startLevel(this.nextUnplayed());
+        this.startFromMenu(this.nextUnplayed());
         break;
       case 'levels':
         // Open on the world being played, so the list starts where the player is.
@@ -526,14 +552,14 @@ export class UIManager {
         void this.startLevel(this.weeklyIndex);
         break;
       case 'leaderboards':
-        this.competition.showLeaderboards();
+        void this.competition.showLeaderboards().then((ok) => this.gcHint(ok));
         break;
       case 'achievements':
-        this.competition.showAchievements();
+        void this.competition.showAchievements().then((ok) => this.gcHint(ok));
         break;
       case 'level-board': {
         const board = this.boardFor(this.current);
-        if (board) this.competition.showLeaderboards(board);
+        if (board) void this.competition.showLeaderboards(board).then((ok) => this.gcHint(ok));
         break;
       }
       case 'skip-level':
@@ -610,8 +636,20 @@ export class UIManager {
     // A level already finished or skipped never shows as locked again.
     const own = this.campaign[i].id;
     if (this.game.recordFor(own).bestTime !== null || this.game.wasSkipped(own)) return true;
+    // Every world in a bought pack opens at its first level, whatever was finished before it: a
+    // player who pays for three worlds can play all three straight away. Levels inside a world
+    // still open in order.
+    if (this.packStart(i)) return true;
     const prev = this.campaign[i - 1].id;
     return this.game.recordFor(prev).bestTime !== null || this.game.wasSkipped(prev);
+  }
+
+  /** Campaign level `i` is the first level of a paid world the player owns (every world in a bought pack opens at once; Chris, 2026-11-22). */
+  private packStart(i: number): boolean {
+    const w = this.worldOf(i);
+    if (this.worldStart(w) !== i) return false;
+    const pack = packFor(this.worlds[w].id);
+    return pack !== null && this.money.ownsWorld(this.worlds[w].id);
   }
 
   /** Campaign levels other than the very last can be skipped (an extras course has nothing after it). */
@@ -707,7 +745,7 @@ export class UIManager {
             return `<button class="level-row world-row pack-locked" data-paywall="${wi}" style="--accent:${w.theme.accent}">
               <span class="lv-num">${wi + 1}</span>
               <span class="lv-name">${w.name}<small>${w.idea}</small></span>
-              <span class="lv-stats"><span class="lv-pack">🔒 ${this.money.priceOf(pack.productId)}</span><small>${pack.name.replace(' Pack', '')} pack</small></span>
+              <span class="lv-stats"><span class="lv-pack">🔒 ${this.money.priceOf(pack.productId)}</span><small>${pack.name.replace('Worlds ', '').replace(' Pack', '')} pack</small></span>
             </button>`;
           }
           const open = this.unlocked(start);
@@ -863,6 +901,11 @@ export class UIManager {
   private boardFor(i: number): string | null {
     if (i < this.campaign.length) return levelBoardId(this.campaign[i].id);
     return i === this.weeklyIndex ? BOARDS.weekly : null;
+  }
+
+  /** After "Not Now" iOS won't show Game Center's sign-in sheet again, so say where to sign in. */
+  private gcHint(opened: boolean): void {
+    if (!opened && this.competition.gc.supported) this.toast('Sign in to Game Center in the iPhone Settings app', 3000);
   }
 
   /** Weekly button text, and Game Center buttons once signed in. */

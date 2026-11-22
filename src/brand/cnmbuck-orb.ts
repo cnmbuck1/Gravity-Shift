@@ -5,9 +5,9 @@
 //   - OrbFx: the extras that go with it, a blue-and-orange rim glow that stays put while the ball rolls,
 //     a neon halo, an optional glow on the ground beneath it and a light trail behind it;
 //   - drawOrbIcon(): the Orb drawn flat on a 2D canvas, for menus, icons and 2D games.
-// See README.md beside this file for the colours and the rules for using it.
+// See README.md in the brand repo for the colours and the rules for using it.
 //
-// Source of truth: cnmbuck1/poolgolf brand/cnmbuck-orb/. Change it there, then copy it to the games.
+// Source of truth: github.com/cnmbuck1/cnmbuckstudios-brand, orb/cnmbuck-orb.ts. Copy it into games unchanged.
 import * as THREE from 'three';
 
 /** The Orb's colours. Use these, not near matches, anywhere the Orb or its glow appears. */

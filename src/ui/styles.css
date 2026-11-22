@@ -301,7 +301,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* World pack paywall and locked pack worlds. */
 .world-row.pack-locked { opacity: 0.85; border-style: dashed; }
-.lv-pack { color: var(--accent, var(--cyan)); font-weight: 800; font-size: 13px; letter-spacing: 0.04em; }
+.lv-pack { color: var(--accent, var(--cyan)); font-weight: 800; font-size: 13px; letter-spacing: 0.04em; white-space: nowrap; }
+/* Locked pack rows: keep the price and pack name on one line each, so the world's name and idea keep their width. */
+.pack-locked .lv-stats { flex-shrink: 0; text-align: right; }
+.pack-locked .lv-stats small { white-space: nowrap; }
+.pack-locked .lv-name { min-width: 0; }
 .paywall { gap: 10px; }
 .paywall h2 { margin-bottom: 2px; }
 .pw-kicker { text-align: center; font-size: 10px; letter-spacing: 0.24em; color: var(--muted); }

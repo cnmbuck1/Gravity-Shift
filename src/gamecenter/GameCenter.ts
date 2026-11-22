@@ -31,6 +31,7 @@ interface GameCenterPlugin {
   loadRank(o: { leaderboardID: string }): Promise<RankInfo>;
   reportAchievements(o: { achievements: { id: string; percent: number }[] }): Promise<void>;
   showDashboard(o: { leaderboardID?: string; state?: 'leaderboards' | 'achievements' }): Promise<void>;
+  addListener(event: 'authChanged', fn: (info: { authenticated: boolean; name?: string }) => void): Promise<unknown>;
 }
 
 /**
@@ -47,6 +48,17 @@ export class GameCenter {
   playerName = '';
   lastError = '';
   private signIn: Promise<boolean> | null = null;
+  /** Called when the player signs in after launch (for example from the Settings app). */
+  onSignIn: (() => void) | null = null;
+
+  constructor() {
+    void native?.addListener('authChanged', (info) => {
+      const was = this.available;
+      this.available = info.authenticated;
+      this.playerName = info.name ?? '';
+      if (info.authenticated && !was) this.onSignIn?.();
+    }).catch(() => {});
+  }
 
   /** Signs in (Game Center shows its own sheet or banner). Safe to call more than once. */
   authenticate(): Promise<boolean> {
@@ -103,13 +115,16 @@ export class GameCenter {
     }
   }
 
-  async show(o: { leaderboardID?: string; state?: 'leaderboards' | 'achievements' } = {}): Promise<void> {
-    if (!native) return;
-    if (!this.available && !(await this.authenticate())) return;
+  /** Opens Apple's Game Center screen. False when the player isn't signed in (or it failed). */
+  async show(o: { leaderboardID?: string; state?: 'leaderboards' | 'achievements' } = {}): Promise<boolean> {
+    if (!native) return false;
+    if (!this.available && !(await this.authenticate())) return false;
     try {
       await native.showDashboard(o);
+      return true;
     } catch (e) {
       this.lastError = `dashboard: ${String((e as Error)?.message ?? e)}`;
+      return false;
     }
   }
 }

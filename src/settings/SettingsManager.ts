@@ -27,6 +27,8 @@ export interface Settings {
   orbWon: boolean;
   /** Testing: every world and level is playable without unlocking. */
   unlockAll: boolean;
+  /** Testing: act as if nothing was bought (ads and locked packs come back), without touching the real purchases. */
+  ignorePurchases: boolean;
   /** Remove Ads was bought, on its own or with the world bundle (also unlocks the Cnmbuck Orb). */
   adFree: boolean;
   /**
@@ -51,6 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ball: 'chrome',
   orbWon: false,
   unlockAll: true,
+  ignorePurchases: false,
   adFree: false,
   owned: [],
 };
@@ -60,7 +63,7 @@ export const ORB_LEVELS = 50;
 
 /** The Orb can be used once won (50 levels), with Remove Ads, and always while testing with every level unlocked. */
 export function orbAvailable(s: Readonly<Settings>): boolean {
-  return s.orbWon || s.adFree || s.unlockAll;
+  return s.orbWon || (s.adFree && !s.ignorePurchases) || s.unlockAll;
 }
 
 type Listener = (s: Readonly<Settings>) => void;
@@ -76,7 +79,7 @@ export class SettingsManager {
     // older save had the switch off. Turning it off afterwards still sticks.
     if (__RELEASE__) {
       // App Store build: no testing switches, whatever a TestFlight build saved before.
-      Object.assign(this.settings, { unlockAll: false, showDebug: false, physics: 'refined' });
+      Object.assign(this.settings, { unlockAll: false, ignorePurchases: false, showDebug: false, physics: 'refined' });
     } else if (!save.load('unlockAllTesting', false)) {
       this.settings.unlockAll = true;
       this.save.save('settings', this.settings);
