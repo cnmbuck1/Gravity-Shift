@@ -126,6 +126,13 @@ export class LevelManager {
    * fade under a glass ceiling (setGhost); on a multi-level board each floor fades while the ball is below it.
    */
   private ghostMats: { m: THREE.Material; opacity: number; transparent: boolean; depthWrite: boolean; ceiling: boolean; tier: number }[] = [];
+  /**
+   * Everything else on a multi-level board's floors (pistons, doors, crumbling tiles, lasers, gates…):
+   * fades with its floor. Some of these animate their own opacity every frame, so the fade is put on
+   * after they animate (fadeExtras) and taken off again before the next frame (updateTiers).
+   */
+  private extras: { m: THREE.Material; tier: number; plain: number; transparent: boolean; depthWrite: boolean; faded: boolean }[] = [];
+  private extraClones: THREE.Material[] = [];
   private ghost = 0;
   private faded = false;
 
@@ -153,6 +160,82 @@ export class LevelManager {
     });
   }
 
+  /** The floor an object standing at height `y` belongs to (index into tiers), or -1. */
+  private tierAt(y: number): number {
+    let best = -1;
+    this.tiers.forEach((t, i) => {
+      if (t.floorY <= y && (best < 0 || t.floorY > this.tiers[best].floorY)) best = i;
+    });
+    return best;
+  }
+
+  /**
+   * Multi-level boards: lets the objects under `root` (the level's own movers and checkpoints,
+   * and the feature layer) fade with the floor they stand on. Call after the level and its features load.
+   */
+  trackTierExtras(...roots: THREE.Object3D[]): void {
+    this.extras = [];
+    if (!this.tiers.length) return;
+    const inFloor = new Set<THREE.Object3D>();
+    this.tiers.forEach((t) => t.objects.forEach((o) => o.traverse((c) => inFloor.add(c))));
+    const box = new THREE.Box3();
+    const tierOfMat = new Map<THREE.Material, number>();
+    for (const root of roots) {
+      root.updateMatrixWorld(true);
+      root.traverse((o) => {
+        const mesh = o as THREE.Mesh & THREE.Line;
+        if (!(mesh.isMesh || mesh.isLine) || inFloor.has(o) || o === this.goal?.object || this.goal?.object.getObjectById(o.id)) return;
+        box.setFromObject(mesh);
+        if (box.isEmpty()) return;
+        const tier = this.tierAt(box.min.y + 0.8);
+        if (tier < 0) return;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        const own = mats.map((m) => {
+          const seen = tierOfMat.get(m);
+          if (seen === undefined || seen === tier) {
+            tierOfMat.set(m, tier);
+            return m;
+          }
+          // Shared with an object on another floor: this one gets its own copy so each floor fades alone.
+          const c = m.clone();
+          this.extraClones.push(c);
+          tierOfMat.set(c, tier);
+          return c;
+        });
+        mesh.material = Array.isArray(mesh.material) ? own : own[0];
+      });
+    }
+    for (const [m, tier] of tierOfMat) this.extras.push({ m, tier, plain: m.opacity, transparent: m.transparent, depthWrite: m.depthWrite, faded: false });
+  }
+
+  /** Puts the floor fade on the tracked extras; call once per frame after the features animate. */
+  fadeExtras(): void {
+    for (const e of this.extras) {
+      const k = TIER_FADE * this.tiers[e.tier].fade;
+      if (k <= 0.001) continue;
+      e.plain = e.m.opacity;
+      e.faded = true;
+      const was = e.m.transparent;
+      e.m.transparent = true;
+      e.m.depthWrite = false;
+      e.m.opacity = e.plain * (1 - k);
+      if (!was) e.m.needsUpdate = true;
+    }
+  }
+
+  private unfadeExtras(): void {
+    for (const e of this.extras) {
+      if (!e.faded) continue;
+      e.faded = false;
+      e.m.opacity = e.plain;
+      e.m.depthWrite = e.depthWrite;
+      if (e.m.transparent !== e.transparent) {
+        e.m.transparent = e.transparent;
+        e.m.needsUpdate = true;
+      }
+    }
+  }
+
   /**
    * Fades the floor layer (0 = solid, 1 = mostly see-through). While the sphere rolls on a glass
    * ceiling the camera looks up from below the course, so the floor would otherwise hide it.
@@ -168,6 +251,7 @@ export class LevelManager {
    */
   updateTiers(ball: THREE.Vector3, dt: number): void {
     if (!this.tiers.length) return;
+    this.unfadeExtras();
     for (const t of this.tiers) {
       // Under this floor once the ball's top is below the floor slab.
       const below = ball.y < t.floorY - 0.7;
@@ -202,6 +286,10 @@ export class LevelManager {
   }
 
   unload(): void {
+    this.unfadeExtras();
+    this.extras = [];
+    this.disposables.push(...this.extraClones);
+    this.extraClones = [];
     for (const t of this.tiers) t.fade = 0;
     this.setGhost(0);
     this.ghostMats = [];
