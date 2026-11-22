@@ -31,7 +31,7 @@ export class AudioManager {
     const ctx = new Ctx();
     this.ctx = ctx;
     this.master = ctx.createGain();
-    this.master.gain.value = 0.8;
+    this.master.gain.value = 0.55;
     this.master.connect(ctx.destination);
 
     // Pink-ish noise buffer reused by every noise-based sound.

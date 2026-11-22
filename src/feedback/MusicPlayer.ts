@@ -15,7 +15,7 @@ const CHORDS: { bass: number; pad: number[]; arp: number[] }[] = [
   { bass: 48, pad: [55, 60, 62, 64], arp: [67, 72, 74, 76, 79] },
   { bass: 43, pad: [55, 59, 62, 64], arp: [67, 71, 74, 76, 79] },
 ];
-const VOLUME = 0.32;
+const VOLUME = 0.38;
 const LOOKAHEAD = 1.2;
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
