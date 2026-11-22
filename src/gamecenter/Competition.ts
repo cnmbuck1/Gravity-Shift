@@ -145,7 +145,9 @@ export class Competition {
       await new Promise((r) => setTimeout(r, 1500));
       info = (await this.gc.rank(boardId)) ?? info;
     }
-    if (!info || info.rank === undefined) return null;
+    // No rank yet: Game Center answers rank 0 of 0 while boards are prerelease (before the version
+    // is live) or before the score has been counted. Show nothing rather than "#0 of 0".
+    if (!info || !info.rank || info.rank < 1 || !info.total) return null;
     const key = `competition:rank:${boardId}`;
     const before = this.save.load<SavedRank | null>(key, null);
     const passed = before ? before.friendsAhead.filter((n) => !info!.friendsAhead.some((f) => f.name === n)) : [];
