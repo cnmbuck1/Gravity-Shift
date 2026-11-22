@@ -635,19 +635,20 @@ export class UIManager {
     // A level already finished or skipped never shows as locked again.
     const own = this.campaign[i].id;
     if (this.game.recordFor(own).bestTime !== null || this.game.wasSkipped(own)) return true;
-    // A bought pack opens at its first level, even if the worlds before it aren't done (or are in a
-    // pack the player didn't buy): otherwise Worlds 18-20 bought on their own could never be played.
+    // Every world in a bought pack opens at its first level, whatever was finished before it: a
+    // player who pays for three worlds can play all three straight away. Levels inside a world
+    // still open in order.
     if (this.packStart(i)) return true;
     const prev = this.campaign[i - 1].id;
     return this.game.recordFor(prev).bestTime !== null || this.game.wasSkipped(prev);
   }
 
-  /** Campaign level `i` is the first level of a world pack the player owns. */
+  /** Campaign level `i` is the first level of a paid world the player owns (every world in a bought pack opens at once; Chris, 2026-11-22). */
   private packStart(i: number): boolean {
     const w = this.worldOf(i);
     if (this.worldStart(w) !== i) return false;
     const pack = packFor(this.worlds[w].id);
-    return pack !== null && pack.worlds[0] === this.worlds[w].id && this.money.ownsWorld(this.worlds[w].id);
+    return pack !== null && this.money.ownsWorld(this.worlds[w].id);
   }
 
   /** Campaign levels other than the very last can be skipped (an extras course has nothing after it). */
